@@ -176,72 +176,77 @@ class MainWindow(QWidget):
         ip = item.text(1)
 
         server_id = item.row_data["id"]
+        now = datetime.datetime.now()
 
+        # ======== ОБНОВЛЯЕМ БД ========
         for port, ok in results.items():
-            # лог
             if not ok:
                 self.log(f"[ERROR] {ip}: порт {port} недоступен")
 
-            # обновление БД
             update_port_status(server_id, port, ok)
 
+        # ======== ОБНОВЛЯЕМ ТЕКСТ В ТАБЛИЦЕ ========
         parts = [
             f"{port} ({get_label(port)}): {'🟢' if ok else '🔴'}"
             for port, ok in results.items()
         ]
         item.setText(2, "    ".join(parts))
 
-        # если все потоки завершены
+        # ======== СТАТУС ========
         if all(not t.isRunning() for t in self.threads):
             self.status_label.setText("Готово.")
 
-        now = datetime.datetime.now()       
         tooltip_lines = []
 
+        # ======== ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ========
+        def normalize_dt(value):
+            if isinstance(value, datetime.datetime):
+                return value
+            if isinstance(value, str):
+                return datetime.datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
+            return None
+
+        # ======== ОБРАБОТКА ПОРТОВ ========
         for port_info in item.row_data["ports"]:
             port = port_info["port"]
-            ok = results[port]
+            ok = results.get(port, False)
 
-            last_success = port_info["last_success"]
-            last_failure = port_info["last_failure"]
-            prev_state = port_info.get("state", None)
+            prev_state = port_info.get("state")
 
-            # ======== ЛОГИКА ОБНОВЛЕНИЯ ДАТ ========
+            # нормализуем даты
+            last_success_dt = normalize_dt(port_info.get("last_success"))
+            last_failure_dt = normalize_dt(port_info.get("last_failure"))
 
+            # ======== ОБНОВЛЯЕМ СОСТОЯНИЕ ========
             if ok:
-                # порт доступен
                 if prev_state != "up":
-                    # был down → стал up (фиксируем успешное время)
-                    port_info["last_success"] = now.strftime("%Y-%m-%d %H:%M:%S")
+                    last_success_dt = now
+                    port_info["last_success"] = now
                 port_info["state"] = "up"
-
             else:
-                # порт недоступен
                 if prev_state != "down":
-                    # был up → стал down (фиксируем время ошибки)
-                    port_info["last_failure"] = now.strftime("%Y-%m-%d %H:%M:%S")
+                    last_failure_dt = now
+                    port_info["last_failure"] = now
                 port_info["state"] = "down"
 
-            # ======== ФОРМИРУЕМ TOOLTIP ========
+            # ======== TOOLTIP ========
             label = get_label(port)
             symbol = "🟢" if ok else "🔴"
-            now = datetime.datetime.now() # Убедитесь, что 'now' определена здесь
 
             if ok:
-                text = f"{symbol} {port} ({label})\n  Доступен\n"
+                text = (
+                    f"{symbol} {port} ({label})\n"
+                    f"  Доступен\n"
+                )
             else:
-                # считаем сколько дней прошло после последнего success
-                if port_info["last_success"]:
-                    dt = datetime.datetime.strptime(port_info["last_success"], "%Y-%m-%d %H:%M:%S")
-                    days = (now - dt).days
-                    
-                    # *** ВОТ ГЛАВНОЕ ИЗМЕНЕНИЕ ***
-                    days_text = pluralize_days(days) # Вызываем функцию для получения корректной строки
-                    
+                if last_success_dt:
+                    days = (now - last_success_dt).days
+                    days_text = pluralize_days(days)
+
                     text = (
                         f"{symbol} {port} ({label})\n"
                         f"  Недоступен\n"
-                        f"  Был доступен: {days_text} назад\n" # Используем days_text
+                        f"  Был доступен: {days_text} назад\n"
                     )
                 else:
                     text = (
@@ -254,7 +259,6 @@ class MainWindow(QWidget):
 
         item.setToolTip(2, "\n".join(tooltip_lines))
 
-    
     def log(self, text):
         self.console.add_log(text)
 

@@ -1,0 +1,15 @@
+app:
+  name: port-pass-manager-backend
+  log_level: INFO
+
+security:
+  allowed_networks:
+    #- 10.0.0.0/24
+    #- 192.168.1.0/24
+    - 255.255.255.254/31
+
+# vault:
+#   secrets_path: servers/
+
+# access:
+#   show_password: true
