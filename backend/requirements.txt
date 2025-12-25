@@ -3,3 +3,4 @@ uvicorn
 python-dotenv
 pyyaml
 hvac
+psycopg2
