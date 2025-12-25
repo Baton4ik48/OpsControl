@@ -6,7 +6,8 @@ security:
   allowed_networks:
     #- 10.0.0.0/24
     #- 192.168.1.0/24
-    - 255.255.255.254/31
+    #- 255.255.255.254/31
+    - 0.0.0.0/0
 
 # vault:
 #   secrets_path: servers/
