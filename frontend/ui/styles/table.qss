@@ -1,0 +1,8 @@
+QTreeWidget::item:!has-children {
+    color: #9adede;
+    font-size: 9pt;
+}
+
+QTreeWidget::item {
+    height: 20px;
+}

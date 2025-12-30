@@ -1,0 +1,4 @@
+#Sidebar {
+    background-color: #1c2b2e;
+    border-radius: 10px;
+}

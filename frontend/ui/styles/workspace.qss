@@ -1,0 +1,5 @@
+#Workspace {
+    background-color: #1f2a2e;
+    border: 1px solid #2bb;
+    border-radius: 12px;
+}
