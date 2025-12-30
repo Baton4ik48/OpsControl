@@ -1,9 +1,0 @@
-pyinstaller --noconsole --onedir `
-  --add-data "gui/icons;gui/icons" `
-  --add-data "bin/devices.xlsx;bin" `
-  --add-data "bin/database.db;bin" `
-  --clean `
-  --name "PortPassManager" `
-  --exclude-module "jax" `
-  --exclude-module "torch" `
-  main.py
