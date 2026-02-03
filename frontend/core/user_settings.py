@@ -5,6 +5,8 @@ from core.paths import RESOURCES_DIR
 SETTINGS_FILE = os.path.join(RESOURCES_DIR, "settings.json")
 
 DEFAULT_SETTINGS = {
+    "admin_login": "AdminGTM",
+
     "auto_refresh_enabled": True,
     "auto_refresh_interval_sec": 300,
 
