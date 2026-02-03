@@ -1,8 +1,26 @@
-QTreeWidget::item:!has-children {
-    color: #9adede;
-    font-size: 9pt;
+QTreeWidget {
+    background-color: #121e21;
+    border: none;
 }
 
 QTreeWidget::item {
     height: 20px;
+    color: #cfd8dc;
 }
+
+QTreeWidget::item:!has-children {
+    color: #9fbfc2;   /* мягкий вторичный */
+    font-size: 9pt;
+}
+
+QTreeWidget::item:selected {
+    background-color: #22363a;
+}
+
+
+QMenu {
+    background-color: #2b2b2b;
+    border: 1px solid #444;
+    padding: 4px;
+}
+

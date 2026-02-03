@@ -1,59 +1,93 @@
-#from core.port_checker import check_port
 from controllers.port_check_manager import PortCheckManager
+from controllers.load_tree_worker import LoadTreeWorker
+from PyQt6.QtCore import QObject, pyqtSignal
+from datetime import datetime, timezone
+from controllers.ssh_launcher import SshLauncher
 
-class TreeController:
+class TreeController(QObject):
+    loaded = pyqtSignal()
+    load_failed = pyqtSignal(str)
+
     def __init__(self, api, tree):
+        super().__init__()
         self.api = api
         self.tree = tree
         self._data = None
         self._runtime_status = {}
         self.checker = PortCheckManager(max_threads=10)
+        self._worker = None
 
-    def load(self):
-        self._data = self.api.tree.load_tree()
 
-        self._clear_runtime_status()
-        self._apply_runtime_status()
+    # =========================
+    # ЗАГРУЗКА ДЕРЕВА
+    # =========================
+    def start_load(self):
+        self._worker = LoadTreeWorker(self.api)
+        self._worker.success.connect(self._on_loaded)
+        self._worker.error.connect(self._on_error)
+        self._worker.start()
 
-        self.tree.render(self._data)
-
-    def _clear_runtime_status(self):
+    def _on_loaded(self, data):
+        self._data = data
         self._runtime_status.clear()
+        self.tree.render(self._data)
+        self.loaded.emit()
 
+    def _on_error(self, message):
+        self.load_failed.emit(message)
+
+    # =========================
+    # ПРОВЕРКА ПОРТОВ
+    # =========================
     def refresh_all(self):
         if not self._data:
             return
 
-        servers = []
-        for b in self._data:
-            servers.extend(b["servers"])
-        self.checker.check_ports(servers, self._on_port_checked)
+        servers = [
+            s
+            for b in self._data
+            for s in b["servers"]
+        ]
+
+        self.checker.check_ports(
+            servers,
+            self._on_port_checked,
+            self.api
+        )
 
     def _on_port_checked(self, server_id, port, ok):
         self._runtime_status[(server_id, port)] = ok
-        self._apply_runtime_status()
+
+        # обновляем ТОЛЬКО нужный порт
+        self._update_port_status(server_id, port)
+
         self.tree.render(self._data)
 
-    # def _check_server_ports(self, server):
-    #     ip = server["ip"]
-    #     server_id = server["id"]
+    def _update_port_status(self, server_id, port):
+        now = datetime.now(timezone.utc).isoformat()
 
-    #     for p in server["ports"]:
-    #         port = p["port"]
-    #         ok = check_port(ip, port)
+        for b in self._data:
+            for s in b["servers"]:
+                if s["id"] != server_id:
+                    continue
 
-    #         self._runtime_status[(server_id, port)] = ok
+                for p in s["ports"]:
+                    if p["port"] != port:
+                        continue
 
-    def _apply_runtime_status(self):
-        for branch in self._data:
-            for server in branch["servers"]:
-                sid = server["id"]
+                    ok = self._runtime_status[(server_id, port)]
+                    p["is_up"] = ok
 
-                for p in server["ports"]:
-                    p["is_up"] = self._runtime_status.get(
-                        (sid, p["port"])
-                    )
+                    if ok:
+                        p["last_success"] = now
+                    else:
+                        p["last_failure"] = now
 
+                    return
+
+    # =========================
+    # ФИЛЬТРЫ
+    # =========================
     def show_all(self):
         if self._data:
             self.tree.render(self._data)
@@ -64,19 +98,57 @@ class TreeController:
 
         result = []
 
-        for branch in self._data:
-            bad_servers = []
-
-            for server in branch["servers"]:
-                for p in server["ports"]:
-                    if p.get("is_up") is False:
-                        bad_servers.append(server)
-                        break
-
-            if bad_servers:
+        for b in self._data:
+            bad = [
+                s for s in b["servers"]
+                if any(p.get("is_up") is False for p in s["ports"])
+            ]
+            if bad:
                 result.append({
-                    "name": branch["name"],
-                    "servers": bad_servers
+                    "name": b["name"],
+                    "servers": bad
                 })
 
         self.tree.render(result)
+    
+    # =========================
+    # Контекст меню
+    # =========================
+
+    def refresh_server(self, server_id: int):
+        for b in self._data:
+            for s in b["servers"]:
+                if s["id"] == server_id:
+                    self.checker.check_ports(
+                        [s],
+                        self._on_port_checked,
+                        self.api
+                    )
+                    return
+
+    def refresh_port(self, server_id: int, port: int):
+        for b in self._data:
+            for s in b["servers"]:
+                if s["id"] == server_id:
+                    for p in s["ports"]:
+                        if p["port"] == port:
+                            self.checker.check_ports(
+                                [{
+                                    "id": server_id,
+                                    "ip": s["ip"],
+                                    "ports": [p]
+                                }],
+                                self._on_port_checked,
+                                self.api
+                            )
+                            return
+
+
+    def open_ssh_terminal(self, server_id: int):
+        # print("open_ssh_terminal:", server_id)  # ⬅ DEBUG
+        for b in self._data:
+            for s in b["servers"]:
+                if s["id"] == server_id:
+                    # user пока хардкодим или позже возьмём из credentials
+                    SshLauncher.open("user", s["ip"])
+                    return

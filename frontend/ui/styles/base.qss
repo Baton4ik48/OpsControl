@@ -1,6 +1,6 @@
 QWidget {
     background-color: #0f1b1e;
-    color: #e0e0e0;
+    color: #d8d8d8;
     font-family: Segoe UI;
     font-size: 10pt;
 }
