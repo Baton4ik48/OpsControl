@@ -11,6 +11,24 @@ class SettingsDialog(QDialog):
 
         layout = QVBoxLayout(self)
 
+
+        # =========================
+        # АВТОРИЗАЦИЯ
+        # =========================
+        auth_group = QGroupBox("Авторизация")
+        auth_layout = QVBoxLayout(auth_group)
+
+        auth_layout.addWidget(QLabel("Логин администратора:"))
+        self.admin_login_input = QLineEdit()
+        self.admin_login_input.setPlaceholderText("AdminGTM")
+        self.admin_login_input.setText(
+            self.settings.get("admin_login") or ""
+        )
+        
+        auth_layout.addWidget(self.admin_login_input)
+        layout.addWidget(auth_group)
+
+
         # =========================
         # АВТООБНОВЛЕНИЕ
         # =========================
@@ -38,11 +56,11 @@ class SettingsDialog(QDialog):
         # =========================
         # BACKEND
         # =========================
-        backend_group = QGroupBox("Backend")
+        backend_group = QGroupBox("Backend сервер")
         backend_layout = QVBoxLayout(backend_group)
 
         self.backend_override_checkbox = QCheckBox(
-            "Переопределить backend (поверх .env)"
+            "Ручная настройка адреса сервера"
         )
         self.backend_override_checkbox.setChecked(
             self.settings.get("backend_override_enabled")
@@ -61,9 +79,9 @@ class SettingsDialog(QDialog):
         )
 
         backend_layout.addWidget(self.backend_override_checkbox)
-        backend_layout.addWidget(QLabel("Backend host:"))
+        backend_layout.addWidget(QLabel("Адрес сервера:"))
         backend_layout.addWidget(self.backend_host_input)
-        backend_layout.addWidget(QLabel("Backend port:"))
+        backend_layout.addWidget(QLabel("Порт сервера:"))
         backend_layout.addWidget(self.backend_port_spin)
 
         layout.addWidget(backend_group)
@@ -88,17 +106,21 @@ class SettingsDialog(QDialog):
         # =========================
         # ЛОГИКА ВКЛ / ВЫКЛ
         # =========================
-        self.backend_override_checkbox.toggled.connect(
-            self._update_backend_enabled
-        )
-        self._update_backend_enabled(
-            self.backend_override_checkbox.isChecked()
-        )
+        self.auto_refresh_checkbox.toggled.connect(self._update_auto_refresh_enabled)
+        self._update_auto_refresh_enabled(self.auto_refresh_checkbox.isChecked())
+
+        self.backend_override_checkbox.toggled.connect(self._update_backend_enabled)
+        self._update_backend_enabled(self.backend_override_checkbox.isChecked())
 
     # =========================
     # APPLY
     # =========================
     def apply(self):
+        # логин
+        self.settings.set(
+            "admin_login", 
+            self.admin_login_input.text().strip()
+        )
         # автообновление
         self.settings.set(
             "auto_refresh_enabled",
@@ -128,6 +150,9 @@ class SettingsDialog(QDialog):
     # =========================
     # UI HELPERS
     # =========================
+    def _update_auto_refresh_enabled(self, enabled: bool):
+        self.interval_spin.setEnabled(enabled)
+
     def _update_backend_enabled(self, enabled: bool):
         self.backend_host_input.setEnabled(enabled)
         self.backend_port_spin.setEnabled(enabled)
