@@ -1,0 +1,133 @@
+from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QCheckBox, QSpinBox, QLabel, QPushButton, QHBoxLayout, QLineEdit, QGroupBox)
+
+
+class SettingsDialog(QDialog):
+    def __init__(self, settings):
+        super().__init__()
+
+        self.settings = settings
+        self.setWindowTitle("Настройки")
+        self.setMinimumWidth(360)
+
+        layout = QVBoxLayout(self)
+
+        # =========================
+        # АВТООБНОВЛЕНИЕ
+        # =========================
+        auto_group = QGroupBox("Автообновление")
+        auto_layout = QVBoxLayout(auto_group)
+
+        self.auto_refresh_checkbox = QCheckBox("Включить автообновление")
+        self.auto_refresh_checkbox.setChecked(
+            self.settings.get("auto_refresh_enabled")
+        )
+
+        self.interval_spin = QSpinBox()
+        self.interval_spin.setRange(30, 3600)
+        self.interval_spin.setSuffix(" сек")
+        self.interval_spin.setValue(
+            self.settings.get("auto_refresh_interval_sec")
+        )
+
+        auto_layout.addWidget(self.auto_refresh_checkbox)
+        auto_layout.addWidget(QLabel("Интервал обновления:"))
+        auto_layout.addWidget(self.interval_spin)
+
+        layout.addWidget(auto_group)
+
+        # =========================
+        # BACKEND
+        # =========================
+        backend_group = QGroupBox("Backend")
+        backend_layout = QVBoxLayout(backend_group)
+
+        self.backend_override_checkbox = QCheckBox(
+            "Переопределить backend (поверх .env)"
+        )
+        self.backend_override_checkbox.setChecked(
+            self.settings.get("backend_override_enabled")
+        )
+
+        self.backend_host_input = QLineEdit()
+        self.backend_host_input.setPlaceholderText("host (например: 127.0.0.1)")
+        self.backend_host_input.setText(
+            self.settings.get("backend_host")
+        )
+
+        self.backend_port_spin = QSpinBox()
+        self.backend_port_spin.setRange(1, 65535)
+        self.backend_port_spin.setValue(
+            self.settings.get("backend_port") or 0
+        )
+
+        backend_layout.addWidget(self.backend_override_checkbox)
+        backend_layout.addWidget(QLabel("Backend host:"))
+        backend_layout.addWidget(self.backend_host_input)
+        backend_layout.addWidget(QLabel("Backend port:"))
+        backend_layout.addWidget(self.backend_port_spin)
+
+        layout.addWidget(backend_group)
+
+        # =========================
+        # КНОПКИ
+        # =========================
+        buttons = QHBoxLayout()
+
+        btn_save = QPushButton("Сохранить")
+        btn_cancel = QPushButton("Отмена")
+
+        btn_save.clicked.connect(self.accept)
+        btn_cancel.clicked.connect(self.reject)
+
+        buttons.addStretch()
+        buttons.addWidget(btn_save)
+        buttons.addWidget(btn_cancel)
+
+        layout.addLayout(buttons)
+
+        # =========================
+        # ЛОГИКА ВКЛ / ВЫКЛ
+        # =========================
+        self.backend_override_checkbox.toggled.connect(
+            self._update_backend_enabled
+        )
+        self._update_backend_enabled(
+            self.backend_override_checkbox.isChecked()
+        )
+
+    # =========================
+    # APPLY
+    # =========================
+    def apply(self):
+        # автообновление
+        self.settings.set(
+            "auto_refresh_enabled",
+            self.auto_refresh_checkbox.isChecked()
+        )
+        self.settings.set(
+            "auto_refresh_interval_sec",
+            self.interval_spin.value()
+        )
+
+        # backend override
+        self.settings.set(
+            "backend_override_enabled",
+            self.backend_override_checkbox.isChecked()
+        )
+        self.settings.set(
+            "backend_host",
+            self.backend_host_input.text().strip()
+        )
+        self.settings.set(
+            "backend_port",
+            self.backend_port_spin.value()
+        )
+
+        self.settings.save()
+
+    # =========================
+    # UI HELPERS
+    # =========================
+    def _update_backend_enabled(self, enabled: bool):
+        self.backend_host_input.setEnabled(enabled)
+        self.backend_port_spin.setEnabled(enabled)
