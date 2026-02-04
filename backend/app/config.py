@@ -22,6 +22,7 @@ print("ENV POSTGRES_HOST =", os.getenv("POSTGRES_HOST"))
 print("ENV POSTGRES_PORT =", os.getenv("POSTGRES_PORT"))
 
 
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 CONFIG_PATH = BASE_DIR / "config" / "config.yaml"
 

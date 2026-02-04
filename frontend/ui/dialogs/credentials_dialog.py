@@ -1,12 +1,18 @@
+import os
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QLabel,
     QLineEdit, QPushButton, QMessageBox
 )
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtGui import QIcon
 
+from core.paths import ICONS_DIR
 from core.api.base import ApiError
 from core.error_handler import handle_api_error
 
 class CredentialsDialog(QDialog):
+    credentials_received = pyqtSignal(str, str)
+
     def __init__(self, api, server_id, port, ip, username):
         super().__init__()
 
@@ -16,6 +22,7 @@ class CredentialsDialog(QDialog):
         self.ip = ip
         self.username = username
 
+        self.setWindowIcon(QIcon(os.path.join(ICONS_DIR, "show_icon.png")))
         self.setWindowTitle(f"Учётные данные {ip}:{port}")
         self.setModal(True)
         self.resize(360, 240)
@@ -59,12 +66,13 @@ class CredentialsDialog(QDialog):
                 username=self.username,
                 master_password=master_password
             )
-
         except ApiError as e:
             handle_api_error(self, e)
             return
 
-        self.result_label.setText(
-            f"<b>Логин:</b> {data['username']}<br>"
-            f"<b>Пароль:</b> {data['password']}"
+        self.credentials_received.emit(
+            data["username"],
+            data["password"]
         )
+        self.accept()
+

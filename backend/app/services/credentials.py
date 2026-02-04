@@ -1,9 +1,4 @@
-from app.services.vault import (
-    vault_login_userpass,
-    vault_read_secret,
-    VaultAuthError,
-    VaultReadError,
-)
+from app.services.vault_client import VaultClient, VaultAuthError, VaultReadError
 from app.services.postgres import get_vault_path_by_server_port
 from app.logging import get_logger
 
@@ -20,35 +15,35 @@ class CredentialsNotFound(Exception):
 
 def show_credentials(server_id: int, port: int, username: str, master_password: str):
     logger.info(
-        f"Show credentials request server_id={server_id} port={port} user={username}, master_password={master_password}"
+        f"Show credentials request server_id={server_id} port={port} user={username}"
     )
 
-    # 1️⃣ Логинимся в Vault
+    vault = VaultClient()
+
+    # 1. Логин в Vault
     try:
-        client_token = vault_login_userpass(username, master_password)
+        token = vault.login_userpass(username, master_password)
         logger.info("Vault login OK")
-    except VaultAuthError as e:
-        logger.warning(f"Vault login FAILED: {e}")
+    except VaultAuthError:
+        logger.warning("Vault login FAILED")
         raise InvalidMasterPassword()
 
-    # 2️⃣ Получаем vault_path из БД
+    # 2. Получаем путь из БД
     vault_path = get_vault_path_by_server_port(server_id, port)
     if not vault_path:
-        logger.warning("Vault path NOT FOUND in DB")
         raise CredentialsNotFound()
 
     logger.info(f"Vault path found: {vault_path}")
 
-    # 3️⃣ Читаем секрет
+    # 3. Читаем секрет
     try:
-        secret = vault_read_secret(client_token, vault_path)
+        secret = vault.read_kv_v2(token, vault_path)
         logger.info("Vault secret read OK")
-    except VaultReadError as e:
-        logger.warning(f"Vault secret read FAILED: {e}")
+    except VaultReadError:
         raise CredentialsNotFound()
 
-    # 4️⃣ Возвращаем GUI
     return {
         "username": secret["username"],
         "password": secret["password"],
     }
+

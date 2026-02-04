@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 from PyQt6.QtWidgets import (QTreeWidget, QTreeWidgetItem, QHeaderView, QMenu)
 from PyQt6.QtGui import QIcon
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 
 from core.paths import ICONS_DIR
 from core.port_checker import get_label
@@ -12,6 +12,9 @@ ROLE_TYPE = Qt.ItemDataRole.UserRole + 1
 ROLE_SERVER_ID = Qt.ItemDataRole.UserRole + 2
 ROLE_PORT = Qt.ItemDataRole.UserRole + 3
 ROLE_IP = Qt.ItemDataRole.UserRole + 4
+
+CREDENTIALS_SHOW_TIMEOUT_MS = 2 * 60 * 1000  # 2 минуты
+
 
 def format_dt(value):
     if not value:
@@ -30,6 +33,7 @@ class DeviceTree(QTreeWidget):
 
     def __init__(self):
         super().__init__()
+        self._credential_timers = {}
 
         self.setHeaderLabels(["Устройство", "IP", "Статус", "Учётные данные", "Дата обновления пароля"])
 
@@ -38,15 +42,21 @@ class DeviceTree(QTreeWidget):
         self.icon_unknown = QIcon(os.path.join(ICONS_DIR, "status_unknown.png"))
         self.icon_update = QIcon(os.path.join(ICONS_DIR, "update_icon.png"))
         self.icon_ssh = QIcon(os.path.join(ICONS_DIR, "ssh_icon.png"))
+        self.icon_show = QIcon(os.path.join(ICONS_DIR, "show_icon.png"))
 
         
         header = self.header()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed)
+        self.setColumnWidth(3, 140)
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
         header.setMinimumSectionSize(60)
+
+        self.headerItem().setTextAlignment(2, Qt.AlignmentFlag.AlignCenter)
+        self.headerItem().setTextAlignment(3, Qt.AlignmentFlag.AlignCenter)
+
 
 
         self.setRootIsDecorated(True)
@@ -122,6 +132,8 @@ class DeviceTree(QTreeWidget):
                         creds_text,
                         creds_date
                     ])
+                    port_item.setTextAlignment(3, Qt.AlignmentFlag.AlignCenter)
+
                     port_item.setIcon(2, icon)
 
                     port_item.setData(0, ROLE_TYPE, "port")
@@ -139,6 +151,24 @@ class DeviceTree(QTreeWidget):
                 server_item.setExpanded(True)
 
             branch_item.setExpanded(True)
+
+    def _find_port_item(self, server_id: int, port: int):
+        for i in range(self.topLevelItemCount()):
+            branch = self.topLevelItem(i)
+
+            for j in range(branch.childCount()):
+                server = branch.child(j)
+
+                if server.data(0, ROLE_SERVER_ID) != server_id:
+                    continue
+
+                for k in range(server.childCount()):
+                    port_item = server.child(k)
+
+                    if port_item.data(0, ROLE_PORT) == port:
+                        return port_item
+
+        return None
 
     def _open_context_menu(self, pos):
         item = self.itemAt(pos)
@@ -179,7 +209,7 @@ class DeviceTree(QTreeWidget):
                 lambda: self.refresh_port_requested.emit(server_id, port)
             )
 
-            show_creds_action = menu.addAction("Показать учётные данные")
+            show_creds_action = menu.addAction(self.icon_show, "Показать учётные данные")
             show_creds_action.triggered.connect(
                 lambda: self.show_credentials_requested.emit(server_id, port, ip)
             )
@@ -187,3 +217,31 @@ class DeviceTree(QTreeWidget):
 
         menu.exec(self.viewport().mapToGlobal(pos))
 
+    def show_credentials(self, server_id: int, port: int, username: str, password: str):
+        item = self._find_port_item(server_id, port)
+        if not item:
+            return
+
+        key = (server_id, port)
+
+        # если уже был показ — сбрасываем таймер
+        if key in self._credential_timers:
+            timer = self._credential_timers.pop(key)
+            timer.stop()
+            timer.deleteLater()
+
+        # показываем креды
+        item.setText(3, f"{username}:{password}")
+
+        timer = QTimer(self)
+        timer.setSingleShot(True)
+
+        def clear():
+            item.setText(3, "********")
+            timer.deleteLater()
+            self._credential_timers.pop(key, None)
+
+        timer.timeout.connect(clear)
+        timer.start(CREDENTIALS_SHOW_TIMEOUT_MS)
+
+        self._credential_timers[key] = timer

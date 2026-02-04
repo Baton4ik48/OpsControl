@@ -21,8 +21,6 @@ class ShowCredentialsRequest(BaseModel):
 
 @router.post("/show")
 def api_show_credentials(data: ShowCredentialsRequest):
-    print(f"server_id = {data.server_id}\
-          master_password = {data.master_password}")
     try:
         creds = show_credentials(
             server_id=data.server_id,

@@ -26,7 +26,6 @@ class BaseApi:
 
     def _request(self, method: str, path: str, **kwargs):
         url = f"{self.base_url}{path}"
-        print(f"[HTTP] {method} {url}")
 
         try:
             r = self.session.request(
@@ -35,7 +34,6 @@ class BaseApi:
                 timeout=(3, 30),
                 **kwargs
             )
-            print("[HTTP] status:", r.status_code)
 
             # HTTP ошибки (403, 404, 500, ...)
             if not r.ok:
