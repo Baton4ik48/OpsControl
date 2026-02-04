@@ -4,6 +4,6 @@
   "auto_refresh_interval_sec": 30,
   "backend_override_enabled": false,
   "backend_scheme": "",
-  "backend_host": "",
+  "backend_host": "127.0.0.2",
   "backend_port": 443
 }

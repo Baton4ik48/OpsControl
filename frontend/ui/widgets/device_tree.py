@@ -11,6 +11,7 @@ from core.port_checker import get_label
 ROLE_TYPE = Qt.ItemDataRole.UserRole + 1
 ROLE_SERVER_ID = Qt.ItemDataRole.UserRole + 2
 ROLE_PORT = Qt.ItemDataRole.UserRole + 3
+ROLE_IP = Qt.ItemDataRole.UserRole + 4
 
 def format_dt(value):
     if not value:
@@ -25,11 +26,12 @@ class DeviceTree(QTreeWidget):
     refresh_server_requested = pyqtSignal(int)
     refresh_port_requested = pyqtSignal(int, int)
     open_ssh_requested = pyqtSignal(int)
+    show_credentials_requested = pyqtSignal(int, int, str)
 
     def __init__(self):
         super().__init__()
 
-        self.setHeaderLabels(["Устройство", "IP", "Статус"])
+        self.setHeaderLabels(["Устройство", "IP", "Статус", "Учётные данные", "Дата обновления пароля"])
 
         self.icon_up = QIcon(os.path.join(ICONS_DIR, "status_up.png"))
         self.icon_down = QIcon(os.path.join(ICONS_DIR, "status_down.png"))
@@ -38,13 +40,14 @@ class DeviceTree(QTreeWidget):
         self.icon_ssh = QIcon(os.path.join(ICONS_DIR, "ssh_icon.png"))
 
         
-        self.setColumnWidth(0, 240)
-        self.setColumnWidth(1, 150)
-
         header = self.header()
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+        header.setMinimumSectionSize(60)
+
 
         self.setRootIsDecorated(True)
         self.setIndentation(18)
@@ -53,22 +56,24 @@ class DeviceTree(QTreeWidget):
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._open_context_menu)
 
+    # ==================================================
+    # RENDER
+    # ==================================================
+    
     def render(self, branches):
         self.clear()
 
         for branch in branches:
-            branch_item = QTreeWidgetItem([branch["name"], "", ""])
+            branch_item = QTreeWidgetItem([branch["name"], "", "", "", ""])
             self.addTopLevelItem(branch_item)
 
             for srv in branch.get("servers", []):
-                server_item = QTreeWidgetItem([
-                    srv["name"],
-                    srv["ip"],
-                    ""
-                ])
+                server_item = QTreeWidgetItem([srv["name"], srv["ip"], "", "", ""])
 
                 server_item.setData(0, ROLE_TYPE, "server")
                 server_item.setData(0, ROLE_SERVER_ID, srv["id"])
+                server_item.setData(0, ROLE_IP, srv["ip"])
+
 
 
                 branch_item.addChild(server_item)
@@ -77,11 +82,15 @@ class DeviceTree(QTreeWidget):
                     state = p.get("is_up")
 
                     if state is True:
-                        text, icon = "up", self.icon_up
+                        status_text, icon = "up", self.icon_up
                     elif state is False:
-                        text, icon = "down", self.icon_down
+                        status_text, icon = "down", self.icon_down
                     else:
-                        text, icon = "unknown", self.icon_unknown
+                        status_text, icon = "unknown", self.icon_unknown
+
+                    has_creds = p.get("has_credentials", False)
+                    creds_text = "********"
+                    creds_date = format_dt(p.get("credentials_updated_at"))
 
                     port = p["port"]
                     label = get_label(port)
@@ -109,13 +118,17 @@ class DeviceTree(QTreeWidget):
                     port_item = QTreeWidgetItem([
                         f"port {port}",
                         "",
-                        text
+                        status_text,
+                        creds_text,
+                        creds_date
                     ])
                     port_item.setIcon(2, icon)
 
                     port_item.setData(0, ROLE_TYPE, "port")
                     port_item.setData(0, ROLE_SERVER_ID, srv["id"])
                     port_item.setData(0, ROLE_PORT, port)
+                    port_item.setData(0, ROLE_IP, srv["ip"])
+
 
 
                     port_item.setToolTip(0, tooltip)
@@ -141,7 +154,6 @@ class DeviceTree(QTreeWidget):
         # ===== SERVER =====
         if item_type == "server":
             server_id = item.data(0, ROLE_SERVER_ID)
-            # print(f"ROLE_SERVER_ID",server_id)
             
             ssh_action = menu.addAction(self.icon_ssh, "SSH (Терминал)")
             ssh_action.triggered.connect(
@@ -157,8 +169,7 @@ class DeviceTree(QTreeWidget):
         elif item_type == "port":
             server_id = item.data(0, ROLE_SERVER_ID)
             port = item.data(0, ROLE_PORT)
-            # print(f"ROLE_SERVER_ID",server_id)
-            # print(f"ROLE_PORT",port)
+            ip = item.data(0, ROLE_IP)
 
             refresh_port_action = menu.addAction(
                 self.icon_update,
@@ -167,6 +178,12 @@ class DeviceTree(QTreeWidget):
             refresh_port_action.triggered.connect(
                 lambda: self.refresh_port_requested.emit(server_id, port)
             )
+
+            show_creds_action = menu.addAction("Показать учётные данные")
+            show_creds_action.triggered.connect(
+                lambda: self.show_credentials_requested.emit(server_id, port, ip)
+            )
+            menu.addSeparator()
 
         menu.exec(self.viewport().mapToGlobal(pos))
 

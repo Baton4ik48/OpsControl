@@ -39,6 +39,9 @@ def get_tree():
                 "port": r[5],
                 "last_success": r[6],
                 "last_failure": r[7],
+                
+                "has_credentials": r[8] is not None,
+                "credentials_updated_at": r[9],
             })
     return {
         "success": True,
