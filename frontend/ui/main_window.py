@@ -8,6 +8,8 @@ from core.paths import ICONS_DIR
 from core.config import settings
 from core.user_settings import UserSettings
 from core.api import ApiClient
+from core.api.base import ApiError
+from core.error_handler import handle_api_error
 
 from controllers.tree_controller import TreeController
 from controllers.console_controller import ConsoleController
@@ -52,7 +54,7 @@ class MainWindow(QWidget):
         # API + CONTROLLERS
         # =========================
         self.api = ApiClient()
-        self.controller = TreeController(self.api, self.tree)
+        self.controller = TreeController(self.api, self.tree, self.user_settings)
 
         self.console_controller = ConsoleController(self.console.log)
         self.console.set_handler(self.console_controller.handle)
@@ -81,6 +83,8 @@ class MainWindow(QWidget):
 
         self.tree.open_ssh_requested.connect(self.controller.open_ssh_terminal)
 
+        self.tree.show_credentials_requested.connect(self.controller.show_credentials)
+
     # =========================
     # TREE
     # =========================
@@ -93,17 +97,11 @@ class MainWindow(QWidget):
         self.sidebar.set_actions_enabled(True)
         self.console.log("Данные загружены")
 
-    def on_tree_load_failed(self, message):
+    def on_tree_load_failed(self, error: ApiError):
         self.sidebar.set_actions_enabled(False)
         self.console.log("Ошибка загрузки данных")
 
-        QMessageBox.critical(
-            self,
-            "Backend недоступен",
-            f"Не удалось подключиться к серверу:\n\n"
-            f"{settings.BACKEND_BASE_URL}\n\n"
-            f"{message}"
-        )
+        handle_api_error(self, error)
 
     # =========================
     # ACTIONS

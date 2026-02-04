@@ -118,10 +118,13 @@ def load_tree():
                 s.ip,
                 p.port,
                 p.last_success,
-                p.last_failure
+                p.last_failure,
+                c.id AS cred_id,
+                c.updated_at
             FROM branches b
             JOIN servers s ON s.branch_id = b.id
             LEFT JOIN ports p ON p.server_id = s.id
+            LEFT JOIN credentials c ON c.server_id = s.id AND c.port = p.port
             ORDER BY b.name, s.name, p.port
         """)
         rows = cur.fetchall()
@@ -185,5 +188,20 @@ def report_port_result(server_id: int, port: int, ok: bool) -> int:
         conn.commit()
         cur.close()
         return affected
+
+    return _execute(work)
+
+
+def get_vault_path_by_server_port(server_id: int, port: int) -> str | None:
+    def work(conn):
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT vault_path
+            FROM credentials
+            WHERE server_id = %s AND port = %s
+        """, (server_id, port))
+        row = cur.fetchone()
+        cur.close()
+        return row[0] if row else None
 
     return _execute(work)

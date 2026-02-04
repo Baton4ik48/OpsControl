@@ -3,15 +3,19 @@ from controllers.load_tree_worker import LoadTreeWorker
 from PyQt6.QtCore import QObject, pyqtSignal
 from datetime import datetime, timezone
 from controllers.ssh_launcher import SshLauncher
+from ui.dialogs.credentials_dialog import CredentialsDialog
+from core.api.base import ApiError
 
 class TreeController(QObject):
     loaded = pyqtSignal()
-    load_failed = pyqtSignal(str)
+    load_failed = pyqtSignal(ApiError)
 
-    def __init__(self, api, tree):
+    def __init__(self, api, tree, user_settings):
         super().__init__()
         self.api = api
         self.tree = tree
+        self.user_settings = user_settings
+
         self._data = None
         self._runtime_status = {}
         self.checker = PortCheckManager(max_threads=10)
@@ -34,7 +38,9 @@ class TreeController(QObject):
         self.loaded.emit()
 
     def _on_error(self, message):
-        self.load_failed.emit(message)
+        self.load_failed.emit(
+            ApiError(message, status_code=None)
+        )
 
     # =========================
     # ПРОВЕРКА ПОРТОВ
@@ -145,10 +151,24 @@ class TreeController(QObject):
 
 
     def open_ssh_terminal(self, server_id: int):
-        # print("open_ssh_terminal:", server_id)  # ⬅ DEBUG
         for b in self._data:
             for s in b["servers"]:
                 if s["id"] == server_id:
-                    # user пока хардкодим или позже возьмём из credentials
                     SshLauncher.open("user", s["ip"])
                     return
+
+
+    def show_credentials(self, server_id: int, port: int, ip: str):
+        admin_login = self.user_settings.get("admin_login")
+
+        dlg = CredentialsDialog(
+            api=self.api,
+            server_id=server_id,
+            port=port,
+            ip=ip,
+            username=admin_login
+        )
+        dlg.exec()
+
+
+
