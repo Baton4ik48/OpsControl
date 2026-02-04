@@ -1,11 +1,15 @@
+import os
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QCheckBox, QSpinBox, QLabel, QPushButton, QHBoxLayout, QLineEdit, QGroupBox)
+from PyQt6.QtGui import QIcon
 
+from core.paths import ICONS_DIR
 
 class SettingsDialog(QDialog):
     def __init__(self, settings):
         super().__init__()
 
         self.settings = settings
+        self.setWindowIcon(QIcon(os.path.join(ICONS_DIR, "settings_icon.png")))
         self.setWindowTitle("Настройки")
         self.setMinimumWidth(360)
 

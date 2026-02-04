@@ -1,6 +1,6 @@
 import os
 
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QMessageBox
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QMessageBox, QApplication
 from PyQt6.QtGui import QIcon
 from PyQt6.QtCore import QTimer
 
@@ -74,6 +74,7 @@ class MainWindow(QWidget):
         self.sidebar.show_all_clicked.connect(self.on_show_all)
         self.sidebar.show_problem_clicked.connect(self.on_show_problem)
         self.sidebar.settings_clicked.connect(self.open_settings)
+        self.sidebar.exit_clicked.connect(self.exit_app)
 
         self.controller.loaded.connect(self.on_tree_loaded)
         self.controller.load_failed.connect(self.on_tree_load_failed)
@@ -139,5 +140,11 @@ class MainWindow(QWidget):
                 QMessageBox.information(
                     self,
                     "Требуется перезапуск",
-                    "Изменения backend вступят в силу после перезапуска приложения."
+                    "Сетевые изменения вступят в силу после перезапуска приложения."
                 )
+
+    # =========================
+    # EXIT
+    # =========================
+    def exit_app(self):
+        QApplication.quit()

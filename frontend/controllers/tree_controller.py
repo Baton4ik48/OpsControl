@@ -168,7 +168,15 @@ class TreeController(QObject):
             ip=ip,
             username=admin_login
         )
+
+        dlg.credentials_received.connect(
+            lambda u, p: self.tree.show_credentials(
+                server_id, port, u, p
+            )
+        )
+
         dlg.exec()
+
 
 
 

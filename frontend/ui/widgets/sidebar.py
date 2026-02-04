@@ -1,5 +1,9 @@
+import os
 from PyQt6.QtWidgets import QFrame, QVBoxLayout, QPushButton
 from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtGui import QIcon
+
+from core.paths import ICONS_DIR
 
 
 class Sidebar(QFrame):
@@ -13,16 +17,24 @@ class Sidebar(QFrame):
     def __init__(self):
         super().__init__()
 
+        self.icon_settings = QIcon(os.path.join(ICONS_DIR, "settings_icon.png"))
+        self.icon_exit = QIcon(os.path.join(ICONS_DIR, "exit_icon.png"))
+        self.icon_tree = QIcon(os.path.join(ICONS_DIR, "tree_icon.png"))
+        self.icon_full = QIcon(os.path.join(ICONS_DIR, "full_icon.png"))
+        self.icon_update_all = QIcon(os.path.join(ICONS_DIR, "update_icon_all.png"))
+        self.icon_down_all = QIcon(os.path.join(ICONS_DIR, "status_down_all.png"))
+
+
         self.setObjectName("Sidebar")
-        self.setFixedWidth(150)
+        self.setFixedWidth(170)
 
         layout = QVBoxLayout(self)
 
         # ===== ОСНОВНЫЕ ДЕЙСТВИЯ =====
-        self.reload_btn = QPushButton("Загрузка древа")
-        self.show_all_btn = QPushButton("Все сервера")
-        self.show_problem_btn = QPushButton("Проблемные")
-        self.refresh_btn = QPushButton("Обновить всё")
+        self.reload_btn = QPushButton(self.icon_tree, "Топология сети")
+        self.show_all_btn = QPushButton(self.icon_full, "Все устройства")
+        self.show_problem_btn = QPushButton(self.icon_down_all, "Недоступные")
+        self.refresh_btn = QPushButton(self.icon_update_all, "Опросить все")
 
         layout.addWidget(self.reload_btn)
         layout.addWidget(self.show_all_btn)
@@ -32,8 +44,8 @@ class Sidebar(QFrame):
         layout.addStretch()
 
         # ===== СИСТЕМНЫЕ =====
-        self.settings_btn = QPushButton("Настройки")
-        self.exit_btn = QPushButton("Выход")
+        self.settings_btn = QPushButton(self.icon_settings, "Настройки")
+        self.exit_btn = QPushButton(self.icon_exit, "Выход")
 
         layout.addWidget(self.settings_btn)
         layout.addWidget(self.exit_btn)
