@@ -9,6 +9,11 @@ security:
     #- 255.255.255.254/31
     - 0.0.0.0/0
 
+  login_throttle:
+    enabled: true
+    max_attempts: 5
+    block_seconds: 600
+    
 # vault:
 #   secrets_path: servers/
 
