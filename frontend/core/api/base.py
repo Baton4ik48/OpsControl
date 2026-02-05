@@ -4,7 +4,6 @@ from core.logger import get_logger
 
 log = get_logger(__name__)
 
-
 class ApiError(Exception):
     def __init__(
         self,
@@ -28,11 +27,11 @@ class BaseApi:
     def get(self, path: str):
         return self._request("GET", path)
 
-    def put(self, path: str, params=None, json=None):
-        return self._request("PUT", path, params=params, json=json)
+    def post(self, path: str, json=None, params=None):
+        return self._request("POST", path, json=json, params=params)
 
-    def post(self, path: str, params=None, json=None):
-        return self._request("POST", path, params=params, json=json)
+    def put(self, path: str, json=None, params=None):
+        return self._request("PUT", path, json=json, params=params)
 
     def _request(self, method: str, path: str, **kwargs):
         url = f"{self.base_url}{path}"
@@ -60,17 +59,16 @@ class BaseApi:
 
             data = r.json()
 
+            if path == "/api/status":
+                return data
+
+            if not data.get("success", False):
+                raise ApiError(
+                    data.get("detail", "Unknown API error"),
+                    status_code=r.status_code
+                )
+
+            return data["data"]
+
         except requests.RequestException:
-            raise ApiError(
-                "Backend недоступен",
-                status_code=None
-            )
-
-        if not data.get("success", False):
-            raise ApiError(
-                data.get("detail", "Unknown API error"),
-                status_code=400
-            )
-
-        return data["data"]
-
+            raise ApiError("Backend недоступен")

@@ -92,9 +92,6 @@ class MainWindow(QWidget):
         self.sidebar.exit_clicked.connect(self.exit_app)
 
         self.controller.loaded.connect(self.on_tree_loaded)
-        # self.controller.load_failed.connect(self.on_tree_load_failed)
-        #self.controller.load_failed.connect(self._on_api_error)
-        
         self.controller.error_occurred.connect(self._on_api_error)
 
         self.tree.refresh_server_requested.connect(self.controller.refresh_server)
@@ -147,7 +144,7 @@ class MainWindow(QWidget):
     # SETTINGS
     # =========================
     def open_settings(self):
-        dlg = SettingsDialog(self.user_settings)
+        dlg = SettingsDialog(self.user_settings, self.api)
 
         if dlg.exec():
             dlg.apply()
