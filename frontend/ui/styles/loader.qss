@@ -1,5 +1,5 @@
 BusyOverlay {
-    background-color: rgba(0, 0, 0, 120);
+    background-color: rgba(0, 0, 0, 0);
 }
 
 BusyOverlay QLabel {
