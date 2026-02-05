@@ -42,4 +42,9 @@ class Settings:
     with open(CONFIG_PATH, "r", encoding="utf-8") as f:
         YAML = yaml.safe_load(f)
 
+    LOGIN_THROTTLE_ENABLED = YAML["security"]["login_throttle"]["enabled"]
+    LOGIN_MAX_ATTEMPTS = YAML["security"]["login_throttle"].get("max_attempts", 3)
+    LOGIN_BLOCK_SECONDS = YAML["security"]["login_throttle"].get("block_seconds", 120)
+
+
 settings = Settings()

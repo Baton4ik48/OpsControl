@@ -6,4 +6,4 @@ FRONTEND_DIR = os.path.abspath(
 
 RESOURCES_DIR = os.path.join(FRONTEND_DIR, "resources")
 ICONS_DIR = os.path.join(RESOURCES_DIR, "icons")
-
+LOG_DIR = os.path.join(FRONTEND_DIR, "logs")

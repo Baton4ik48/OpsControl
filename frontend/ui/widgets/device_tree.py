@@ -13,7 +13,7 @@ ROLE_SERVER_ID = Qt.ItemDataRole.UserRole + 2
 ROLE_PORT = Qt.ItemDataRole.UserRole + 3
 ROLE_IP = Qt.ItemDataRole.UserRole + 4
 
-CREDENTIALS_SHOW_TIMEOUT_MS = 2 * 60 * 1000  # 2 минуты
+CREDENTIALS_SHOW_TIMEOUT_MS = 1 * 60 * 1000  # 1 минута
 
 
 def format_dt(value):
@@ -26,8 +26,8 @@ def format_dt(value):
 
 
 class DeviceTree(QTreeWidget):
-    refresh_server_requested = pyqtSignal(int)
-    refresh_port_requested = pyqtSignal(int, int)
+    refresh_server_requested = pyqtSignal(int, str)
+    refresh_port_requested = pyqtSignal(int, int, str)
     open_ssh_requested = pyqtSignal(int)
     show_credentials_requested = pyqtSignal(int, int, str)
 
@@ -141,8 +141,6 @@ class DeviceTree(QTreeWidget):
                     port_item.setData(0, ROLE_PORT, port)
                     port_item.setData(0, ROLE_IP, srv["ip"])
 
-
-
                     port_item.setToolTip(0, tooltip)
                     port_item.setToolTip(2, tooltip)
 
@@ -184,6 +182,7 @@ class DeviceTree(QTreeWidget):
         # ===== SERVER =====
         if item_type == "server":
             server_id = item.data(0, ROLE_SERVER_ID)
+            ip = item.data(0, ROLE_IP)
             
             ssh_action = menu.addAction(self.icon_ssh, "SSH (Терминал)")
             ssh_action.triggered.connect(
@@ -192,7 +191,7 @@ class DeviceTree(QTreeWidget):
 
             refresh_action = menu.addAction(self.icon_update, "Обновить сервер")
             refresh_action.triggered.connect(
-                lambda: self.refresh_server_requested.emit(server_id)
+                lambda: self.refresh_server_requested.emit(server_id, ip)
             )
 
         # ===== PORT =====
@@ -206,10 +205,10 @@ class DeviceTree(QTreeWidget):
                 "Обновить порт"
             )
             refresh_port_action.triggered.connect(
-                lambda: self.refresh_port_requested.emit(server_id, port)
+                lambda: self.refresh_port_requested.emit(server_id, port, ip)
             )
 
-            show_creds_action = menu.addAction(self.icon_show, "Показать учётные данные")
+            show_creds_action = menu.addAction(self.icon_show, "Показать учетные данные")
             show_creds_action.triggered.connect(
                 lambda: self.show_credentials_requested.emit(server_id, port, ip)
             )

@@ -1,0 +1,8 @@
+BusyOverlay {
+    background-color: rgba(0, 0, 0, 120);
+}
+
+BusyOverlay QLabel {
+    color: white;
+    font-size: 16px;
+}
