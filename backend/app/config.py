@@ -13,13 +13,12 @@ load_dotenv(
     override=(APP_ENV == "dev")
 )
 
-
-print("ENV BACKEND_HOST =", os.getenv("BACKEND_HOST"))
-print("ENV BACKEND_PORT =", os.getenv("BACKEND_PORT"))
 print("ENV VAULT_ADDR =", os.getenv("VAULT_ADDR"))
 print("ENV VAULT_AUTH_METHOD =", os.getenv("VAULT_AUTH_METHOD"))
 print("ENV POSTGRES_HOST =", os.getenv("POSTGRES_HOST"))
 print("ENV POSTGRES_PORT =", os.getenv("POSTGRES_PORT"))
+print("ENV USE_VAULT_DB_CREDS =", os.getenv("USE_VAULT_DB_CREDS"))
+
 
 
 
@@ -27,24 +26,29 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 CONFIG_PATH = BASE_DIR / "config" / "config.yaml"
 
 class Settings:
-    BACKEND_HOST = os.getenv("BACKEND_HOST", "0.0.0.0")
-    BACKEND_PORT = int(os.getenv("BACKEND_PORT", 8443))
+    def __init__(self):
+        self.VAULT_ADDR = os.getenv("VAULT_ADDR", "localhost")
+        self.VAULT_AUTH_METHOD = os.getenv("VAULT_AUTH_METHOD")
+        self.VAULT_HTTP_TIMEOUT = int(os.getenv("VAULT_HTTP_TIMEOUT", 1))
+        self.VAULT_TOKEN = os.getenv("VAULT_TOKEN")
+        
+        self.POSTGRES_HOST = os.getenv("POSTGRES_HOST")
+        self.POSTGRES_PORT = int(os.getenv("POSTGRES_PORT", 5432))
+        self.POSTGRES_DB = os.getenv("POSTGRES_DB")
+        self.DB_CREDS_MODE = os.getenv("DB_CREDS_MODE", "static").lower()
+        self.POSTGRES_USER = os.getenv("POSTGRES_USER")
+        self.POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+        self.POSTGRES_CONNECT_TIMEOUT = int(os.getenv("POSTGRES_CONNECT_TIMEOUT", 1))
+        self.POSTGRES_QUERY_TIMEOUT = int(os.getenv("POSTGRES_QUERY_TIMEOUT", 3))
 
-    VAULT_ADDR = os.getenv("VAULT_ADDR", "localhost")
-    VAULT_AUTH_METHOD = os.getenv("VAULT_AUTH_METHOD")
+        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+            yaml_data = yaml.safe_load(f)
 
-    POSTGRES_HOST = os.getenv("POSTGRES_HOST")
-    POSTGRES_PORT = int(os.getenv("POSTGRES_PORT", 5432))
-    POSTGRES_DB = os.getenv("POSTGRES_DB")
-    POSTGRES_USER = os.getenv("POSTGRES_USER")
-    POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+        self.ALLOWED_NETWORKS = yaml_data["security"].get("allowed_networks", [])
 
-    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-        YAML = yaml.safe_load(f)
-
-    LOGIN_THROTTLE_ENABLED = YAML["security"]["login_throttle"]["enabled"]
-    LOGIN_MAX_ATTEMPTS = YAML["security"]["login_throttle"].get("max_attempts", 3)
-    LOGIN_BLOCK_SECONDS = YAML["security"]["login_throttle"].get("block_seconds", 120)
-
+        login = yaml_data["security"]["login_throttle"]
+        self.LOGIN_THROTTLE_ENABLED = login["enabled"]
+        self.LOGIN_MAX_ATTEMPTS = login.get("max_attempts", 3)
+        self.LOGIN_BLOCK_SECONDS = login.get("block_seconds", 120)
 
 settings = Settings()
