@@ -17,3 +17,24 @@ QMenu::item:selected {
 QMenu::icon {
     margin-left: 8px;
 }
+
+QMenuBar {
+    background-color: transparent;
+    color: #d0f0f0;
+    font-size: 14px;
+}
+
+QMenuBar::item {
+    background: transparent;
+    padding: 6px 12px;
+    border-radius: 6px;
+}
+
+QMenuBar::item:selected {
+    background-color: rgba(0, 200, 200, 0.25);
+    color: white;
+}
+
+QMenuBar::item:pressed {
+    background-color: rgba(0, 200, 200, 0.4);
+}
