@@ -14,6 +14,7 @@ from core.error_handler import handle_api_error
 from controllers.tree_controller import TreeController
 from controllers.console_controller import ConsoleController
 
+from ui.widgets.tools_menu import ToolsMenu
 from ui.widgets.sidebar import Sidebar
 from ui.widgets.device_tree import DeviceTree
 from ui.widgets.console import Console
@@ -40,9 +41,11 @@ class MainWindow(QWidget):
         main_layout = QVBoxLayout(self)
         body = QHBoxLayout()
 
+        self.menu = ToolsMenu()
         self.sidebar = Sidebar()
         self.tree = DeviceTree()
         self.console = Console()
+        main_layout.setMenuBar(self.menu)
 
         workspace = Workspace(self.tree, self.console)
 
