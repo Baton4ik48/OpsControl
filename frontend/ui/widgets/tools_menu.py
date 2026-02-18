@@ -8,7 +8,9 @@ class ToolsMenu(QMenuBar):
 
         tools_menu = self.addMenu("Инструменты")
 
-        firewall_action = tools_menu.addAction("Генератор firewall правил")
+        xfirewall_menu = tools_menu.addMenu("xFirewall")
+
+        firewall_action = xfirewall_menu.addAction("Сгенерировать правила")
         firewall_action.triggered.connect(self.open_firewall_generator)
 
     def open_firewall_generator(self):
