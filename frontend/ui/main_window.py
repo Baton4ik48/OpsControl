@@ -5,11 +5,11 @@ from PyQt6.QtGui import QIcon
 from PyQt6.QtCore import QTimer
 
 from core.paths import ICONS_DIR
-from core.config import settings
 from core.user_settings import UserSettings
 from core.api import ApiClient
-from core.api.base import ApiError
 from core.error_handler import handle_api_error
+from core.api.base import ApiError
+from core.busy_manager import BusyManager
 
 from controllers.tree_controller import TreeController
 from controllers.console_controller import ConsoleController
@@ -19,6 +19,7 @@ from ui.widgets.sidebar import Sidebar
 from ui.widgets.device_tree import DeviceTree
 from ui.widgets.console import Console
 from ui.widgets.workspace import Workspace
+from ui.widgets.busy_overlay import BusyOverlay
 from ui.dialogs.settings_dialog import SettingsDialog
 
 
@@ -54,10 +55,24 @@ class MainWindow(QWidget):
         main_layout.addLayout(body)
 
         # =========================
+        # BUSY
+        # =========================
+        self.busy = BusyManager()
+        self.busy_overlay = BusyOverlay(self)
+
+        self.busy.started.connect(self.busy_overlay.show_message)
+        self.busy.finished.connect(self.busy_overlay.hide_overlay)
+
+        # =========================
         # API + CONTROLLERS
         # =========================
         self.api = ApiClient()
-        self.controller = TreeController(self.api, self.tree, self.user_settings)
+        self.controller = TreeController(
+            self.api,
+            self.tree,
+            self.user_settings,
+            self.busy
+        )
 
         self.console_controller = ConsoleController(self.console.log)
         self.console.set_handler(self.console_controller.handle)
@@ -80,32 +95,31 @@ class MainWindow(QWidget):
         self.sidebar.exit_clicked.connect(self.exit_app)
 
         self.controller.loaded.connect(self.on_tree_loaded)
-        self.controller.load_failed.connect(self.on_tree_load_failed)
+        self.controller.error_occurred.connect(self._on_api_error)
 
         self.tree.refresh_server_requested.connect(self.controller.refresh_server)
         self.tree.refresh_port_requested.connect(self.controller.refresh_port)
-
         self.tree.open_ssh_requested.connect(self.controller.open_ssh_terminal)
-
         self.tree.show_credentials_requested.connect(self.controller.show_credentials)
+
+
+    def _on_api_error(self, error: ApiError):
+        handle_api_error(self, error)
 
     # =========================
     # TREE
     # =========================
     def reload(self):
-        self.console.log("Загрузка данных…")
         self.sidebar.set_actions_enabled(False)
         self.controller.start_load()
 
     def on_tree_loaded(self):
         self.sidebar.set_actions_enabled(True)
-        self.console.log("Данные загружены")
+        self.console.log("Топология сети загружена")
 
-    def on_tree_load_failed(self, error: ApiError):
-        self.sidebar.set_actions_enabled(False)
-        self.console.log("Ошибка загрузки данных")
-
-        handle_api_error(self, error)
+    # def on_tree_load_failed(self):
+    #     self.sidebar.set_actions_enabled(False)
+    #     self.console.log("Ошибка загрузки данных")
 
     # =========================
     # ACTIONS
@@ -133,7 +147,7 @@ class MainWindow(QWidget):
     # SETTINGS
     # =========================
     def open_settings(self):
-        dlg = SettingsDialog(self.user_settings)
+        dlg = SettingsDialog(self.user_settings, self.api)
 
         if dlg.exec():
             dlg.apply()
@@ -150,4 +164,15 @@ class MainWindow(QWidget):
     # EXIT
     # =========================
     def exit_app(self):
-        QApplication.quit()
+        # Создаем стандартное окно вопроса
+        reply = QMessageBox.question(
+            self, 
+            'Подтверждение', 
+            'Вы уверены, что хотите выйти?',
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, 
+            QMessageBox.StandardButton.No
+        )
+
+        # Если пользователь нажал "Да" — закрываем приложение
+        if reply == QMessageBox.StandardButton.Yes:
+            QApplication.quit()

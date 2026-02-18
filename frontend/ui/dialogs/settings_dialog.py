@@ -1,11 +1,12 @@
 import os
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QCheckBox, QSpinBox, QLabel, QPushButton, QHBoxLayout, QLineEdit, QGroupBox)
 from PyQt6.QtGui import QIcon
+from controllers.settings_controller import SettingsController
 
 from core.paths import ICONS_DIR
 
 class SettingsDialog(QDialog):
-    def __init__(self, settings):
+    def __init__(self, settings, api):
         super().__init__()
 
         self.settings = settings
@@ -14,6 +15,25 @@ class SettingsDialog(QDialog):
         self.setMinimumWidth(360)
 
         layout = QVBoxLayout(self)
+
+
+        # =========================
+        # STATUS
+        # =========================
+        status_layout = QHBoxLayout()
+
+        self.status_icon = QLabel()
+        self.status_text = QLabel("")
+
+        self.status_icon.setFixedSize(16, 16)
+
+        status_layout.addStretch()
+        status_layout.addWidget(self.status_icon)
+        status_layout.addWidget(self.status_text)
+        status_layout.addStretch()
+
+        layout.addLayout(status_layout)
+
 
 
         # =========================
@@ -116,6 +136,16 @@ class SettingsDialog(QDialog):
         self.backend_override_checkbox.toggled.connect(self._update_backend_enabled)
         self._update_backend_enabled(self.backend_override_checkbox.isChecked())
 
+        # =========================
+        # CONTROLLER
+        # =========================
+        self.controller = SettingsController(api)
+
+        self.controller.status_changed.connect(self._set_status)
+
+        self._set_status("unknown")
+        self.controller.check_backend_status()
+
     # =========================
     # APPLY
     # =========================
@@ -160,3 +190,21 @@ class SettingsDialog(QDialog):
     def _update_backend_enabled(self, enabled: bool):
         self.backend_host_input.setEnabled(enabled)
         self.backend_port_spin.setEnabled(enabled)
+
+
+
+    def _set_status(self, status: str):
+        icons = {
+            "ok": ("status_ok_icon.png", "Сервер доступен"),
+            "degraded": ("status_warn_icon.png", "Некоторые сервисы недоступны"),
+            "offline": ("status_offline_icon.png", "Серверы доступен"),
+            "unknown": ("status_unknown.png", "Проверка сервера....."),
+        }
+
+        icon, text = icons.get(status, icons["unknown"])
+
+        self.status_icon.setPixmap(
+            QIcon(os.path.join(ICONS_DIR, icon)).pixmap(16, 16)
+        )
+        self.status_text.setText(text)
+
