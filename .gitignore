@@ -4,5 +4,6 @@ __pycache__/
 *.pyd
 
 .env
+frontend/logs/**
 *.log
-frontend/logs/
+

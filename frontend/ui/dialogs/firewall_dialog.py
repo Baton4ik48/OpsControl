@@ -31,6 +31,9 @@ E — ports raw:
       tcp:443
       tcp:9200
 F — dst ip (IP-адрес куда)
+
+Каждая строка Excel = одна команда firewall.
+Формат: firewall forward add <id> rule "NAME" src <ip> dst <ip> tcp dport <port> ... pass
 """
 
 

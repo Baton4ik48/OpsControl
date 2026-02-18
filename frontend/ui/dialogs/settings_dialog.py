@@ -197,7 +197,7 @@ class SettingsDialog(QDialog):
         icons = {
             "ok": ("status_ok_icon.png", "Сервер доступен"),
             "degraded": ("status_warn_icon.png", "Некоторые сервисы недоступны"),
-            "offline": ("status_offline_icon.png", "Серверы доступен"),
+            "offline": ("status_offline_icon.png", "Сервер недоступен"),
             "unknown": ("status_unknown.png", "Проверка сервера....."),
         }
 
