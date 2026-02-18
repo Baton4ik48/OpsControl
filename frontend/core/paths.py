@@ -12,3 +12,4 @@ FIREWALL_TEMPLATE_PATH = os.path.join(
     TEMPLATES_DIR,
     "firewall_template.xlsx"
 )
+LOG_DIR = os.path.join(FRONTEND_DIR, "logs")

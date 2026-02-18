@@ -1,22 +1,58 @@
 from psycopg2.pool import SimpleConnectionPool
 from psycopg2 import OperationalError
 from app.config import settings
+import time
+import logging
+from app.services.db_credentials import get_db_credentials
 
+logger = logging.getLogger("postgres")
 
 # ==================================================
 # CONNECTION POOL
 # ==================================================
+pool: SimpleConnectionPool | None = None
 
-pool = SimpleConnectionPool(
-    minconn=1,
-    maxconn=10,
-    host=settings.POSTGRES_HOST,
-    port=settings.POSTGRES_PORT,
-    dbname=settings.POSTGRES_DB,
-    user=settings.POSTGRES_USER,
-    password=settings.POSTGRES_PASSWORD,
-    connect_timeout=5,
-)
+
+
+def init_pool(retries: int = 5, delay: int = 2):
+    global pool
+    creds = get_db_credentials()
+    for attempt in range(1, retries + 1):
+        try:
+            pool = SimpleConnectionPool(
+                minconn=1,
+                maxconn=10,
+                host=creds.host,
+                port=creds.port,
+                dbname=creds.dbname,
+                user=creds.user,
+                password=creds.password,
+                connect_timeout=settings.POSTGRES_CONNECT_TIMEOUT,
+                options=f"-c statement_timeout={settings.POSTGRES_QUERY_TIMEOUT * 1000}",
+                
+            )
+            logger.info("PostgreSQL pool initialized")
+            return
+
+        except OperationalError as e:
+            logger.warning(
+                f"PostgreSQL connection failed "
+                f"(attempt {attempt}/{retries}): {e}"
+            )
+            time.sleep(delay)
+
+    raise RuntimeError("PostgreSQL unavailable after retries")
+
+
+def is_ready() -> bool:
+    return pool is not None
+
+
+def close_pool():
+    global pool
+    if pool:
+        pool.closeall()
+        pool = None
 
 
 # ==================================================
@@ -35,20 +71,13 @@ def _execute(fn, retries: int = 1):
         except OperationalError as e:
             last_exc = e
             if conn:
-                # битое соединение — выкидываем
-                try:
-                    pool.putconn(conn, close=True)
-                except Exception:
-                    pass
+                pool.putconn(conn, close=True)
+                conn = None
 
         finally:
             if conn:
-                try:
-                    pool.putconn(conn)
-                except Exception:
-                    pass
+                pool.putconn(conn)
 
-    # если не получилось даже после retry
     raise last_exc
 
 

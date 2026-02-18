@@ -1,13 +1,22 @@
 import requests
 from core.config import settings
-from PyQt6.QtWidgets import QMessageBox
+from core.logger import get_logger
 
+log = get_logger(__name__)
 
 class ApiError(Exception):
-    def __init__(self, message: str, status_code: int | None = None):
+    def __init__(
+        self,
+        message: str,
+        status_code: int | None = None,
+        error_code: str | None = None,
+        retry_after: int | None = None,
+    ):
         super().__init__(message)
         self.message = message
         self.status_code = status_code
+        self.error_code = error_code
+        self.retry_after = retry_after
 
 
 class BaseApi:
@@ -18,11 +27,11 @@ class BaseApi:
     def get(self, path: str):
         return self._request("GET", path)
 
-    def put(self, path: str, params=None, json=None):
-        return self._request("PUT", path, params=params, json=json)
+    def post(self, path: str, json=None, params=None):
+        return self._request("POST", path, json=json, params=params)
 
-    def post(self, path: str, params=None, json=None):
-        return self._request("POST", path, params=params, json=json)
+    def put(self, path: str, json=None, params=None):
+        return self._request("PUT", path, json=json, params=params)
 
     def _request(self, method: str, path: str, **kwargs):
         url = f"{self.base_url}{path}"
@@ -35,82 +44,31 @@ class BaseApi:
                 **kwargs
             )
 
-            # HTTP ошибки (403, 404, 500, ...)
             if not r.ok:
                 try:
-                    detail = r.json().get("detail", r.text)
+                    payload = r.json()
                 except Exception:
-                    detail = r.text
+                    payload = {}
 
-                raise ApiError(detail, status_code=r.status_code)
+                raise ApiError(
+                    message=payload.get("detail", r.text),
+                    status_code=r.status_code,
+                    error_code=payload.get("error_code"),
+                    retry_after=payload.get("retry_after"),
+                )
 
             data = r.json()
 
-        except requests.RequestException as e:
-            # проблемы сети / соединения
-            raise ApiError(
-                "Backend недоступен",
-                status_code=None
-            ) from e
+            if path == "/api/status":
+                return data
 
-        # бизнес-ошибка API
-        if not data.get("success", False):
-            raise ApiError(
-                data.get("detail", "Unknown API error"),
-                status_code=400
-            )
+            if not data.get("success", False):
+                raise ApiError(
+                    data.get("detail", "Unknown API error"),
+                    status_code=r.status_code
+                )
 
-        return data["data"]
+            return data["data"]
 
-
-    def _handle_api_error(self, e: ApiError):
-        code = e.status_code
-
-        if code == 403:
-            QMessageBox.critical(
-                self,
-                "Доступ запрещён",
-                "Неверный пароль администратора"
-            )
-
-        elif code == 404:
-            QMessageBox.warning(
-                self,
-                "Не найдено",
-                "Учётные данные не найдены"
-            )
-
-        elif code == 409:
-            QMessageBox.warning(
-                self,
-                "Недоступно",
-                "Учётные данные временно недоступны"
-            )
-
-        elif code == 503:
-            QMessageBox.critical(
-                self,
-                "Хранилище недоступно",
-                "Vault временно недоступен.\nПопробуйте позже."
-            )
-
-        elif code == 504:
-            QMessageBox.warning(
-                self,
-                "Таймаут",
-                "Превышено время ожидания ответа"
-            )
-
-        elif code == 500:
-            QMessageBox.critical(
-                self,
-                "Ошибка сервера",
-                "Внутренняя ошибка сервера"
-            )
-
-        else:
-            QMessageBox.critical(
-                self,
-                "Ошибка",
-                e.message
-            )
+        except requests.RequestException:
+            raise ApiError("Backend недоступен")

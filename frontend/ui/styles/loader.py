@@ -9,7 +9,8 @@ def load_styles():
         "sidebar.qss",
         "workspace.qss",
         "table.qss",
-        "menu.qss"
+        "menu.qss",
+        "loader.qss"
     ]
 
     style = ""
