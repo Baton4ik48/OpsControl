@@ -13,15 +13,6 @@ load_dotenv(
     override=(APP_ENV == "dev")
 )
 
-print("ENV VAULT_ADDR =", os.getenv("VAULT_ADDR"))
-print("ENV VAULT_AUTH_METHOD =", os.getenv("VAULT_AUTH_METHOD"))
-print("ENV POSTGRES_HOST =", os.getenv("POSTGRES_HOST"))
-print("ENV POSTGRES_PORT =", os.getenv("POSTGRES_PORT"))
-print("ENV USE_VAULT_DB_CREDS =", os.getenv("USE_VAULT_DB_CREDS"))
-
-
-
-
 BASE_DIR = Path(__file__).resolve().parent.parent
 CONFIG_PATH = BASE_DIR / "config" / "config.yaml"
 
@@ -30,7 +21,9 @@ class Settings:
         self.VAULT_ADDR = os.getenv("VAULT_ADDR", "localhost")
         self.VAULT_AUTH_METHOD = os.getenv("VAULT_AUTH_METHOD")
         self.VAULT_HTTP_TIMEOUT = int(os.getenv("VAULT_HTTP_TIMEOUT", 1))
-        self.VAULT_TOKEN = os.getenv("VAULT_TOKEN")
+        self.VAULT_ROLE_ID = os.getenv("VAULT_ROLE_ID")
+        self.VAULT_SECRET_ID = os.getenv("VAULT_SECRET_ID")
+
         
         self.POSTGRES_HOST = os.getenv("POSTGRES_HOST")
         self.POSTGRES_PORT = int(os.getenv("POSTGRES_PORT", 5432))
