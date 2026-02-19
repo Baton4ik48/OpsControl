@@ -13,26 +13,26 @@ class VaultReadError(Exception):
 class VaultClient:
     def __init__(self):
         self.addr = settings.VAULT_ADDR.rstrip("/")
-        self.auth_mount = settings.VAULT_AUTH_METHOD
-        self.backend_token = settings.VAULT_TOKEN
+        self.http_timeout = settings.VAULT_HTTP_TIMEOUT
+        self.role_id = settings.VAULT_ROLE_ID
+        self.secret_id = settings.VAULT_SECRET_ID
 
-    # =============================
-    # USER LOGIN (GUI)
-    # =============================
+        self._backend_token = None
 
-    def login_userpass(self, username: str, password: str) -> str:
-        username = username.lower()
+    # ==========================================
+    # APPROLE LOGIN (для backend)
+    # ==========================================
 
-        url = (
-            f"{self.addr}"
-            f"/v1/auth/{self.auth_mount}/login/{username}"
-        )
+    def _approle_login(self) -> str:
+        url = f"{self.addr}/v1/auth/approle/login"
 
         resp = requests.post(
             url,
-            json={"password": password},
-            headers={"Content-Type": "application/json"},
-            timeout=settings.VAULT_HTTP_TIMEOUT,
+            json={
+                "role_id": self.role_id,
+                "secret_id": self.secret_id,
+            },
+            timeout=self.http_timeout,
         )
 
         if resp.status_code != 200:
@@ -40,28 +40,49 @@ class VaultClient:
 
         return resp.json()["auth"]["client_token"]
 
-    # =============================
-    # READ KV WITH USER TOKEN
-    # =============================
+    def _get_backend_token(self) -> str:
+        if not self._backend_token:
+            self._backend_token = self._approle_login()
+        return self._backend_token
+
+    # ==========================================
+    # USER LOGIN (GUI → Vault userpass)
+    # ==========================================
+
+    def login_userpass(self, username: str, password: str) -> str:
+        username = username.lower()
+
+        url = (
+            f"{self.addr}"
+            f"/v1/auth/userpass/login/{username}"
+        )
+
+        resp = requests.post(
+            url,
+            json={"password": password},
+            timeout=self.http_timeout,
+        )
+
+        if resp.status_code != 200:
+            raise VaultAuthError(resp.text)
+
+        return resp.json()["auth"]["client_token"]
+
+    # ==========================================
+    # READ KV (user token)
+    # ==========================================
 
     def read_kv_v2(self, token: str, vault_path: str) -> dict:
-        """
-        vault_path: credentials/server_253/port_22
-        """
-
         if not vault_path.startswith("credentials/"):
             raise VaultReadError("Invalid vault path")
 
         path = vault_path.replace("credentials/", "")
-
         url = f"{self.addr}/v1/credentials/data/{path}"
 
         resp = requests.get(
             url,
-            headers={
-                "Authorization": f"Bearer {token}",
-            },
-            timeout=settings.VAULT_HTTP_TIMEOUT,
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=self.http_timeout,
         )
 
         if resp.status_code != 200:
@@ -69,20 +90,19 @@ class VaultClient:
 
         return resp.json()["data"]["data"]
 
-
-    # =============================
-    # READ DATABASE CREDS (backend)
-    # =============================
+    # ==========================================
+    # DATABASE CREDS (backend token)
+    # ==========================================
 
     def read_database_creds(self, role_name: str) -> dict:
+        token = self._get_backend_token()
+
         url = f"{self.addr}/v1/database/creds/{role_name}"
 
         resp = requests.get(
             url,
-            headers={
-                "X-Vault-Token": self.backend_token
-            },
-            timeout=settings.VAULT_HTTP_TIMEOUT,
+            headers={"X-Vault-Token": token},
+            timeout=self.http_timeout,
         )
 
         if resp.status_code != 200:
