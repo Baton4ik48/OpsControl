@@ -68,3 +68,28 @@ def handle_api_error(parent, error: ApiError):
             error.message or "Неизвестная ошибка"
         )
 
+def handle_system_error(parent, error: Exception):
+    log.exception("System error occurred", exc_info=error)
+
+    if isinstance(error, FileNotFoundError):
+        QMessageBox.critical(
+            parent,
+            "Утилита не найдена",
+            "Не найдена системная SSH-утилита.\n\n"
+            "Убедитесь, что plink (Windows) или sshpass (Linux) установлены и доступны в PATH."
+        )
+        return
+
+    if isinstance(error, RuntimeError):
+        QMessageBox.critical(
+            parent,
+            "Ошибка SSH",
+            str(error)
+        )
+        return
+
+    QMessageBox.critical(
+        parent,
+        "Ошибка приложения",
+        "Произошла непредвиденная ошибка."
+    )

@@ -12,6 +12,8 @@ from core.api.base import ApiError
 from ui.dialogs.credentials_dialog import CredentialsDialog
 from ui.dialogs.workers.credentials_worker import CredentialsWorker
 
+from core.error_handler import handle_system_error
+
 log = get_logger(__name__)
 
 class TreeController(QObject):
@@ -191,15 +193,6 @@ class TreeController(QObject):
                     return
 
 
-
-    def open_ssh_terminal(self, server_id: int):
-        for b in self._data:
-            for s in b["servers"]:
-                if s["id"] == server_id:
-                    SshLauncher.open("user", s["ip"])
-                    return
-
-
     def show_credentials(self, server_id: int, port: int, ip: str):
         dlg = CredentialsDialog(ip, port)
 
@@ -210,7 +203,6 @@ class TreeController(QObject):
         )
 
         dlg.exec()
-
 
     def _start_credentials_worker(self, server_id, port, master_password):
         admin_login = self.user_settings.get("admin_login")
@@ -241,11 +233,58 @@ class TreeController(QObject):
         self._credentials_worker.error.connect(on_error)
         self._credentials_worker.start()
 
+    def connect_ssh(self, server_id: int, port: int, ip: str):
+        dlg = CredentialsDialog(ip, port, mode="ssh")
+
+        dlg.submitted.connect(
+            lambda master_password: self._start_ssh_worker(
+                server_id, port, master_password
+            )
+        )
+
+        dlg.exec()
+
+    def _start_ssh_worker(self, server_id, port, master_password):
+        admin_login = self.user_settings.get("admin_login")
+
+        self.busy.start("Получение учётных данных…")
+
+        self._credentials_worker = CredentialsWorker(
+            api=self.api,
+            server_id=server_id,
+            port=port,
+            username=admin_login,
+            master_password=master_password
+        )
+
+        def on_success(data):
+            username = data["username"]
+            password = data["password"]
+            host = self._get_ip_by_server_id(server_id)
+
+            if not host:
+                self.busy.stop()
+                return
+
+            try:
+                SshLauncher.open(username, password, host)
+            except RuntimeError as e:
+                handle_system_error(None, e)
+
+        def on_error(e: ApiError):
+            self.error_occurred.emit(e)
+
+        self._credentials_worker.finished.connect(self.busy.stop)
+        self._credentials_worker.success.connect(on_success)
+        self._credentials_worker.error.connect(on_error)
+        self._credentials_worker.start()
 
 
-
-
-
+    def _get_ip_by_server_id(self, server_id):
+        for b in self._data:
+            for s in b["servers"]:
+                if s["id"] == server_id:
+                    return s["ip"]
 
 
 

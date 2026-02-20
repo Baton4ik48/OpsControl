@@ -28,7 +28,7 @@ def format_dt(value):
 class DeviceTree(QTreeWidget):
     refresh_server_requested = pyqtSignal(int, str)
     refresh_port_requested = pyqtSignal(int, int, str)
-    open_ssh_requested = pyqtSignal(int)
+    open_ssh_requested = pyqtSignal(int, int, str)
     show_credentials_requested = pyqtSignal(int, int, str)
 
     def __init__(self):
@@ -179,22 +179,49 @@ class DeviceTree(QTreeWidget):
 
         menu = QMenu(self)
 
-        # ===== SERVER =====
+        # =========================
+        # SERVER
+        # =========================
         if item_type == "server":
             server_id = item.data(0, ROLE_SERVER_ID)
             ip = item.data(0, ROLE_IP)
-            
-            ssh_action = menu.addAction(self.icon_ssh, "SSH (Терминал)")
-            ssh_action.triggered.connect(
-                lambda: self.open_ssh_requested.emit(server_id)
-            )
 
+            ssh_port = None
+
+            # ищем SSH порт среди дочерних элементов
+            for i in range(item.childCount()):
+                child = item.child(i)
+                port = child.data(0, ROLE_PORT)
+
+                if port is None:
+                    continue
+
+                label = get_label(port)
+
+                if label.lower() == "ssh":
+                    ssh_port = port
+                    break
+
+            # --- SSH ---
+            if ssh_port:
+                ssh_action = menu.addAction(self.icon_ssh, "Подключиться по SSH")
+                ssh_action.triggered.connect(
+                    lambda: self.open_ssh_requested.emit(server_id, ssh_port, ip)
+                )
+            else:
+                # неактивный пункт для UX
+                ssh_action = menu.addAction(self.icon_ssh, "SSH недоступен")
+                ssh_action.setEnabled(False)
+
+            # --- REFRESH ---
             refresh_action = menu.addAction(self.icon_update, "Обновить сервер")
             refresh_action.triggered.connect(
                 lambda: self.refresh_server_requested.emit(server_id, ip)
             )
 
-        # ===== PORT =====
+        # =========================
+        # PORT
+        # =========================
         elif item_type == "port":
             server_id = item.data(0, ROLE_SERVER_ID)
             port = item.data(0, ROLE_PORT)
@@ -208,11 +235,13 @@ class DeviceTree(QTreeWidget):
                 lambda: self.refresh_port_requested.emit(server_id, port, ip)
             )
 
-            show_creds_action = menu.addAction(self.icon_show, "Показать учетные данные")
+            show_creds_action = menu.addAction(
+                self.icon_show,
+                "Показать учётные данные"
+            )
             show_creds_action.triggered.connect(
                 lambda: self.show_credentials_requested.emit(server_id, port, ip)
             )
-            menu.addSeparator()
 
         menu.exec(self.viewport().mapToGlobal(pos))
 

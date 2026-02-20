@@ -99,7 +99,7 @@ class MainWindow(QWidget):
 
         self.tree.refresh_server_requested.connect(self.controller.refresh_server)
         self.tree.refresh_port_requested.connect(self.controller.refresh_port)
-        self.tree.open_ssh_requested.connect(self.controller.open_ssh_terminal)
+        self.tree.open_ssh_requested.connect(self.controller.connect_ssh)
         self.tree.show_credentials_requested.connect(self.controller.show_credentials)
 
 
