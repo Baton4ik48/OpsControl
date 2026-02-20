@@ -13,15 +13,23 @@ from core.paths import ICONS_DIR
 class CredentialsDialog(QDialog):
     submitted = pyqtSignal(str)
 
-    def __init__(self, ip: str, port: int):
+    def __init__(self, ip: str, port: int, mode: str = "show"):
         super().__init__()
 
-        self.setWindowTitle(f"Учётные данные {ip}:{port}")
+        self.mode = mode
+
+        if mode == "ssh":
+            self.setWindowTitle(f"SSH подключение {ip}:{port}")
+        else:
+            self.setWindowTitle(f"Учётные данные {ip}:{port}")
         self.setModal(True)
 
         layout = QVBoxLayout(self)
 
-        layout.addWidget(QLabel("Введите пароль администратора:"))
+        if mode == "ssh":
+            layout.addWidget(QLabel("Введите мастер-пароль для подключения к серверу(SSH):"))
+        else:
+            layout.addWidget(QLabel("Введите пароль администратора:"))
 
         self.admin_input = QLineEdit()
         self.admin_input.setEchoMode(QLineEdit.EchoMode.Password)
