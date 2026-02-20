@@ -14,7 +14,6 @@ class InvalidMasterPassword(Exception):
 class CredentialsNotFound(Exception):
     pass
 
-
 class TooManyLoginAttempts(Exception):
     def __init__(self, retry_after_seconds: int):
         self.retry_after_seconds = retry_after_seconds

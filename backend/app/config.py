@@ -20,9 +20,10 @@ class Settings:
     def __init__(self):
         self.VAULT_ADDR = os.getenv("VAULT_ADDR", "localhost")
         self.VAULT_AUTH_METHOD = os.getenv("VAULT_AUTH_METHOD")
-        self.VAULT_HTTP_TIMEOUT = int(os.getenv("VAULT_HTTP_TIMEOUT", 1))
+        self.VAULT_HTTP_TIMEOUT = int(os.getenv("VAULT_HTTP_TIMEOUT", 5))
         self.VAULT_ROLE_ID = os.getenv("VAULT_ROLE_ID")
         self.VAULT_SECRET_ID = os.getenv("VAULT_SECRET_ID")
+        self.VAULT_DATABASE_ROLE_NAME = os.getenv("VAULT_DATABASE_ROLE_NAME")
 
         
         self.POSTGRES_HOST = os.getenv("POSTGRES_HOST")
@@ -31,8 +32,8 @@ class Settings:
         self.DB_CREDS_MODE = os.getenv("DB_CREDS_MODE", "static").lower()
         self.POSTGRES_USER = os.getenv("POSTGRES_USER")
         self.POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
-        self.POSTGRES_CONNECT_TIMEOUT = int(os.getenv("POSTGRES_CONNECT_TIMEOUT", 1))
-        self.POSTGRES_QUERY_TIMEOUT = int(os.getenv("POSTGRES_QUERY_TIMEOUT", 3))
+        self.POSTGRES_CONNECT_TIMEOUT = int(os.getenv("POSTGRES_CONNECT_TIMEOUT", 4))
+        self.POSTGRES_QUERY_TIMEOUT = int(os.getenv("POSTGRES_QUERY_TIMEOUT", 7))
 
         with open(CONFIG_PATH, "r", encoding="utf-8") as f:
             yaml_data = yaml.safe_load(f)
