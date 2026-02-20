@@ -41,7 +41,7 @@ def _static_creds() -> DBCreds:
 def _get_dynamic_db_creds() -> DBCreds:
     vault = VaultClient()
 
-    data = vault.read_database_creds("ppm-role")
+    data = vault.read_database_creds()
 
     return DBCreds(
         host=settings.POSTGRES_HOST,

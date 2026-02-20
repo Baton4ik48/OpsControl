@@ -1,5 +1,5 @@
 from psycopg2.pool import SimpleConnectionPool
-from psycopg2 import OperationalError
+from psycopg2 import OperationalError, InterfaceError, errors
 from app.config import settings
 import time
 import logging
@@ -60,23 +60,53 @@ def close_pool():
 # ==================================================
 
 def _execute(fn, retries: int = 1):
+    global pool
+
     last_exc = None
 
-    for _ in range(retries + 1):
+    for attempt in range(retries + 1):
         conn = None
+
         try:
+            # если пул не создан — создаём
+            if pool is None:
+                logger.warning("Pool is None → initializing")
+                init_pool()
+
             conn = pool.getconn()
             return fn(conn)
 
-        except OperationalError as e:
+        # 🔥 Ловим ВСЕ ошибки соединения и авторизации
+        except (OperationalError,
+                InterfaceError,
+                errors.InsufficientPrivilege,
+                errors.InvalidAuthorizationSpecification) as e:
+
             last_exc = e
+
+            logger.warning(f"[POSTGRES] DB error detected: {e}")
+            logger.warning("Rebuilding pool and refreshing Vault credentials")
+
+            # закрываем текущее соединение если есть
             if conn:
-                pool.putconn(conn, close=True)
+                try:
+                    pool.putconn(conn, close=True)
+                except Exception:
+                    pass
                 conn = None
+
+            # пересоздаём пул (а значит получаем новые Vault creds)
+            close_pool()
+            init_pool()
+
+            continue
 
         finally:
             if conn:
-                pool.putconn(conn)
+                try:
+                    pool.putconn(conn)
+                except Exception:
+                    pass
 
     raise last_exc
 

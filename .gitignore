@@ -3,7 +3,8 @@ __pycache__/
 *.pyo
 *.pyd
 
-.env
+**/.env
+**/.env.*
+!**/.env.example
 frontend/logs/**
-*.log
-
+backend/logs/**
