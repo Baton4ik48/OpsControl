@@ -14,6 +14,7 @@ from ui.dialogs.workers.credentials_worker import CredentialsWorker
 
 from core.error_handler import handle_system_error
 
+
 log = get_logger(__name__)
 
 class TreeController(QObject):
@@ -26,6 +27,7 @@ class TreeController(QObject):
         self.tree = tree
         self.user_settings = user_settings
         self.busy = busy    
+        self.tree.set_user_settings(self.user_settings)
 
         self._data = None
         self._runtime_status = {}
@@ -233,16 +235,79 @@ class TreeController(QObject):
         self._credentials_worker.error.connect(on_error)
         self._credentials_worker.start()
 
-    def connect_protocol(self, server_id: int, port: int, ip: str, protocol: str):
+    def connect_protocol(self, server_id: int, port: int, ip: str, _unused_protocol: str):
+        settings = self.user_settings
+        external_apps = settings.get("external_apps") or []
+        web_ports = settings.get("web_ports") or []
+        # =========================
+        # SSH
+        # =========================
+        if port == 22:
+            protocol = "ssh"
+
+        # =========================
+        # RDP
+        # =========================
+        elif port == 3389:
+            protocol = "rdp"
+
+        else:
+            protocol = None
+
+            # =========================
+            # EXTERNAL APP (приоритет)
+            # =========================
+            for app in external_apps:
+                if app.get("port") == port:
+                    try:
+                        ProtocolLauncher.open_external(app.get("path"))
+                    except Exception as e:
+                        handle_system_error(None, e)
+                    return
+
+            # =========================
+            # WEB
+            # =========================
+            for entry in web_ports:
+                if entry.get("port") == port:
+                    protocol = entry.get("scheme")
+                    break
+
+        # =========================
+        # Если ничего не найдено
+        # =========================
+        if not protocol:
+            handle_system_error(None, RuntimeError("UNSUPPORTED_PROTOCOL"))
+            return
+
+        # =========================
+        # WEB — без мастер-пароля
+        # =========================
+        if protocol in ("http", "https"):
+            try:
+                ProtocolLauncher.open(protocol, None, None, ip, port)
+            except Exception as e:
+                log.exception("Ошибка запуска WEB протокола")
+                handle_system_error(None, e)
+            return
+
+        # =========================
+        # SSH / RDP — с мастер-паролем
+        # =========================
         dlg = CredentialsDialog(ip, port, mode=protocol)
 
         dlg.submitted.connect(
-            lambda master_password: self._start_protocol_worker(
-                server_id, port, master_password, protocol
-            )
+            lambda master_password:
+                self._start_protocol_worker(
+                    server_id,
+                    port,
+                    master_password,
+                    protocol
+                )
         )
+
         dlg.exec()
-        
+
     def _start_protocol_worker(self, server_id, port, master_password, protocol):
         admin_login = self.user_settings.get("admin_login")
 

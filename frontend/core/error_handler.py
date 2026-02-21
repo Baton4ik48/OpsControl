@@ -81,10 +81,18 @@ def handle_system_error(parent, error: Exception):
         return
 
     if isinstance(error, RuntimeError):
+
+        message_map = {
+            "PLINK_NOT_FOUND": "Не найден plink.\nУстановите PuTTY и добавьте в PATH.",
+            "SSHPASS_NOT_FOUND": "Не найден sshpass.\nУстановите пакет sshpass.",
+            "RDP_ONLY_WINDOWS": "RDP доступен только на Windows.",
+            "UNSUPPORTED_PROTOCOL": "Данный протокол не поддерживается."
+        }
+
         QMessageBox.critical(
             parent,
-            "Ошибка SSH",
-            str(error)
+            "Ошибка протокола",
+            message_map.get(str(error), "Неизвестная ошибка протокола.")
         )
         return
 

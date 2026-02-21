@@ -13,9 +13,13 @@ DEFAULT_SETTINGS = {
     "backend_override_enabled": False,
     "backend_scheme": "http",
     "backend_host": "",
-    "backend_port": 0
+    "backend_port": 0,
+    "web_ports": [
+        {"port": 80, "scheme": "http"},
+        {"port": 443, "scheme": "https"}
+    ],
+    "external_apps": []
 }
-
 
 
 class UserSettings:

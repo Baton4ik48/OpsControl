@@ -11,8 +11,6 @@ from PyQt6.QtGui import QIcon
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 
 from core.paths import ICONS_DIR
-from core.port_checker import get_label
-
 
 ROLE_TYPE = Qt.ItemDataRole.UserRole + 1
 ROLE_SERVER_ID = Qt.ItemDataRole.UserRole + 2
@@ -58,6 +56,8 @@ class DeviceTree(QTreeWidget):
         self.icon_ssh = QIcon(os.path.join(ICONS_DIR, "ssh_icon.png"))
         self.icon_rdp = QIcon(os.path.join(ICONS_DIR, "rdp_icon.png"))
         self.icon_show = QIcon(os.path.join(ICONS_DIR, "show_icon.png"))
+        self.icon_web = QIcon(os.path.join(ICONS_DIR, "web_icon.png"))
+        self.icon_external = QIcon(os.path.join(ICONS_DIR, "external_icon.png"))
 
         header = self.header()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
@@ -78,6 +78,9 @@ class DeviceTree(QTreeWidget):
 
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._open_context_menu)
+
+    def set_user_settings(self, settings):
+        self.user_settings = settings
 
     # ==================================================
     # RENDER
@@ -120,7 +123,6 @@ class DeviceTree(QTreeWidget):
                         icon = self.icon_unknown
 
                     port = p["port"]
-                    label = get_label(port)
 
                     port_item = QTreeWidgetItem([
                         f"port {port}",
@@ -153,7 +155,9 @@ class DeviceTree(QTreeWidget):
         if not item:
             return
 
-        if item.data(0, ROLE_TYPE) != "server":
+        item_type = item.data(0, ROLE_TYPE)
+
+        if item_type not in ("server", "port"):
             return
 
         server_id = item.data(0, ROLE_SERVER_ID)
@@ -161,48 +165,48 @@ class DeviceTree(QTreeWidget):
 
         menu = QMenu(self)
 
-        protocols = []
+        # =========================
+        # SERVER
+        # =========================
+        if item_type == "server":
 
-        # ищем протоколы среди портов сервера
-        for i in range(item.childCount()):
-            child = item.child(i)
-            port = child.data(0, ROLE_PORT)
+            for i in range(item.childCount()):
+                child = item.child(i)
+                port = child.data(0, ROLE_PORT)
 
-            if not port:
-                continue
+                if not port:
+                    continue
 
-            label = get_label(port).lower()
+                self._add_connect_action(menu, server_id, ip, port)
 
-            if label == "ssh":
-                protocols.append(("ssh", port))
+            menu.addSeparator()
 
-            elif label == "rdp":
-                protocols.append(("rdp", port))
+            refresh_action = menu.addAction(
+                self.icon_update,
+                "Обновить сервер"
+            )
+            refresh_action.triggered.connect(
+                lambda: self.refresh_server_requested.emit(server_id, ip)
+            )
 
-        # --- протоколы ---
-        if protocols:
-            for protocol, port in protocols:
+        # =========================
+        # PORT
+        # =========================
+        elif item_type == "port":
 
-                if protocol == "ssh":
-                    action = menu.addAction(self.icon_ssh, "Подключиться по SSH")
+            port = item.data(0, ROLE_PORT)
 
-                elif protocol == "rdp":
-                    action = menu.addAction(self.icon_rdp, "Подключиться по RDP")
+            self._add_connect_action(menu, server_id, ip, port)
 
-                action.triggered.connect(
-                    lambda checked=False, p=protocol, prt=port:
-                        self.open_protocol_requested.emit(server_id, prt, ip, p)
-                )
-        else:
-            disabled = menu.addAction("Нет доступных протоколов")
-            disabled.setEnabled(False)
+            menu.addSeparator()
 
-        menu.addSeparator()
-
-        refresh_action = menu.addAction(self.icon_update, "Обновить сервер")
-        refresh_action.triggered.connect(
-            lambda: self.refresh_server_requested.emit(server_id, ip)
-        )
+            refresh_action = menu.addAction(
+                self.icon_update,
+                "Обновить порт"
+            )
+            refresh_action.triggered.connect(
+                lambda: self.refresh_port_requested.emit(server_id, port, ip)
+            )
 
         menu.exec(self.viewport().mapToGlobal(pos))
 
@@ -254,3 +258,51 @@ class DeviceTree(QTreeWidget):
         timer.start(CREDENTIALS_SHOW_TIMEOUT_MS)
 
         self._credential_timers[key] = timer
+
+    def _add_connect_action(self, menu, server_id, ip, port):
+
+        icon = None
+        text = None
+
+        # SSH
+        if port == 22:
+            icon = self.icon_ssh
+            text = "Подключиться по SSH"
+
+        # RDP
+        elif port == 3389:
+            icon = self.icon_rdp
+            text = "Подключиться по RDP"
+
+        else:
+            external_apps = []
+            web_ports = []
+
+            if hasattr(self, "user_settings") and self.user_settings:
+                external_apps = self.user_settings.get("external_apps") or []
+                web_ports = self.user_settings.get("web_ports") or []
+
+            # EXTERNAL 
+            for app in external_apps:
+                if app.get("port") == port:
+                    icon = self.icon_external
+                    text = f"Открыть {app.get('name')}"
+                    break
+
+            # WEB
+            if not text:
+                for entry in web_ports:
+                    if entry.get("port") == port:
+                        icon = self.icon_web
+                        scheme = entry.get("scheme")
+                        text = f"Открыть Web ({scheme.upper()})"
+                        break
+
+        if not text:
+            return
+
+        action = menu.addAction(icon, text)
+        action.triggered.connect(
+            lambda checked=False, p=port:
+                self.open_protocol_requested.emit(server_id, p, ip, "")
+        )
