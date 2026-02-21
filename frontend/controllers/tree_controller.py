@@ -4,7 +4,7 @@ from PyQt6.QtCore import QObject, pyqtSignal
 
 from controllers.port_check_manager import PortCheckManager
 from controllers.load_tree_worker import LoadTreeWorker
-from controllers.ssh_launcher import SshLauncher
+from controllers.protocol_launcher import ProtocolLauncher
 
 from core.logger import get_logger
 from core.api.base import ApiError
@@ -233,21 +233,20 @@ class TreeController(QObject):
         self._credentials_worker.error.connect(on_error)
         self._credentials_worker.start()
 
-    def connect_ssh(self, server_id: int, port: int, ip: str):
-        dlg = CredentialsDialog(ip, port, mode="ssh")
+    def connect_protocol(self, server_id: int, port: int, ip: str, protocol: str):
+        dlg = CredentialsDialog(ip, port, mode=protocol)
 
         dlg.submitted.connect(
-            lambda master_password: self._start_ssh_worker(
-                server_id, port, master_password
+            lambda master_password: self._start_protocol_worker(
+                server_id, port, master_password, protocol
             )
         )
-
         dlg.exec()
-
-    def _start_ssh_worker(self, server_id, port, master_password):
+        
+    def _start_protocol_worker(self, server_id, port, master_password, protocol):
         admin_login = self.user_settings.get("admin_login")
 
-        self.busy.start("Получение учётных данных…")
+        self.busy.start(f"Получение учётных данных для {protocol.upper()}…")
 
         self._credentials_worker = CredentialsWorker(
             api=self.api,
@@ -267,8 +266,8 @@ class TreeController(QObject):
                 return
 
             try:
-                SshLauncher.open(username, password, host)
-            except RuntimeError as e:
+                ProtocolLauncher.open(protocol, username, password, host, port)
+            except Exception as e:
                 handle_system_error(None, e)
 
         def on_error(e: ApiError):
@@ -278,7 +277,6 @@ class TreeController(QObject):
         self._credentials_worker.success.connect(on_success)
         self._credentials_worker.error.connect(on_error)
         self._credentials_worker.start()
-
 
     def _get_ip_by_server_id(self, server_id):
         for b in self._data:
