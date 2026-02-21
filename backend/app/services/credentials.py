@@ -1,5 +1,5 @@
 from app.services.vault_client import VaultClient, VaultAuthError, VaultReadError
-from app.services.postgres import get_vault_path_by_server_port
+from app.services.db.credentials import get_vault_path_by_server_port
 from app.services.login_throttle import throttle, TooManyAttempts
 from app.config import settings
 from app.logging import get_logger

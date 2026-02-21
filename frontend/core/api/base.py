@@ -33,6 +33,9 @@ class BaseApi:
     def put(self, path: str, json=None, params=None):
         return self._request("PUT", path, json=json, params=params)
 
+    def delete(self, path: str, json=None, params=None):
+        return self._request("DELETE", path, json=json, params=params)
+
     def _request(self, method: str, path: str, **kwargs):
         url = f"{self.base_url}{path}"
 

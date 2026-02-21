@@ -10,7 +10,7 @@ from app.services.credentials import (
 )
 
 router = APIRouter(
-    prefix="/api/credentials",
+    prefix="/credentials",
     tags=["credentials"]
 )
 
@@ -23,7 +23,7 @@ class ShowCredentialsRequest(BaseModel):
 
 
 @router.post("/show")
-def api_show_credentials(
+def show_credentials_api(
     data: ShowCredentialsRequest,
     request: Request,
 ):
@@ -37,7 +37,11 @@ def api_show_credentials(
             master_password=data.master_password,
             client_ip=client_ip,
         )
-        return {"success": True, "data": creds}
+
+        return {
+            "success": True,
+            "data": creds
+        }
 
     except TooManyLoginAttempts as e:
         return JSONResponse(
@@ -61,3 +65,5 @@ def api_show_credentials(
             status_code=404,
             detail="Credentials not found"
         )
+    
+

@@ -1,0 +1,94 @@
+from app.services.db.pool import _execute
+
+
+# ==========================
+# READ
+# ==========================
+
+def load_servers(branch_id: int):
+    def work(conn):
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT id, name, ip
+            FROM servers
+            WHERE branch_id = %s
+            ORDER BY name
+        """, (branch_id,))
+        rows = cur.fetchall()
+        cur.close()
+        return rows
+
+    return _execute(work)
+
+
+# ==========================
+# CREATE
+# ==========================
+
+def create_server(branch_id: int, name: str, ip: str) -> int:
+    def work(conn):
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO servers (branch_id, name, ip)
+            VALUES (%s, %s, %s)
+            RETURNING id
+        """, (branch_id, name, ip))
+        new_id = cur.fetchone()[0]
+        conn.commit()
+        cur.close()
+        return new_id
+
+    return _execute(work)
+
+
+# ==========================
+# UPDATE
+# ==========================
+
+def update_server_name(server_id: int, new_name: str) -> int:
+    def work(conn):
+        cur = conn.cursor()
+        cur.execute(
+            "UPDATE servers SET name = %s WHERE id = %s",
+            (new_name, server_id)
+        )
+        affected = cur.rowcount
+        conn.commit()
+        cur.close()
+        return affected
+
+    return _execute(work)
+
+
+def update_server_ip(server_id: int, new_ip: str) -> int:
+    def work(conn):
+        cur = conn.cursor()
+        cur.execute(
+            "UPDATE servers SET ip = %s WHERE id = %s",
+            (new_ip, server_id)
+        )
+        affected = cur.rowcount
+        conn.commit()
+        cur.close()
+        return affected
+
+    return _execute(work)
+
+
+# ==========================
+# DELETE
+# ==========================
+
+def delete_server(server_id: int) -> int:
+    def work(conn):
+        cur = conn.cursor()
+        cur.execute(
+            "DELETE FROM servers WHERE id = %s",
+            (server_id,)
+        )
+        affected = cur.rowcount
+        conn.commit()
+        cur.close()
+        return affected
+
+    return _execute(work)

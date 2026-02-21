@@ -9,3 +9,16 @@ class ServerApi(BaseApi):
 
     def update_ip(self, server_id: int, new_ip: str):
         self.put(f"/api/servers/{server_id}/ip", params={"new_ip": new_ip})
+
+    def create(self, branch_id: int, name: str, ip: str):
+        return self.post(
+            "/api/servers",
+            params={
+                "branch_id": branch_id,
+                "name": name,
+                "ip": ip
+            }
+        )
+
+    def delete_server(self, server_id: int):
+        return super().delete(f"/api/servers/{server_id}")

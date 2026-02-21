@@ -197,7 +197,15 @@ class DeviceTree(QTreeWidget):
             port = item.data(0, ROLE_PORT)
 
             self._add_connect_action(menu, server_id, ip, port)
-
+            
+            show_action = menu.addAction(
+                self.icon_show,
+                "Показать учётные данные"
+            )
+            show_action.triggered.connect(
+                lambda checked=False, p=port:
+                    self.show_credentials_requested.emit(server_id, p, ip)
+            )
             menu.addSeparator()
 
             refresh_action = menu.addAction(
