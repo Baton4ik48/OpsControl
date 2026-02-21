@@ -11,6 +11,7 @@ from core.error_handler import handle_api_error
 from core.api.base import ApiError
 from core.busy_manager import BusyManager
 
+
 from controllers.tree_controller import TreeController
 from controllers.console_controller import ConsoleController
 
@@ -99,7 +100,7 @@ class MainWindow(QWidget):
 
         self.tree.refresh_server_requested.connect(self.controller.refresh_server)
         self.tree.refresh_port_requested.connect(self.controller.refresh_port)
-        self.tree.open_ssh_requested.connect(self.controller.connect_ssh)
+        self.tree.open_protocol_requested.connect(self.controller.connect_protocol)
         self.tree.show_credentials_requested.connect(self.controller.show_credentials)
 
 
