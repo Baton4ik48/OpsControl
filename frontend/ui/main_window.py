@@ -151,7 +151,6 @@ class MainWindow(QWidget):
         dlg = SettingsDialog(self.user_settings, self.api)
 
         if dlg.exec():
-            dlg.apply()
             self._apply_auto_refresh()
 
             if self.user_settings.get("backend_override_enabled"):

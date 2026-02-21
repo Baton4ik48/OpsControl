@@ -1,7 +1,8 @@
 import subprocess
 import sys
 import shutil
-
+import webbrowser
+import os
 
 class ProtocolLauncher:
 
@@ -13,6 +14,9 @@ class ProtocolLauncher:
 
         elif protocol == "rdp":
             ProtocolLauncher._open_rdp(user, password, host)
+
+        elif protocol in ("http", "https"):
+            ProtocolLauncher._open_web(protocol, host, port)
 
         else:
             raise RuntimeError("UNSUPPORTED_PROTOCOL")
@@ -88,3 +92,24 @@ class ProtocolLauncher:
                 "cmdkey",
                 f"/delete:TERMSRV/{host}"
             ], check=False)
+    # =========================
+    # WEB
+    # =========================
+    @staticmethod
+    def _open_web(protocol, host, port):
+        url = f"{protocol}://{host}:{port}"
+        webbrowser.open(url)
+
+    # =========================
+    # EXTERNAL APP
+    # =========================
+    @staticmethod
+    def open_external(app_path: str):
+
+        if not os.path.exists(app_path):
+            raise RuntimeError("EXTERNAL_APP_NOT_FOUND")
+
+        try:
+            subprocess.Popen([app_path])
+        except Exception as e:
+            raise RuntimeError(f"EXTERNAL_APP_LAUNCH_FAILED: {e}")

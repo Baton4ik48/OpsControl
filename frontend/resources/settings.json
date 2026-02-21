@@ -5,5 +5,26 @@
   "backend_override_enabled": false,
   "backend_scheme": "",
   "backend_host": "127.0.0.2",
-  "backend_port": 443
+  "backend_port": 443,
+  "web_ports": [
+    {
+      "port": 80,
+      "scheme": "http"
+    },
+    {
+      "port": 443,
+      "scheme": "https"
+    },
+    {
+      "port": 9877,
+      "scheme": "https"
+    }
+  ],
+  "external_apps": [
+    {
+      "name": "Efros Config Inspector",
+      "port": 20000,
+      "path": "C:/Program Files (x86)/EFROS Config Inspector 4/Console/CIWPF.exe"
+    }
+  ]
 }
