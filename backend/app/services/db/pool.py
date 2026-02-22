@@ -31,6 +31,7 @@ def init_pool(retries: int = 5, delay: int = 2):
             return
         except OperationalError as e:
             logger.warning(f"Attempt {attempt}: {e}")
+            print("⚠️ POOL RECREATE TRIGGERED:", type(e), e)
             time.sleep(delay)
 
     raise RuntimeError("PostgreSQL unavailable")
@@ -49,24 +50,40 @@ def _execute(fn, retries: int = 1):
 
     for _ in range(retries + 1):
         conn = None
+        local_pool = pool
+
         try:
-            if pool is None:
+            if local_pool is None:
                 init_pool()
+                local_pool = pool
 
-            conn = pool.getconn()
-            return fn(conn)
+            conn = local_pool.getconn()
+            result = fn(conn)
+            return result
 
-        except (OperationalError,
-                InterfaceError,
-                errors.InsufficientPrivilege,
-                errors.InvalidAuthorizationSpecification) as e:
+        except (
+            OperationalError,
+            InterfaceError,
+            errors.InvalidAuthorizationSpecification,
+        ) as e:
 
             last_exc = e
+
+            if conn:
+                try:
+                    local_pool.putconn(conn, close=True)
+                except Exception:
+                    pass
+
             close_pool()
             init_pool()
+            continue
 
         finally:
             if conn:
-                pool.putconn(conn)
+                try:
+                    local_pool.putconn(conn)
+                except Exception:
+                    pass
 
     raise last_exc

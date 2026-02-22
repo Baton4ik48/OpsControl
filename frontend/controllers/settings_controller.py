@@ -16,7 +16,11 @@ class SettingsController(QObject):
         self._worker.start()
 
     def _on_success(self, data: dict):
-        status = data.get("status", "unknown")
+        if not data.get("success"):
+            self.status_changed.emit("offline")
+            return
+
+        status = data.get("data", {}).get("status", "unknown")
         self.status_changed.emit(status)
 
     def _on_error(self, _):

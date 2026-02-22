@@ -1,7 +1,7 @@
 from PyQt6.QtCore import QThread, pyqtSignal
 
 
-class LoadTreeWorker(QThread):
+class TreeLoaderWorker(QThread):
     success = pyqtSignal(list)
     error = pyqtSignal(str)
 

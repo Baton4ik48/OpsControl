@@ -4,13 +4,14 @@ from datetime import datetime, timezone
 from PyQt6.QtWidgets import (
     QTreeWidget,
     QTreeWidgetItem,
-    QHeaderView,
-    QMenu
+    QHeaderView
 )
 from PyQt6.QtGui import QIcon
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 
 from core.paths import ICONS_DIR
+from ui.context_menus.device_tree_context_menu import DeviceTreeContextMenu
+
 
 ROLE_TYPE = Qt.ItemDataRole.UserRole + 1
 ROLE_SERVER_ID = Qt.ItemDataRole.UserRole + 2
@@ -31,6 +32,12 @@ def format_dt(value):
 
 class DeviceTree(QTreeWidget):
 
+    # делаем роли доступными для context menu
+    ROLE_TYPE = ROLE_TYPE
+    ROLE_SERVER_ID = ROLE_SERVER_ID
+    ROLE_PORT = ROLE_PORT
+    ROLE_IP = ROLE_IP
+
     refresh_server_requested = pyqtSignal(int, str)
     refresh_port_requested = pyqtSignal(int, int, str)
     open_protocol_requested = pyqtSignal(int, int, str, str)
@@ -49,6 +56,7 @@ class DeviceTree(QTreeWidget):
             "Дата обновления пароля"
         ])
 
+        # ===== Icons =====
         self.icon_up = QIcon(os.path.join(ICONS_DIR, "status_up.png"))
         self.icon_down = QIcon(os.path.join(ICONS_DIR, "status_down.png"))
         self.icon_unknown = QIcon(os.path.join(ICONS_DIR, "status_unknown.png"))
@@ -76,8 +84,10 @@ class DeviceTree(QTreeWidget):
         self.setIndentation(18)
         self.setUniformRowHeights(True)
 
+        # ===== Context menu вынесен =====
+        self.context_menu = DeviceTreeContextMenu(self)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.customContextMenuRequested.connect(self._open_context_menu)
+        self.customContextMenuRequested.connect(self.context_menu.open)
 
     def set_user_settings(self, settings):
         self.user_settings = settings
@@ -87,6 +97,7 @@ class DeviceTree(QTreeWidget):
     # ==================================================
 
     def render(self, branches):
+        self._stop_all_credential_timers()
         self.clear()
 
         for branch in branches:
@@ -147,79 +158,7 @@ class DeviceTree(QTreeWidget):
             branch_item.setExpanded(True)
 
     # ==================================================
-    # CONTEXT MENU
-    # ==================================================
-
-    def _open_context_menu(self, pos):
-        item = self.itemAt(pos)
-        if not item:
-            return
-
-        item_type = item.data(0, ROLE_TYPE)
-
-        if item_type not in ("server", "port"):
-            return
-
-        server_id = item.data(0, ROLE_SERVER_ID)
-        ip = item.data(0, ROLE_IP)
-
-        menu = QMenu(self)
-
-        # =========================
-        # SERVER
-        # =========================
-        if item_type == "server":
-
-            for i in range(item.childCount()):
-                child = item.child(i)
-                port = child.data(0, ROLE_PORT)
-
-                if not port:
-                    continue
-
-                self._add_connect_action(menu, server_id, ip, port)
-
-            menu.addSeparator()
-
-            refresh_action = menu.addAction(
-                self.icon_update,
-                "Обновить сервер"
-            )
-            refresh_action.triggered.connect(
-                lambda: self.refresh_server_requested.emit(server_id, ip)
-            )
-
-        # =========================
-        # PORT
-        # =========================
-        elif item_type == "port":
-
-            port = item.data(0, ROLE_PORT)
-
-            self._add_connect_action(menu, server_id, ip, port)
-            
-            show_action = menu.addAction(
-                self.icon_show,
-                "Показать учётные данные"
-            )
-            show_action.triggered.connect(
-                lambda checked=False, p=port:
-                    self.show_credentials_requested.emit(server_id, p, ip)
-            )
-            menu.addSeparator()
-
-            refresh_action = menu.addAction(
-                self.icon_update,
-                "Обновить порт"
-            )
-            refresh_action.triggered.connect(
-                lambda: self.refresh_port_requested.emit(server_id, port, ip)
-            )
-
-        menu.exec(self.viewport().mapToGlobal(pos))
-
-    # ==================================================
-    # SHOW CREDENTIALS
+    # CREDENTIALS
     # ==================================================
 
     def _find_port_item(self, server_id: int, port: int):
@@ -267,50 +206,8 @@ class DeviceTree(QTreeWidget):
 
         self._credential_timers[key] = timer
 
-    def _add_connect_action(self, menu, server_id, ip, port):
-
-        icon = None
-        text = None
-
-        # SSH
-        if port == 22:
-            icon = self.icon_ssh
-            text = "Подключиться по SSH"
-
-        # RDP
-        elif port == 3389:
-            icon = self.icon_rdp
-            text = "Подключиться по RDP"
-
-        else:
-            external_apps = []
-            web_ports = []
-
-            if hasattr(self, "user_settings") and self.user_settings:
-                external_apps = self.user_settings.get("external_apps") or []
-                web_ports = self.user_settings.get("web_ports") or []
-
-            # EXTERNAL 
-            for app in external_apps:
-                if app.get("port") == port:
-                    icon = self.icon_external
-                    text = f"Открыть {app.get('name')}"
-                    break
-
-            # WEB
-            if not text:
-                for entry in web_ports:
-                    if entry.get("port") == port:
-                        icon = self.icon_web
-                        scheme = entry.get("scheme")
-                        text = f"Открыть Web ({scheme.upper()})"
-                        break
-
-        if not text:
-            return
-
-        action = menu.addAction(icon, text)
-        action.triggered.connect(
-            lambda checked=False, p=port:
-                self.open_protocol_requested.emit(server_id, p, ip, "")
-        )
+    def _stop_all_credential_timers(self):
+        for timer in self._credential_timers.values():
+            timer.stop()
+            timer.deleteLater()
+        self._credential_timers.clear()
