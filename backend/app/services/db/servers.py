@@ -42,31 +42,19 @@ def create_server(branch_id: int, name: str, ip: str) -> int:
 
 
 # ==========================
-# UPDATE
+# UPDATE (атомарный)
 # ==========================
 
-def update_server_name(server_id: int, new_name: str) -> int:
+def update_server(server_id: int, name: str, ip: str) -> int:
     def work(conn):
         cur = conn.cursor()
-        cur.execute(
-            "UPDATE servers SET name = %s WHERE id = %s",
-            (new_name, server_id)
-        )
-        affected = cur.rowcount
-        conn.commit()
-        cur.close()
-        return affected
+        cur.execute("""
+            UPDATE servers
+            SET name = %s,
+                ip = %s
+            WHERE id = %s
+        """, (name, ip, server_id))
 
-    return _execute(work)
-
-
-def update_server_ip(server_id: int, new_ip: str) -> int:
-    def work(conn):
-        cur = conn.cursor()
-        cur.execute(
-            "UPDATE servers SET ip = %s WHERE id = %s",
-            (new_ip, server_id)
-        )
         affected = cur.rowcount
         conn.commit()
         cur.close()

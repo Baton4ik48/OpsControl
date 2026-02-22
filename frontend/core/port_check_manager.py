@@ -1,5 +1,5 @@
 from PyQt6.QtCore import QThreadPool
-from controllers.port_check_task import PortCheckTask
+from core.workers.port_check_worker import PortCheckWorker
 
 
 class PortCheckManager:
@@ -13,6 +13,6 @@ class PortCheckManager:
             ip = server["ip"]
 
             for p in server["ports"]:
-                task = PortCheckTask(sid, ip, p["port"], api)
+                task = PortCheckWorker(sid, ip, p["port"], api)
                 task.signals.result.connect(on_result)
                 self.pool.start(task)

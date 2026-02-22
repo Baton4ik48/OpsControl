@@ -1,8 +1,8 @@
 import json
 import os
-from core.paths import RESOURCES_DIR
+from core.paths import CONFIG_DIR
 
-SETTINGS_FILE = os.path.join(RESOURCES_DIR, "settings.json")
+SETTINGS_FILE = os.path.join(CONFIG_DIR, "settings.json")
 
 DEFAULT_SETTINGS = {
     "admin_login": "AdminGTM",

@@ -5,7 +5,7 @@ from core.port_checker import check_port
 class PortCheckSignals(QObject):
     result = pyqtSignal(int, int, bool)  
 
-class PortCheckTask(QRunnable):
+class PortCheckWorker(QRunnable):
     def __init__(self, server_id, ip, port, api):
         super().__init__()
         self.server_id = server_id

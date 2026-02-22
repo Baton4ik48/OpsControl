@@ -1,5 +1,6 @@
 from app.services.db.pool import _execute
 
+
 # ==========================
 # READ
 # ==========================
@@ -13,6 +14,7 @@ def load_branches():
         return rows
 
     return _execute(work)
+
 
 # ==========================
 # CREATE
@@ -31,6 +33,7 @@ def create_branch(name: str) -> int:
         return new_id
 
     return _execute(work)
+
 
 # ==========================
 # UPDATE
@@ -52,6 +55,7 @@ def update_branch(branch_id: int, new_name: str) -> int:
 
     return _execute(work)
 
+
 # ==========================
 # DELETE
 # ==========================
@@ -59,7 +63,10 @@ def update_branch(branch_id: int, new_name: str) -> int:
 def delete_branch(branch_id: int) -> int:
     def work(conn):
         cur = conn.cursor()
-        cur.execute("DELETE FROM branches WHERE id = %s", (branch_id,))
+        cur.execute(
+            "DELETE FROM branches WHERE id = %s",
+            (branch_id,)
+        )
         affected = cur.rowcount
         conn.commit()
         cur.close()

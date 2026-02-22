@@ -5,11 +5,11 @@ from PyQt6.QtGui import QIcon
 from PyQt6.QtCore import QTimer
 
 from core.paths import ICONS_DIR
-from core.user_settings import UserSettings
+from core.config.user_settings import UserSettings
 from core.api import ApiClient
-from core.error_handler import handle_api_error
+from ui.error_handler import handle_api_error
 from core.api.base import ApiError
-from core.busy_manager import BusyManager
+from ui.managers.busy_manager import BusyManager
 
 
 from controllers.tree_controller import TreeController

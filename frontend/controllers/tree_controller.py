@@ -2,17 +2,16 @@ from datetime import datetime, timezone
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from controllers.port_check_manager import PortCheckManager
-from controllers.load_tree_worker import LoadTreeWorker
-from controllers.protocol_launcher import ProtocolLauncher
+from core.port_check_manager import PortCheckManager
+from core.workers.tree_loader_worker import TreeLoaderWorker
+from core.protocol_launcher import ProtocolLauncher
 
 from core.logger import get_logger
 from core.api.base import ApiError
-
+from core.workers.credentials_worker import CredentialsWorker
 from ui.dialogs.credentials_dialog import CredentialsDialog
-from ui.dialogs.workers.credentials_worker import CredentialsWorker
 
-from core.error_handler import handle_system_error
+from ui.error_handler import handle_system_error
 
 
 log = get_logger(__name__)
@@ -40,7 +39,7 @@ class TreeController(QObject):
     def start_load(self):
         self.busy.start("Загрузка топологии сети...")
 
-        self._worker = LoadTreeWorker(self.api)
+        self._worker = TreeLoaderWorker(self.api)
         self._worker.success.connect(self._on_loaded)
         self._worker.error.connect(self._on_error)
         self._worker.finished.connect(self.busy.stop)

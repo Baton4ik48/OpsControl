@@ -1,6 +1,4 @@
 from PyQt6.QtCore import QThread, pyqtSignal
-from core.api.base import ApiError
-
 
 class CredentialsWorker(QThread):
     success = pyqtSignal(dict)

@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 from pathlib import Path
-from core.user_settings import UserSettings
+from core.config.user_settings import UserSettings
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent
 
