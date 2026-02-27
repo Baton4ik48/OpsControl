@@ -4,3 +4,6 @@ python-dotenv
 pyyaml
 hvac
 psycopg2
+pandas
+openpyxl
+python-multipart
