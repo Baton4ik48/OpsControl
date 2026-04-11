@@ -1,6 +1,22 @@
+import ipaddress
+import re
+
 from PyQt6.QtWidgets import QWidget, QFormLayout, QLineEdit, QPushButton
 from PyQt6.QtCore import pyqtSignal
-import ipaddress
+
+# метка домена: буквы, цифры, дефис (не в начале/конце), 1–63 символа
+_DOMAIN_RE = re.compile(
+    r'^(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$'
+)
+
+
+def is_valid_host(value: str) -> bool:
+    try:
+        ipaddress.ip_address(value)
+        return True
+    except ValueError:
+        pass
+    return bool(_DOMAIN_RE.match(value))
 
 
 class ServerForm(QWidget):
@@ -14,10 +30,10 @@ class ServerForm(QWidget):
 
         self.name_input = QLineEdit()
         self.ip_input = QLineEdit()
-        self.ip_input.setPlaceholderText("Например: 192.168.0.1")
+        self.ip_input.setPlaceholderText("Например: 192.168.0.1 или server.example.ru")
 
         layout.addRow("Название:", self.name_input)
-        layout.addRow("IP:", self.ip_input)
+        layout.addRow("IP / Домен:", self.ip_input)
 
         self.save_btn = QPushButton("Сохранить")
         layout.addRow(self.save_btn)
@@ -30,16 +46,14 @@ class ServerForm(QWidget):
 
     def _on_save(self):
         name = self.name_input.text().strip()
-        ip = self.ip_input.text().strip()
+        host = self.ip_input.text().strip()
 
         if not name:
             self.error.emit("Название сервера не может быть пустым")
             return
 
-        try:
-            ipaddress.ip_address(ip)
-        except ValueError:
-            self.error.emit("Введите корректный IP-адрес")
+        if not is_valid_host(host):
+            self.error.emit("Введите корректный IP-адрес или доменное имя")
             return
 
-        self.saved.emit(name, ip)
+        self.saved.emit(name, host)

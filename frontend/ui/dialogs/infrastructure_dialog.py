@@ -4,11 +4,10 @@ from PyQt6.QtWidgets import (
     QInputDialog, QWidget
 )
 from PyQt6.QtCore import Qt
-import ipaddress
-
 from controllers.infrastructure_controller import InfrastructureController
 from ui.widgets.busy_overlay import BusyOverlay
 from ui.dialogs.infrastructureDialog.infrastructure_tree import InfrastructureTree
+from ui.dialogs.infrastructureDialog.server_form import is_valid_host
 from ui.context_menus.infrastructure_context_menu import InfrastructureContextMenu
 from ui.dialogs.infrastructureDialog.server_form import ServerForm
 from ui.dialogs.infrastructureDialog.port_form import PortForm
@@ -119,8 +118,8 @@ class InfrastructureManagerDialog(QDialog):
         self.server_form.set_data(server_data)
         self.stack.setCurrentWidget(self.server_form)
 
-    def show_port_form(self, port_data):
-        self.port_form.set_data(port_data)
+    def show_port_form(self, server_id, port_data):
+        self.port_form.set_data(server_id, port_data)
         self.stack.setCurrentWidget(self.port_form)
 
     def show_branch_form(self, branch_data):
@@ -173,10 +172,8 @@ class InfrastructureManagerDialog(QDialog):
         if not ok2 or not ip.strip():
             return
 
-        try:
-            ipaddress.ip_address(ip.strip())
-        except ValueError:
-            self.show_error("Введите корректный IP")
+        if not is_valid_host(ip.strip()):
+            self.show_error("Введите корректный IP-адрес или доменное имя")
             return
 
         self.controller.create_server(branch_id, name.strip(), ip.strip())

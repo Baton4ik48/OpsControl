@@ -1,9 +1,10 @@
 fastapi
-uvicorn
+uvicorn[standard]
+pydantic
+psycopg2-binary
+requests
+pandas
 python-dotenv
 pyyaml
-hvac
-psycopg2
-pandas
-openpyxl
 python-multipart
+paramiko

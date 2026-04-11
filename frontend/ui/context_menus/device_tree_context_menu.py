@@ -1,6 +1,5 @@
 from PyQt6.QtWidgets import QMenu
 
-
 class DeviceTreeContextMenu:
     def __init__(self, tree):
         self.tree = tree
@@ -61,6 +60,15 @@ class DeviceTreeContextMenu:
                 lambda checked=False, p=port:
                     self.tree.show_credentials_requested.emit(server_id, p, ip)
             )
+
+            if port == 22:
+                rotate_action = menu.addAction(
+                    self.tree.icon_key,
+                    "Сменить пароль"
+                )
+                rotate_action.triggered.connect(
+                    lambda: self.tree.rotate_password_requested.emit(server_id, ip)
+                )
 
             menu.addSeparator()
 

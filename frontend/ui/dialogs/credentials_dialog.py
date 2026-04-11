@@ -13,13 +13,15 @@ from core.paths import ICONS_DIR
 class CredentialsDialog(QDialog):
     submitted = pyqtSignal(str)
 
-    def __init__(self, ip: str, port: int, mode: str = "show"):
+    def __init__(self, ip: str = "", port: int = 0, mode: str = "show"):
         super().__init__()
 
         self.mode = mode
 
         if mode == "ssh":
             self.setWindowTitle(f"SSH подключение {ip}:{port}")
+        elif mode == "infra":
+            self.setWindowTitle("Доступ к управлению инфраструктурой")
         else:
             self.setWindowTitle(f"Учётные данные {ip}:{port}")
         self.setModal(True)
@@ -28,14 +30,18 @@ class CredentialsDialog(QDialog):
 
         if mode == "ssh":
             layout.addWidget(QLabel("Введите мастер-пароль для подключения к серверу(SSH):"))
+        elif mode == "infra":
+            layout.addWidget(QLabel("Введите мастер-пароль для доступа к управлению инфраструктурой:"))
         else:
             layout.addWidget(QLabel("Введите пароль администратора:"))
 
         self.admin_input = QLineEdit()
         self.admin_input.setEchoMode(QLineEdit.EchoMode.Password)
+        self.admin_input.returnPressed.connect(self._on_submit)
         layout.addWidget(self.admin_input)
 
-        self.show_btn = QPushButton("Показать")
+        btn_label = "Войти" if mode == "infra" else "Показать"
+        self.show_btn = QPushButton(btn_label)
         self.show_btn.clicked.connect(self._on_submit)
         layout.addWidget(self.show_btn)
 

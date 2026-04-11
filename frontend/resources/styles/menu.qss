@@ -53,3 +53,13 @@ QMenuBar::item:selected {
 QMenuBar::item:pressed {
     background-color: rgba(0, 200, 200, 0.4);
 }
+
+
+QToolTip {
+    background-color: #1e1e1e;
+    color: #dddddd;
+    border: 1px solid #3a3a3a;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 12px;
+}

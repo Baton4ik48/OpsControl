@@ -55,7 +55,7 @@ class ProtocolLauncher:
             subprocess.Popen([
                 "x-terminal-emulator",
                 "-e",
-                "sshpass",
+                "/usr/bin/sshpass",
                 "-p",
                 password,
                 "ssh",

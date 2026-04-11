@@ -50,16 +50,13 @@ class VaultClient:
         return token
 
     def _get_backend_token(self) -> str:
-        # если токена нет — логинимся
         if not self._backend_token:
             self._backend_token = self._approle_login()
             return self._backend_token
 
-        # пытаемся renew (для periodic token)
         if self._renew_token():
             return self._backend_token
 
-        # renew не прошёл — логинимся заново
         print("[VAULT] Token renew failed → relogin")
         self._backend_token = self._approle_login()
         return self._backend_token
@@ -79,6 +76,7 @@ class VaultClient:
             return True
 
         return False
+
     # ==========================================
     # USER LOGIN (GUI → Vault userpass)
     # ==========================================
@@ -125,6 +123,28 @@ class VaultClient:
         return resp.json()["data"]["data"]
 
     # ==========================================
+    # WRITE KV (backend AppRole token)
+    # ==========================================
+
+    def write_kv_v2(self, vault_path: str, data: dict) -> None:
+        if not vault_path.startswith("credentials/"):
+            raise VaultReadError("Invalid vault path")
+
+        token = self._get_backend_token()
+        path = vault_path.replace("credentials/", "")
+        url = f"{self.addr}/v1/credentials/data/{path}"
+
+        resp = requests.post(
+            url,
+            headers={"X-Vault-Token": token},
+            json={"data": data},
+            timeout=self.http_timeout,
+        )
+
+        if resp.status_code not in (200, 204):
+            raise VaultReadError(resp.text)
+
+    # ==========================================
     # DATABASE CREDS (backend token)
     # ==========================================
 
@@ -141,7 +161,7 @@ class VaultClient:
 
         if resp.status_code != 200:
             raise VaultReadError(resp.text)
-        
+
         body = resp.json()
 
         username = body["data"]["username"]
@@ -155,3 +175,12 @@ class VaultClient:
 
         return body["data"]
 
+
+_vault_instance = None
+
+
+def get_vault_client() -> VaultClient:
+    global _vault_instance
+    if _vault_instance is None:
+        _vault_instance = VaultClient()
+    return _vault_instance

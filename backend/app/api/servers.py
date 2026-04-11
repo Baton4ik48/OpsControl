@@ -1,5 +1,8 @@
+import ipaddress
+import re
+
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, IPvAnyAddress
+from pydantic import BaseModel, field_validator
 
 from app.services.db.servers import (
     load_servers,
@@ -10,6 +13,21 @@ from app.services.db.servers import (
 
 router = APIRouter(prefix="/servers", tags=["servers"])
 
+_DOMAIN_RE = re.compile(
+    r'^(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$'
+)
+
+
+def _validate_host(value: str) -> str:
+    try:
+        ipaddress.ip_address(value)
+        return value
+    except ValueError:
+        pass
+    if _DOMAIN_RE.match(value):
+        return value
+    raise ValueError(f"'{value}' не является корректным IP-адресом или доменным именем")
+
 
 # ==========================
 # Pydantic models
@@ -18,12 +36,22 @@ router = APIRouter(prefix="/servers", tags=["servers"])
 class ServerCreate(BaseModel):
     branch_id: int
     name: str
-    ip: IPvAnyAddress
+    ip: str
+
+    @field_validator("ip")
+    @classmethod
+    def validate_ip(cls, v):
+        return _validate_host(v.strip())
 
 
 class ServerUpdate(BaseModel):
     name: str
-    ip: IPvAnyAddress
+    ip: str
+
+    @field_validator("ip")
+    @classmethod
+    def validate_ip(cls, v):
+        return _validate_host(v.strip())
 
 
 def ensure_found(affected: int, entity: str):
@@ -53,7 +81,7 @@ def create_server_api(payload: ServerCreate):
     new_id = create_server(
         payload.branch_id,
         payload.name,
-        str(payload.ip)
+        payload.ip
     )
     return {"success": True, "data": {"id": new_id}}
 
@@ -67,7 +95,7 @@ def update_server_api(server_id: int, payload: ServerUpdate):
     affected = update_server(
         server_id,
         payload.name,
-        str(payload.ip)
+        payload.ip
     )
     ensure_found(affected, "Server")
     return {"success": True, "data": None}

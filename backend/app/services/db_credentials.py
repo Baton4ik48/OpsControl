@@ -2,7 +2,7 @@ import logging
 from dataclasses import dataclass
 
 from app.config import settings
-from app.services.vault_client import VaultClient
+from app.services.vault_client import get_vault_client
 
 logger = logging.getLogger("db-creds")
 
@@ -39,7 +39,7 @@ def _static_creds() -> DBCreds:
 # ===============================
 
 def _get_dynamic_db_creds() -> DBCreds:
-    vault = VaultClient()
+    vault = get_vault_client()
 
     data = vault.read_database_creds()
 
