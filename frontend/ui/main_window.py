@@ -22,6 +22,7 @@ from ui.widgets.console import Console
 from ui.widgets.workspace import Workspace
 from ui.widgets.busy_overlay import BusyOverlay
 from ui.dialogs.settings_dialog import SettingsDialog
+from ui.dialogs.password_rotation_dialog import PasswordRotationDialog
 
 
 class MainWindow(QWidget):
@@ -43,7 +44,7 @@ class MainWindow(QWidget):
         main_layout = QVBoxLayout(self)
         body = QHBoxLayout()
 
-        self.menu = ToolsMenu()
+        self.menu = ToolsMenu(self.user_settings)
         self.sidebar = Sidebar()
         self.tree = DeviceTree()
         self.console = Console()
@@ -102,6 +103,7 @@ class MainWindow(QWidget):
         self.tree.refresh_port_requested.connect(self.controller.refresh_port)
         self.tree.open_protocol_requested.connect(self.controller.connect_protocol)
         self.tree.show_credentials_requested.connect(self.controller.show_credentials)
+        self.tree.rotate_password_requested.connect(self._open_password_rotation)
 
 
     def _on_api_error(self, error: ApiError):
@@ -145,15 +147,35 @@ class MainWindow(QWidget):
             self.auto_refresh_timer.start(interval * 1000)
 
     # =========================
+    # PASSWORD ROTATION
+    # =========================
+    def _open_password_rotation(self, server_id: int, ip: str):
+        admin_login = self.user_settings.get("admin_login") or ""
+        dlg = PasswordRotationDialog(server_id, ip, admin_login, parent=self)
+        dlg.exec()
+
+    # =========================
     # SETTINGS
     # =========================
     def open_settings(self):
+        old_backend = (
+            self.user_settings.get("backend_override_enabled"),
+            self.user_settings.get("backend_host"),
+            self.user_settings.get("backend_port"),
+        )
+
         dlg = SettingsDialog(self.user_settings, self.api)
 
         if dlg.exec():
             self._apply_auto_refresh()
 
-            if self.user_settings.get("backend_override_enabled"):
+            new_backend = (
+                self.user_settings.get("backend_override_enabled"),
+                self.user_settings.get("backend_host"),
+                self.user_settings.get("backend_port"),
+            )
+
+            if new_backend != old_backend:
                 QMessageBox.information(
                     self,
                     "Требуется перезапуск",

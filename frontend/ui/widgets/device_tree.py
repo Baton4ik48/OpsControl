@@ -30,6 +30,56 @@ def format_dt(value):
     return local.strftime("%d.%m.%Y %H:%M")
 
 
+def _icon_img(icon_path, size=13):
+    return f'<img src="file://{icon_path}" width="{size}" height="{size}">'
+
+
+def _build_port_tooltip(state, last_success, last_failure):
+    icon_up   = os.path.join(ICONS_DIR, "status_up.png")
+    icon_down = os.path.join(ICONS_DIR, "status_down.png")
+
+    rows = []
+
+    if state is True:
+        rows.append(
+            f'<tr><td>{_icon_img(icon_up)}</td>'
+            f'<td>&nbsp;<b>Онлайн</b></td></tr>'
+        )
+        if last_failure:
+            rows.append(
+                f'<tr><td>{_icon_img(icon_down)}</td>'
+                f'<td>&nbsp;Последний раз недоступен:&nbsp;{format_dt(last_failure)}</td></tr>'
+            )
+
+    elif state is False:
+        if last_success:
+            rows.append(
+                f'<tr><td>{_icon_img(icon_down)}</td>'
+                f'<td>&nbsp;Последний раз был в сети:&nbsp;{format_dt(last_success)}</td></tr>'
+            )
+        else:
+            rows.append(
+                f'<tr><td>{_icon_img(icon_down)}</td>'
+                f'<td>&nbsp;В сети не наблюдался</td></tr>'
+            )
+
+    else:
+        if last_success:
+            rows.append(
+                f'<tr><td>{_icon_img(icon_up)}</td>'
+                f'<td>&nbsp;Последний раз в сети:&nbsp;{format_dt(last_success)}</td></tr>'
+            )
+        if last_failure:
+            rows.append(
+                f'<tr><td>{_icon_img(icon_down)}</td>'
+                f'<td>&nbsp;Последний раз недоступен:&nbsp;{format_dt(last_failure)}</td></tr>'
+            )
+        if not last_success and not last_failure:
+            rows.append('<tr><td colspan="2">Статус неизвестен</td></tr>')
+
+    return f'<table cellspacing="3">{"".join(rows)}</table>'
+
+
 class DeviceTree(QTreeWidget):
 
     # делаем роли доступными для context menu
@@ -42,11 +92,13 @@ class DeviceTree(QTreeWidget):
     refresh_port_requested = pyqtSignal(int, int, str)
     open_protocol_requested = pyqtSignal(int, int, str, str)
     show_credentials_requested = pyqtSignal(int, int, str)
+    rotate_password_requested = pyqtSignal(int, str)  # server_id, ip
 
     def __init__(self):
         super().__init__()
 
         self._credential_timers = {}
+        self._has_rendered = False
 
         self.setHeaderLabels([
             "Устройство",
@@ -66,6 +118,7 @@ class DeviceTree(QTreeWidget):
         self.icon_show = QIcon(os.path.join(ICONS_DIR, "show_icon.png"))
         self.icon_web = QIcon(os.path.join(ICONS_DIR, "web_icon.png"))
         self.icon_external = QIcon(os.path.join(ICONS_DIR, "external_icon.png"))
+        self.icon_key = QIcon(os.path.join(ICONS_DIR, "key_icon.png"))
 
         header = self.header()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
@@ -96,7 +149,63 @@ class DeviceTree(QTreeWidget):
     # RENDER
     # ==================================================
 
+    def _save_tree_state(self):
+        """Возвращает (expanded_branches, expanded_servers, selected)."""
+        expanded_branches: set[str] = set()
+        expanded_servers: set[int] = set()
+        selected = None  # ("server", server_id, None) | ("port", server_id, port)
+
+        for i in range(self.topLevelItemCount()):
+            branch = self.topLevelItem(i)
+            if branch.isExpanded():
+                expanded_branches.add(branch.text(0))
+
+            for j in range(branch.childCount()):
+                server = branch.child(j)
+                srv_id = server.data(0, ROLE_SERVER_ID)
+
+                if server.isExpanded():
+                    expanded_servers.add(srv_id)
+                if server.isSelected():
+                    selected = ("server", srv_id, None)
+
+                for k in range(server.childCount()):
+                    port_item = server.child(k)
+                    if port_item.isSelected():
+                        selected = (
+                            "port",
+                            port_item.data(0, ROLE_SERVER_ID),
+                            port_item.data(0, ROLE_PORT),
+                        )
+
+        return expanded_branches, expanded_servers, selected
+
+    def _restore_selection(self, selected):
+        if not selected:
+            return
+
+        item_type, server_id, port = selected
+
+        for i in range(self.topLevelItemCount()):
+            branch = self.topLevelItem(i)
+            for j in range(branch.childCount()):
+                server = branch.child(j)
+                if item_type == "server" and server.data(0, ROLE_SERVER_ID) == server_id:
+                    self.setCurrentItem(server)
+                    return
+                for k in range(server.childCount()):
+                    port_item = server.child(k)
+                    if (
+                        item_type == "port"
+                        and port_item.data(0, ROLE_SERVER_ID) == server_id
+                        and port_item.data(0, ROLE_PORT) == port
+                    ):
+                        self.setCurrentItem(port_item)
+                        return
+
     def render(self, branches):
+        expanded_branches, expanded_servers, selected = self._save_tree_state()
+
         self._stop_all_credential_timers()
         self.clear()
 
@@ -151,11 +260,28 @@ class DeviceTree(QTreeWidget):
                     port_item.setData(0, ROLE_PORT, port)
                     port_item.setData(0, ROLE_IP, srv["ip"])
 
+                    tooltip = _build_port_tooltip(
+                        state,
+                        p.get("last_success"),
+                        p.get("last_failure"),
+                    )
+                    port_item.setToolTip(0, tooltip)
+                    port_item.setToolTip(2, tooltip)
+
                     server_item.addChild(port_item)
 
-                server_item.setExpanded(True)
+                expand_srv = (
+                    not self._has_rendered or srv["id"] in expanded_servers
+                )
+                server_item.setExpanded(expand_srv)
 
-            branch_item.setExpanded(True)
+            expand_branch = (
+                not self._has_rendered or branch["name"] in expanded_branches
+            )
+            branch_item.setExpanded(expand_branch)
+
+        self._has_rendered = True
+        self._restore_selection(selected)
 
     # ==================================================
     # CREDENTIALS

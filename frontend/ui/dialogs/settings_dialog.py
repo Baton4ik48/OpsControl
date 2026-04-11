@@ -16,6 +16,7 @@ class SettingsDialog(QDialog):
         super().__init__()
 
         self.settings = settings
+        self._dirty_tabs: set[str] = set()
 
         self.setWindowIcon(QIcon(os.path.join(ICONS_DIR, "settings_icon.png")))
         self.setWindowTitle("Настройки")
@@ -259,6 +260,21 @@ class SettingsDialog(QDialog):
             self.backend_override_checkbox.isChecked()
         )
 
+        # --- dirty tracking (подключаем после установки начальных значений) ---
+        self.admin_login_input.textChanged.connect(lambda: self._mark_dirty("general"))
+        self.auto_refresh_checkbox.toggled.connect(lambda: self._mark_dirty("general"))
+        self.interval_spin.valueChanged.connect(lambda: self._mark_dirty("general"))
+
+        self.backend_override_checkbox.toggled.connect(lambda: self._mark_dirty("backend"))
+        self.backend_host_input.textChanged.connect(lambda: self._mark_dirty("backend"))
+        self.backend_port_spin.valueChanged.connect(lambda: self._mark_dirty("backend"))
+
+        self.web_ports_input.textChanged.connect(lambda: self._mark_dirty("web"))
+
+        self.external_name_input.textChanged.connect(lambda: self._mark_dirty("external"))
+        self.external_port_spin.valueChanged.connect(lambda: self._mark_dirty("external"))
+        self.external_path_input.textChanged.connect(lambda: self._mark_dirty("external"))
+
         # =========================
         # CONTROLLER
         # =========================
@@ -280,70 +296,75 @@ class SettingsDialog(QDialog):
         self.accept()
 
     def apply(self):
-        self.settings.set("admin_login",
-                          self.admin_login_input.text().strip())
+        if not self._dirty_tabs:
+            return
 
-        self.settings.set("auto_refresh_enabled",
-                          self.auto_refresh_checkbox.isChecked())
+        if "general" in self._dirty_tabs:
+            self.settings.set("admin_login",
+                              self.admin_login_input.text().strip())
+            self.settings.set("auto_refresh_enabled",
+                              self.auto_refresh_checkbox.isChecked())
+            self.settings.set("auto_refresh_interval_sec",
+                              self.interval_spin.value())
 
-        self.settings.set("auto_refresh_interval_sec",
-                          self.interval_spin.value())
+        if "backend" in self._dirty_tabs:
+            self.settings.set("backend_override_enabled",
+                              self.backend_override_checkbox.isChecked())
+            self.settings.set("backend_host",
+                              self.backend_host_input.text().strip())
+            self.settings.set("backend_port",
+                              self.backend_port_spin.value())
 
-        self.settings.set("backend_override_enabled",
-                          self.backend_override_checkbox.isChecked())
+        if "web" in self._dirty_tabs:
+            raw = self.web_ports_input.text().strip()
+            web_ports = []
 
-        self.settings.set("backend_host",
-                          self.backend_host_input.text().strip())
+            for item in raw.split(","):
+                if ":" not in item:
+                    continue
 
-        self.settings.set("backend_port",
-                          self.backend_port_spin.value())
+                port_part, scheme_part = item.split(":", 1)
+                port_part = port_part.strip()
+                scheme_part = scheme_part.strip().lower()
 
-        # WEB
-        raw = self.web_ports_input.text().strip()
-        web_ports = []
+                if port_part.isdigit() and scheme_part in ("http", "https"):
+                    web_ports.append({
+                        "port": int(port_part),
+                        "scheme": scheme_part
+                    })
 
-        for item in raw.split(","):
-            if ":" not in item:
-                continue
+            self.settings.set("web_ports", web_ports)
 
-            port_part, scheme_part = item.split(":", 1)
-            port_part = port_part.strip()
-            scheme_part = scheme_part.strip().lower()
+        if "external" in self._dirty_tabs:
+            external_apps = []
+            name = self.external_name_input.text().strip()
+            port = self.external_port_spin.value()
+            path = self.external_path_input.text().strip()
 
-            if port_part.isdigit() and scheme_part in ("http", "https"):
-                web_ports.append({
-                    "port": int(port_part),
-                    "scheme": scheme_part
-                })
+            if name and port and path:
+                if not os.path.exists(path):
+                    QMessageBox.warning(
+                        self,
+                        "Ошибка",
+                        "Указанный путь к приложению не существует."
+                    )
+                else:
+                    external_apps.append({
+                        "name": name,
+                        "port": port,
+                        "path": path
+                    })
 
-        self.settings.set("web_ports", web_ports)
+            self.settings.set("external_apps", external_apps)
 
-        # EXTERNAL
-        external_apps = []
-        name = self.external_name_input.text().strip()
-        port = self.external_port_spin.value()
-        path = self.external_path_input.text().strip()
-
-        if name and port and path:
-            if not os.path.exists(path):
-                QMessageBox.warning(
-                    self,
-                    "Ошибка",
-                    "Указанный путь к приложению не существует."
-                )
-            else:
-                external_apps.append({
-                    "name": name,
-                    "port": port,
-                    "path": path
-                })
-
-        self.settings.set("external_apps", external_apps)
         self.settings.save()
 
     # =====================================================
     # HELPERS
     # =====================================================
+    def _mark_dirty(self, tab: str):
+        self._dirty_tabs.add(tab)
+
     def _browse_external_path(self):
         file_path, _ = QFileDialog.getOpenFileName(
             self,

@@ -65,9 +65,11 @@ def _execute(fn, retries: int = 1):
             OperationalError,
             InterfaceError,
             errors.InvalidAuthorizationSpecification,
+            errors.InsufficientPrivilege,
         ) as e:
 
             last_exc = e
+            logger.warning(f"Pool error, recreating: {type(e).__name__}: {e}")
 
             if conn:
                 try:

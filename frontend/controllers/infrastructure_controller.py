@@ -99,12 +99,11 @@ class InfrastructureController:
     def select_port(self, server_id, port_data):
         self.current_server_id = server_id
         self.current_port = port_data["port"]
-        self.view.show_port_form(port_data)
+        self.view.show_port_form(server_id, port_data)
 
-    def save_port(self, new_port, vault_path):
+    def save_port(self, new_port):
 
         def task():
-            # изменение номера порта
             if new_port != self.current_port:
                 self.port_api.update_port(
                     self.current_server_id,
@@ -112,19 +111,6 @@ class InfrastructureController:
                     new_port
                 )
                 self.current_port = new_port
-
-            # удаляем креды если пусто
-            if not vault_path.strip():
-                self.port_api.delete_credentials(
-                    self.current_server_id,
-                    self.current_port
-                )
-            else:
-                self.port_api.update_vault_path(
-                    self.current_server_id,
-                    self.current_port,
-                    vault_path
-                )
 
         self._run_task("Сохранение порта…", task)
 

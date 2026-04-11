@@ -71,7 +71,7 @@ class BaseApi:
                     status_code=r.status_code
                 )
 
-            return data["data"]
+            return data.get("data")
 
         except requests.RequestException:
             raise ApiError("Backend недоступен")
