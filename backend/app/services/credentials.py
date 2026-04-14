@@ -4,7 +4,6 @@ from app.services.db.credentials import (
     upsert_vault_path,
     touch_credentials_updated_at,
 )
-from app.services.ssh_rotate import rotate_linux_password, SSHRotateError
 from app.services.login_throttle import throttle, TooManyAttempts
 from app.config import settings
 from app.logging import get_logger
@@ -110,6 +109,7 @@ def show_credentials(
     return {
         "username": secret["username"],
         "password": secret["password"],
+        "mnemonic": secret.get("mnemonic", ""),
     }
 
 
@@ -119,18 +119,18 @@ class RotateError(Exception):
 
 def rotate_credentials(
     server_id: int,
-    host: str,
     ssh_port: int,
     new_password: str,
     username: str,
     master_password: str,
     client_ip: str,
+    mnemonic: str = "",
 ) -> None:
     """
-    Полный цикл ротации пароля:
+    Сохраняет новый пароль в Vault после того, как фронтенд уже сменил его по SSH.
     1. Верифицирует мастер-пароль
-    2. Читает текущие SSH-креды из Vault (AppRole)
-    3. Подключается по SSH и меняет пароль
+    2. Читает vault_path из БД
+    3. Получает текущий username из Vault (AppRole)
     4. Пишет новый пароль в Vault
     5. Обновляет updated_at в Postgres
     """
@@ -141,7 +141,7 @@ def rotate_credentials(
     if not vault_path:
         raise RotateError("Учётные данные для этого порта не найдены в БД")
 
-    # 2. Читаем текущие креды через AppRole
+    # 2. Получаем текущий username из Vault (он не меняется)
     vault = get_vault_client()
     try:
         token = vault._get_backend_token()
@@ -150,30 +150,18 @@ def rotate_credentials(
         raise RotateError(f"Не удалось прочитать текущие креды из Vault: {e}")
 
     current_username = current["username"]
-    current_password = current["password"]
 
-    # 3. SSH — меняем пароль
-    try:
-        rotate_linux_password(
-            host=host,
-            username=current_username,
-            current_password=current_password,
-            new_password=new_password,
-            port=ssh_port,
-        )
-    except SSHRotateError as e:
-        raise RotateError(str(e))
-
-    # 4. Пишем новый пароль в Vault
+    # 3. Пишем новый пароль и мнемонику в Vault
     try:
         vault.write_kv_v2(vault_path, {
             "username": current_username,
             "password": new_password,
+            "mnemonic": mnemonic,
         })
     except VaultReadError as e:
-        raise RotateError(f"Пароль сменён на сервере, но не удалось записать в Vault: {e}")
+        raise RotateError(f"Не удалось записать новый пароль в Vault: {e}")
 
-    # 5. Обновляем updated_at
+    # 4. Обновляем updated_at
     touch_credentials_updated_at(server_id, ssh_port)
 
-    logger.info(f"Password rotation complete: server_id={server_id} host={host}:{ssh_port}")
+    logger.info(f"Vault password updated: server_id={server_id} port={ssh_port}")

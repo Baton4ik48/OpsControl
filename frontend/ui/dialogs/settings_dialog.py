@@ -226,6 +226,54 @@ class SettingsDialog(QDialog):
             self.external_port_spin.setValue(app.get("port", 0))
             self.external_path_input.setText(app.get("path", ""))
 
+        # =====================================================
+        # TAB 5 — Генерация паролей
+        # =====================================================
+        password_tab = QWidget()
+        password_layout_wrapper = QVBoxLayout(password_tab)
+
+        desc_password = QLabel(
+            "Настройки генерации паролей.\n"
+            "Пароль = число + первые N букв от каждого слова в QWERTY-раскладке.")
+        desc_password.setWordWrap(True)
+        desc_password.setObjectName("settingsDescription")
+        desc_password.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        password_layout_wrapper.addWidget(desc_password)
+
+        password_group = QGroupBox("Генератор паролей")
+        password_layout = QVBoxLayout(password_group)
+
+        password_layout.addWidget(QLabel("Количество слов (2–5):"))
+        self.spin_words = QSpinBox()
+        self.spin_words.setRange(2, 5)
+        self.spin_words.setValue(self.settings.get("password_word_count"))
+        password_layout.addWidget(self.spin_words)
+
+        password_layout.addWidget(QLabel("Букв от каждого слова (3–4):"))
+        self.spin_letters = QSpinBox()
+        self.spin_letters.setRange(3, 4)
+        self.spin_letters.setValue(self.settings.get("password_letters_per_word"))
+        password_layout.addWidget(self.spin_letters)
+
+        password_layout.addWidget(QLabel("Цифр в числе (0–4):"))
+        self.spin_digits = QSpinBox()
+        self.spin_digits.setRange(0, 4)
+        self.spin_digits.setValue(self.settings.get("password_digit_count"))
+        password_layout.addWidget(self.spin_digits)
+
+        self.length_hint = QLabel()
+        self._update_length_hint()
+        password_layout.addWidget(self.length_hint)
+
+        self.spin_words.valueChanged.connect(self._update_length_hint)
+        self.spin_letters.valueChanged.connect(self._update_length_hint)
+        self.spin_digits.valueChanged.connect(self._update_length_hint)
+
+        password_layout_wrapper.addWidget(password_group)
+        password_layout_wrapper.addStretch()
+
+        tabs.addTab(password_tab, "Правила генерации паролей")
+
         # =========================
         # КНОПКИ
         # =========================
@@ -274,6 +322,10 @@ class SettingsDialog(QDialog):
         self.external_name_input.textChanged.connect(lambda: self._mark_dirty("external"))
         self.external_port_spin.valueChanged.connect(lambda: self._mark_dirty("external"))
         self.external_path_input.textChanged.connect(lambda: self._mark_dirty("external"))
+
+        self.spin_words.valueChanged.connect(lambda: self._mark_dirty("password"))
+        self.spin_letters.valueChanged.connect(lambda: self._mark_dirty("password"))
+        self.spin_digits.valueChanged.connect(lambda: self._mark_dirty("password"))
 
         # =========================
         # CONTROLLER
@@ -357,6 +409,11 @@ class SettingsDialog(QDialog):
 
             self.settings.set("external_apps", external_apps)
 
+        if "password" in self._dirty_tabs:
+            self.settings.set("password_word_count", self.spin_words.value())
+            self.settings.set("password_letters_per_word", self.spin_letters.value())
+            self.settings.set("password_digit_count", self.spin_digits.value())
+
         self.settings.save()
 
     # =====================================================
@@ -381,6 +438,10 @@ class SettingsDialog(QDialog):
     def _update_backend_enabled(self, enabled: bool):
         self.backend_host_input.setEnabled(enabled)
         self.backend_port_spin.setEnabled(enabled)
+
+    def _update_length_hint(self):
+        total = self.spin_digits.value() + self.spin_words.value() * self.spin_letters.value()
+        self.length_hint.setText(f"Итоговая длина пароля: {total} символов")
 
     def _set_status(self, status: str):
         icons = {

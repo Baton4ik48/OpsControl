@@ -26,5 +26,8 @@
       "port": 20000,
       "path": "C:/Program Files (x86)/EFROS Config Inspector 4/Console/CIWPF.exe"
     }
-  ]
+  ],
+  "password_word_count": 4,
+  "password_letters_per_word": 3,
+  "password_digit_count": 4
 }

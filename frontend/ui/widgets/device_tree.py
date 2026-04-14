@@ -6,8 +6,8 @@ from PyQt6.QtWidgets import (
     QTreeWidgetItem,
     QHeaderView
 )
-from PyQt6.QtGui import QIcon
-from PyQt6.QtCore import Qt, pyqtSignal, QTimer
+from PyQt6.QtGui import QIcon, QFont, QColor, QBrush
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QSize, QModelIndex
 
 from core.paths import ICONS_DIR
 from ui.context_menus.device_tree_context_menu import DeviceTreeContextMenu
@@ -135,7 +135,24 @@ class DeviceTree(QTreeWidget):
 
         self.setRootIsDecorated(True)
         self.setIndentation(18)
-        self.setUniformRowHeights(True)
+        self.setUniformRowHeights(False)
+
+        # ===== Шрифты =====
+        self._font_branch = QFont()
+        self._font_branch.setBold(True)
+        self._font_branch.setPointSize(10)
+
+        self._font_server = QFont()
+        self._font_server.setWeight(QFont.Weight.DemiBold)
+
+        # ===== Цвета фона строк =====
+        self._brush_branch_bg  = QBrush(QColor(42, 54, 66))   # section header
+        self._brush_port_up    = QBrush(QColor(18, 48, 30))   # зелёный тинт
+        self._brush_port_down  = QBrush(QColor(58, 20, 20))   # красный тинт
+
+        # ===== Цвета текста =====
+        self._brush_text_down  = QBrush(QColor(220, 100, 100))
+        self._brush_text_muted = QBrush(QColor(130, 145, 160))
 
         # ===== Context menu вынесен =====
         self.context_menu = DeviceTreeContextMenu(self)
@@ -211,7 +228,15 @@ class DeviceTree(QTreeWidget):
 
         for branch in branches:
             branch_item = QTreeWidgetItem([branch["name"], "", "", "", ""])
+            branch_item.setFont(0, self._font_branch)
+            branch_item.setSizeHint(0, QSize(0, 20))
+            for col in range(5):
+                branch_item.setBackground(col, self._brush_branch_bg)
             self.addTopLevelItem(branch_item)
+            # Растягиваем название филиала на всю ширину — как section header
+            self.setFirstColumnSpanned(
+                self.topLevelItemCount() - 1, QModelIndex(), True
+            )
 
             for srv in branch.get("servers", []):
                 server_item = QTreeWidgetItem([
@@ -221,6 +246,8 @@ class DeviceTree(QTreeWidget):
                     "",
                     ""
                 ])
+                server_item.setFont(0, self._font_server)
+                server_item.setSizeHint(0, QSize(0, 15))
 
                 server_item.setData(0, ROLE_TYPE, "server")
                 server_item.setData(0, ROLE_SERVER_ID, srv["id"])
@@ -252,8 +279,20 @@ class DeviceTree(QTreeWidget):
                         format_dt(p.get("credentials_updated_at"))
                     ])
 
+                    port_item.setTextAlignment(2, Qt.AlignmentFlag.AlignCenter)
                     port_item.setTextAlignment(3, Qt.AlignmentFlag.AlignCenter)
                     port_item.setIcon(2, icon)
+                    port_item.setSizeHint(0, QSize(0, 12))
+
+                    # Цвет фона и текста по статусу
+                    if state is True:
+                        for col in range(5):
+                            port_item.setBackground(col, self._brush_port_up)
+                    elif state is False:
+                        for col in range(5):
+                            port_item.setBackground(col, self._brush_port_down)
+                        port_item.setForeground(0, self._brush_text_down)
+                        port_item.setForeground(4, self._brush_text_muted)
 
                     port_item.setData(0, ROLE_TYPE, "port")
                     port_item.setData(0, ROLE_SERVER_ID, srv["id"])
@@ -305,7 +344,7 @@ class DeviceTree(QTreeWidget):
 
         return None
 
-    def show_credentials(self, server_id: int, port: int, username: str, password: str):
+    def show_credentials(self, server_id: int, port: int, username: str, password: str, mnemonic: str = ""):
         item = self._find_port_item(server_id, port)
         if not item:
             return
@@ -318,12 +357,19 @@ class DeviceTree(QTreeWidget):
             timer.deleteLater()
 
         item.setText(3, f"{username}:{password}")
+        self.header().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+
+        if mnemonic:
+            item.setToolTip(3, f'<span style="color:#4CAF50">{mnemonic}</span>')
 
         timer = QTimer(self)
         timer.setSingleShot(True)
 
         def clear():
             item.setText(3, "********")
+            item.setToolTip(3, "")
+            self.header().setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed)
+            self.setColumnWidth(3, 160)
             timer.deleteLater()
             self._credential_timers.pop(key, None)
 
@@ -332,8 +378,11 @@ class DeviceTree(QTreeWidget):
 
         self._credential_timers[key] = timer
 
+
     def _stop_all_credential_timers(self):
         for timer in self._credential_timers.values():
             timer.stop()
             timer.deleteLater()
         self._credential_timers.clear()
+        self.header().setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed)
+        self.setColumnWidth(3, 160)

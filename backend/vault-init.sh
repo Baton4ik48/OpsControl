@@ -1,35 +1,54 @@
-#!/bin/bash
+#!/bin/sh
 # =========================================================
-# Vault Dev Init Script
-# Настраивает Vault с нуля после каждого перезапуска
+# Vault Production Init Script
+# Запускать ТОЛЬКО после init + unseal + login
 # =========================================================
 
-VAULT_ADDR="http://127.0.0.1:8200"
-VAULT_TOKEN="${VAULT_DEV_ROOT_TOKEN_ID:-myroot}"
+set -e
 
-export VAULT_ADDR VAULT_TOKEN
+echo "🔍 Проверка VAULT_TOKEN..."
 
-echo "⏳ Ожидание Vault..."
-until vault status > /dev/null 2>&1; do
-  sleep 1
+if [ -z "$VAULT_TOKEN" ]; then
+  echo "❌ VAULT_TOKEN не установлен"
+  exit 1
+fi
+
+echo "🔍 Проверка ENV..."
+
+if [ -z "$POSTGRES_USER" ] || [ -z "$POSTGRES_PASSWORD" ] || [ -z "$VAULT_DATABASE_ROLE_NAME" ]; then
+  echo "❌ Не заданы переменные окружения (POSTGRES_USER / POSTGRES_PASSWORD / VAULT_DATABASE_ROLE_NAME)"
+  exit 1
+fi
+
+echo "⏳ Ожидание Vault (init)..."
+
+until vault status 2>/dev/null | grep -q "Initialized.*true"; do
+  sleep 2
 done
-echo "✅ Vault доступен"
+
+echo "⏳ Ожидание Vault (unseal)..."
+
+until vault status 2>/dev/null | grep -q "Sealed.*false"; do
+  sleep 2
+done
+
+echo "✅ Vault готов"
 
 # =========================================================
 # 1. Database Secrets Engine
 # =========================================================
 echo "📦 Настройка Database engine..."
 
-vault secrets enable database 2>/dev/null
+vault secrets enable database 2>/dev/null || true
 
 vault write database/config/ppm-db \
   plugin_name=postgresql-database-plugin \
-  connection_url="postgresql://{{username}}:{{password}}@postgres:5432/ppm_database?sslmode=disable" \
-  allowed_roles="postgres-dynamic" \
-  username="login_ppm" \
-  password="***REMOVED-SEE-INCIDENT***"
+  connection_url="postgresql://{{username}}:{{password}}@postgres:5432/${POSTGRES_DB}?sslmode=disable" \
+  allowed_roles="${VAULT_DATABASE_ROLE_NAME}" \
+  username="${POSTGRES_USER}" \
+  password="${POSTGRES_PASSWORD}"
 
-vault write database/roles/postgres-dynamic \
+vault write database/roles/${VAULT_DATABASE_ROLE_NAME} \
   db_name=ppm-db \
   creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; GRANT app_role TO \"{{name}}\";" \
   default_ttl="1h" \
@@ -38,11 +57,11 @@ vault write database/roles/postgres-dynamic \
 echo "✅ Database engine готов"
 
 # =========================================================
-# 2. KV v2 Engine (для паролей к серверам)
+# 2. KV v2 Engine
 # =========================================================
 echo "📦 Настройка KV engine..."
 
-vault secrets enable -path=credentials kv-v2 2>/dev/null
+vault secrets enable -path=credentials kv-v2 2>/dev/null || true
 
 echo "✅ KV engine готов"
 
@@ -52,7 +71,7 @@ echo "✅ KV engine готов"
 echo "📜 Создание политик..."
 
 vault policy write ppm-db-policy - <<EOF
-path "database/creds/postgres-dynamic" {
+path "database/creds/${VAULT_DATABASE_ROLE_NAME}" {
   capabilities = ["read"]
 }
 EOF
@@ -69,18 +88,17 @@ EOF
 echo "✅ Политики созданы"
 
 # =========================================================
-# 4. AppRole для бэкенда
+# 4. AppRole для backend
 # =========================================================
 echo "🔑 Настройка AppRole..."
 
-vault auth enable approle 2>/dev/null
+vault auth enable approle 2>/dev/null || true
 
 vault write auth/approle/role/backend-app \
   token_policies="ppm-db-policy,ppm-admin-policy" \
   token_period=1h \
   token_num_uses=0
-  
-# Получаем role_id и secret_id
+
 ROLE_ID=$(vault read -field=role_id auth/approle/role/backend-app/role-id)
 SECRET_ID=$(vault write -field=secret_id -f auth/approle/role/backend-app/secret-id)
 
@@ -93,10 +111,10 @@ echo "   VAULT_SECRET_ID=${SECRET_ID}"
 # =========================================================
 echo "👤 Настройка Userpass..."
 
-vault auth enable userpass 2>/dev/null
+vault auth enable userpass 2>/dev/null || true
 
 vault write auth/userpass/users/admin \
-  password="7946130" \
+  password="${VAULT_ADMIN_PASSWORD}" \
   policies="ppm-admin-policy"
 
 echo "✅ Userpass готов (login: admin)"
@@ -106,7 +124,7 @@ echo "✅ Userpass готов (login: admin)"
 # =========================================================
 echo ""
 echo "=========================================="
-echo "  Vault настроен!"
+echo "  Vault настроен (PROD)"
 echo "=========================================="
 echo "  VAULT_ROLE_ID=${ROLE_ID}"
 echo "  VAULT_SECRET_ID=${SECRET_ID}"

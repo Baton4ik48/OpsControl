@@ -37,20 +37,20 @@ class CredentialsApi(BaseApi):
     def rotate(
         self,
         server_id: int,
-        host: str,
         ssh_port: int,
         new_password: str,
         username: str,
         master_password: str,
+        mnemonic: str = "",
     ):
         return self.post(
             "/api/credentials/rotate",
             json={
                 "server_id": server_id,
-                "host": host,
                 "ssh_port": ssh_port,
                 "new_password": new_password,
                 "username": username,
                 "master_password": master_password,
+                "mnemonic": mnemonic,
             }
         )
