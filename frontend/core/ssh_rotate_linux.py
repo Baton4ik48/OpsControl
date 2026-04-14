@@ -70,10 +70,10 @@ def rotate_linux_password(
     """
     Подключается по SSH и меняет пароль пользователя через chpasswd.
 
-    Использует printf + sudo -S без PTY:
-      - printf передаёт current_password как пароль для sudo (первая строка)
-      - username:new_password передаётся в chpasswd (вторая строка)
+    Использует printf + sudo без PTY:
+      - printf передаёт username:new_password в chpasswd через pipe
       - PTY не используется — исключает эхо паролей в stdout
+      - Требует NOPASSWD для chpasswd в sudoers
 
     Если канал рвётся во время выполнения команды — делает проверочное
     переподключение:

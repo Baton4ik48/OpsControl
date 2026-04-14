@@ -33,25 +33,44 @@ def _validate_host(value: str) -> str:
 # Pydantic models
 # ==========================
 
+ALLOWED_DEVICE_TYPES = {"linux", "natex"}
+
+
 class ServerCreate(BaseModel):
     branch_id: int
     name: str
     ip: str
+    device_type: str = "linux"
 
     @field_validator("ip")
     @classmethod
     def validate_ip(cls, v):
         return _validate_host(v.strip())
+
+    @field_validator("device_type")
+    @classmethod
+    def validate_device_type(cls, v):
+        if v not in ALLOWED_DEVICE_TYPES:
+            raise ValueError(f"device_type must be one of: {ALLOWED_DEVICE_TYPES}")
+        return v
 
 
 class ServerUpdate(BaseModel):
     name: str
     ip: str
+    device_type: str = "linux"
 
     @field_validator("ip")
     @classmethod
     def validate_ip(cls, v):
         return _validate_host(v.strip())
+
+    @field_validator("device_type")
+    @classmethod
+    def validate_device_type(cls, v):
+        if v not in ALLOWED_DEVICE_TYPES:
+            raise ValueError(f"device_type must be one of: {ALLOWED_DEVICE_TYPES}")
+        return v
 
 
 def ensure_found(affected: int, entity: str):
@@ -68,7 +87,7 @@ def get_servers(branch_id: int):
     rows = load_servers(branch_id)
     return {
         "success": True,
-        "data": [{"id": r[0], "name": r[1], "ip": r[2]} for r in rows]
+        "data": [{"id": r[0], "name": r[1], "ip": r[2], "device_type": r[3]} for r in rows]
     }
 
 
@@ -81,7 +100,8 @@ def create_server_api(payload: ServerCreate):
     new_id = create_server(
         payload.branch_id,
         payload.name,
-        payload.ip
+        payload.ip,
+        payload.device_type,
     )
     return {"success": True, "data": {"id": new_id}}
 
@@ -95,7 +115,8 @@ def update_server_api(server_id: int, payload: ServerUpdate):
     affected = update_server(
         server_id,
         payload.name,
-        payload.ip
+        payload.ip,
+        payload.device_type,
     )
     ensure_found(affected, "Server")
     return {"success": True, "data": None}

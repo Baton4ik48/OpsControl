@@ -35,6 +35,7 @@ def get_tree():
                     "id": sid,
                     "name": sname,
                     "ip": sip,
+                    "device_type": r[11] or "linux",
                     "ports": []
                 }
 
