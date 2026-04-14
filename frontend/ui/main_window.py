@@ -149,9 +149,9 @@ class MainWindow(QWidget):
     # =========================
     # PASSWORD ROTATION
     # =========================
-    def _open_password_rotation(self, server_id: int, ip: str):
+    def _open_password_rotation(self, server_id: int, ip: str, device_type: str = "linux"):
         admin_login = self.user_settings.get("admin_login") or ""
-        dlg = PasswordRotationDialog(server_id, ip, admin_login, parent=self)
+        dlg = PasswordRotationDialog(server_id, ip, admin_login, device_type=device_type, parent=self)
         dlg.exec()
 
     # =========================

@@ -17,6 +17,7 @@ ROLE_TYPE = Qt.ItemDataRole.UserRole + 1
 ROLE_SERVER_ID = Qt.ItemDataRole.UserRole + 2
 ROLE_PORT = Qt.ItemDataRole.UserRole + 3
 ROLE_IP = Qt.ItemDataRole.UserRole + 4
+ROLE_DEVICE_TYPE = Qt.ItemDataRole.UserRole + 5
 
 CREDENTIALS_SHOW_TIMEOUT_MS = 1 * 60 * 1000
 
@@ -87,12 +88,13 @@ class DeviceTree(QTreeWidget):
     ROLE_SERVER_ID = ROLE_SERVER_ID
     ROLE_PORT = ROLE_PORT
     ROLE_IP = ROLE_IP
+    ROLE_DEVICE_TYPE = ROLE_DEVICE_TYPE
 
     refresh_server_requested = pyqtSignal(int, str)
     refresh_port_requested = pyqtSignal(int, int, str)
     open_protocol_requested = pyqtSignal(int, int, str, str)
     show_credentials_requested = pyqtSignal(int, int, str)
-    rotate_password_requested = pyqtSignal(int, str)  # server_id, ip
+    rotate_password_requested = pyqtSignal(int, str, str)  # server_id, ip, device_type
 
     def __init__(self):
         super().__init__()
@@ -252,6 +254,7 @@ class DeviceTree(QTreeWidget):
                 server_item.setData(0, ROLE_TYPE, "server")
                 server_item.setData(0, ROLE_SERVER_ID, srv["id"])
                 server_item.setData(0, ROLE_IP, srv["ip"])
+                server_item.setData(0, ROLE_DEVICE_TYPE, srv.get("device_type", "linux"))
 
                 branch_item.addChild(server_item)
 

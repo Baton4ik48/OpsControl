@@ -82,12 +82,13 @@ class InfrastructureController:
         self.current_port = None
         self.view.show_server_form(server_data)
 
-    def save_server(self, name, ip):
+    def save_server(self, name, ip, device_type="linux"):
         def task():
             self.server_api.update(
                 self.current_server_id,
                 name,
-                ip
+                ip,
+                device_type,
             )
 
         self._run_task("Сохранение сервера…", task)

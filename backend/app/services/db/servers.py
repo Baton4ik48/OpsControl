@@ -9,7 +9,7 @@ def load_servers(branch_id: int):
     def work(conn):
         cur = conn.cursor()
         cur.execute("""
-            SELECT id, name, ip
+            SELECT id, name, ip, device_type
             FROM servers
             WHERE branch_id = %s
             ORDER BY name
@@ -25,14 +25,14 @@ def load_servers(branch_id: int):
 # CREATE
 # ==========================
 
-def create_server(branch_id: int, name: str, ip: str) -> int:
+def create_server(branch_id: int, name: str, ip: str, device_type: str = "linux") -> int:
     def work(conn):
         cur = conn.cursor()
         cur.execute("""
-            INSERT INTO servers (branch_id, name, ip)
-            VALUES (%s, %s, %s)
+            INSERT INTO servers (branch_id, name, ip, device_type)
+            VALUES (%s, %s, %s, %s)
             RETURNING id
-        """, (branch_id, name, ip))
+        """, (branch_id, name, ip, device_type))
         new_id = cur.fetchone()[0]
         conn.commit()
         cur.close()
@@ -45,15 +45,16 @@ def create_server(branch_id: int, name: str, ip: str) -> int:
 # UPDATE (атомарный)
 # ==========================
 
-def update_server(server_id: int, name: str, ip: str) -> int:
+def update_server(server_id: int, name: str, ip: str, device_type: str = "linux") -> int:
     def work(conn):
         cur = conn.cursor()
         cur.execute("""
             UPDATE servers
             SET name = %s,
-                ip = %s
+                ip = %s,
+                device_type = %s
             WHERE id = %s
-        """, (name, ip, server_id))
+        """, (name, ip, device_type, server_id))
 
         affected = cur.rowcount
         conn.commit()

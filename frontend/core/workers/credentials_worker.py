@@ -1,5 +1,5 @@
 from PyQt6.QtCore import QThread, pyqtSignal
-from core.ssh_rotate import _wipe
+from core.ssh_rotate_linux import _wipe
 
 
 class CredentialsWorker(QThread):
