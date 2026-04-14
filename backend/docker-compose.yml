@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:16
-    container_name: ppm-postgres
+    container_name: OpsControl-postgres
     restart: always
     environment:
       TZ: Europe/Moscow
@@ -15,7 +15,7 @@ services:
 
   vault-init:
     image: hashicorp/vault:1.15
-    container_name: ppm-vault-init
+    container_name: OpsControl-vault-init
     user: "0:0"
     entrypoint: ["sh", "-c", "chown -R 100:100 /vault/data"]
     volumes:
@@ -24,7 +24,7 @@ services:
 
   vault:
     image: hashicorp/vault:1.15
-    container_name: ppm-vault
+    container_name: OpsControl-vault
     restart: always
     depends_on:
       vault-init:
@@ -34,6 +34,10 @@ services:
     environment:
       TZ: Europe/Moscow
       VAULT_ADDR: http://127.0.0.1:8200
+      #VAULT_DISABLE_MLOCK: "true" #Для astra linux надо включить
+    security_opt:
+      #- apparmor: unconfined #Для astra linux надо включить
+      #- seccomp: unconfined #Для astra linux надо включить
     volumes:
       - vault_data:/vault/data
       - ./vault-config:/vault/config
@@ -45,8 +49,8 @@ services:
     command: vault server -config=/vault/config/config.hcl
 
   backend:
-    build: .
-    container_name: ppm-backend
+    image: opscontrol-backend
+    container_name: OpsControl-backend
     restart: always
     depends_on:
       - postgres
