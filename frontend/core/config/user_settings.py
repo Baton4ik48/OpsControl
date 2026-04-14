@@ -18,7 +18,12 @@ DEFAULT_SETTINGS = {
         {"port": 80, "scheme": "http"},
         {"port": 443, "scheme": "https"}
     ],
-    "external_apps": []
+    
+    "external_apps": [],
+
+    "password_word_count": 3,
+    "password_letters_per_word": 4,
+    "password_digit_count": 2
 }
 
 

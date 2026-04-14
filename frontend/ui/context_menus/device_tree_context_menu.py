@@ -6,18 +6,44 @@ class DeviceTreeContextMenu:
 
     def open(self, pos):
         item = self.tree.itemAt(pos)
+        menu = QMenu(self.tree)
+
+        # =========================
+        # ПУСТОЕ МЕСТО
+        # =========================
         if not item:
+            expand_all = menu.addAction("Развернуть всё")
+            collapse_all = menu.addAction("Свернуть всё")
+            expand_all.triggered.connect(self.tree.expandAll)
+            collapse_all.triggered.connect(self.tree.collapseAll)
+            menu.exec(self.tree.viewport().mapToGlobal(pos))
             return
 
         item_type = item.data(0, self.tree.ROLE_TYPE)
+
+        # =========================
+        # ФИЛИАЛ
+        # =========================
+        if item_type is None:
+            if item.isExpanded():
+                action = menu.addAction("Свернуть филиал")
+                action.triggered.connect(lambda: item.setExpanded(False))
+            else:
+                action = menu.addAction("Развернуть филиал")
+                action.triggered.connect(lambda: self._expand_branch(item))
+            menu.addSeparator()
+            expand_all = menu.addAction("Развернуть всё")
+            collapse_all = menu.addAction("Свернуть всё")
+            expand_all.triggered.connect(self.tree.expandAll)
+            collapse_all.triggered.connect(self.tree.collapseAll)
+            menu.exec(self.tree.viewport().mapToGlobal(pos))
+            return
 
         if item_type not in ("server", "port"):
             return
 
         server_id = item.data(0, self.tree.ROLE_SERVER_ID)
         ip = item.data(0, self.tree.ROLE_IP)
-
-        menu = QMenu(self.tree)
 
         # =========================
         # SERVER
@@ -81,6 +107,16 @@ class DeviceTreeContextMenu:
             )
 
         menu.exec(self.tree.viewport().mapToGlobal(pos))
+
+    # ==================================================
+    # EXPAND BRANCH
+    # ==================================================
+
+    def _expand_branch(self, branch_item):
+        """Разворачивает филиал и все серверы внутри него."""
+        branch_item.setExpanded(True)
+        for i in range(branch_item.childCount()):
+            branch_item.child(i).setExpanded(True)
 
     # ==================================================
     # CONNECT ACTIONS

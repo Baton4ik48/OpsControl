@@ -39,8 +39,9 @@ backend/logs/**
 readme.txt
 main.spec
 
-frontend/build/**
-frontend/dist/**
+frontend/build
+frontend/dist
+frontend/venv
 
 # ================================
 # Примечание

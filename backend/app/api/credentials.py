@@ -138,11 +138,11 @@ def upsert_credentials_api(data: UpsertCredentialsRequest):
 
 class RotateCredentialsRequest(BaseModel):
     server_id: int
-    host: str
     ssh_port: int
     new_password: str
     username: str
     master_password: str
+    mnemonic: str = ""
 
 
 @router.post("/rotate")
@@ -152,12 +152,12 @@ def rotate_credentials_api(data: RotateCredentialsRequest, request: Request):
     try:
         rotate_credentials(
             server_id=data.server_id,
-            host=data.host,
             ssh_port=data.ssh_port,
             new_password=data.new_password,
             username=data.username,
             master_password=data.master_password,
             client_ip=client_ip,
+            mnemonic=data.mnemonic,
         )
         return {"success": True}
 

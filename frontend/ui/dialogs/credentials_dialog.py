@@ -45,6 +45,10 @@ class CredentialsDialog(QDialog):
         self.show_btn.clicked.connect(self._on_submit)
         layout.addWidget(self.show_btn)
 
+        # Ширина окна — title bar использует системный шрифт, считаем по символам
+        min_w = max(320, len(self.windowTitle()) * 11 + 160)
+        self.setMinimumWidth(min_w)
+
     def _on_submit(self):
         password = self.admin_input.text().strip()
         if not password:
@@ -52,5 +56,6 @@ class CredentialsDialog(QDialog):
             return
 
         self.submitted.emit(password)
+        self.admin_input.clear()
         self.accept()
 

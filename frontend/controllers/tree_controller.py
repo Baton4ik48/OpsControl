@@ -223,8 +223,10 @@ class TreeController(QObject):
                 server_id,
                 port,
                 data["username"],
-                data["password"]
+                data["password"],
+                data.get("mnemonic", ""),
             )
+            del data
 
         def on_error(e: ApiError):
             self.error_occurred.emit(e)
@@ -323,6 +325,8 @@ class TreeController(QObject):
         def on_success(data):
             username = data["username"]
             password = data["password"]
+            del data
+
             host = self._get_ip_by_server_id(server_id)
 
             if not host:

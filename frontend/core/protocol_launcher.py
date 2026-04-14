@@ -48,20 +48,13 @@ class ProtocolLauncher:
             ])
 
         elif sys.platform.startswith("linux"):
-
             if not shutil.which("sshpass"):
                 raise RuntimeError("SSHPASS_NOT_FOUND")
-
             subprocess.Popen([
                 "x-terminal-emulator",
                 "-e",
-                "/usr/bin/sshpass",
-                "-p",
-                password,
-                "ssh",
-                "-p",
-                str(port),
-                f"{user}@{host}"
+                "bash", "-c",
+                f"sshpass -p '{password}' ssh -o StrictHostKeyChecking=no -p {port} {user}@{host}; exec bash"
             ])
 
     # =========================
