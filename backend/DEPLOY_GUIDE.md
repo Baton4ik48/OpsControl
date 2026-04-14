@@ -46,7 +46,6 @@ docker compose ps
 
 ```bash
 cat init.sql | docker compose exec -T postgres psql -U login_ppm -d ppm_database
-cat migrate_add_device_type.sql | docker compose exec -T postgres psql -U login_ppm -d ppm_database
 ```
 
 Проверка:
@@ -116,7 +115,6 @@ VAULT_SECRET_ID=...
 ## 🔄 Шаг 6 — Перезапуск backend
 
 ```bash
-docker compose build backend
 docker compose up -d --no-deps backend
 ```
 
@@ -143,19 +141,6 @@ curl http://localhost:8001/api/status
 curl http://localhost:8001/api/tree
 ```
 
----
-
-## 🔁 Повторный запуск
-
-### Если просто:
-
-```bash
-docker compose restart
-```
-
-👉 ничего делать НЕ нужно
-
----
 
 ### Если сделал:
 
