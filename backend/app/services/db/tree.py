@@ -16,7 +16,8 @@ def load_tree():
             p.last_failure,
             c.id AS cred_id,
             c.updated_at,
-            c.vault_path
+            c.vault_path,
+            s.device_type
         FROM branches b
         LEFT JOIN servers s ON s.branch_id = b.id
         LEFT JOIN ports p ON p.server_id = s.id

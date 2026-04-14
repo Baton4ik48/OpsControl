@@ -14,15 +14,23 @@ from core.api.credentials import CredentialsApi
 from core.api.base import ApiError
 from core.password_generator import generate_password
 from core.config.user_settings import UserSettings
-from core.ssh_rotate import rotate_linux_password, SSHRotateError, _wipe
+from core.ssh_rotate_linux import rotate_linux_password, SSHRotateError, _wipe
+from core.ssh_rotate_natex import rotate_natex_password
+
+_ROTATE_FN = {
+    "linux": rotate_linux_password,
+    "natex": rotate_natex_password,
+}
 
 
 class PasswordRotationDialog(QDialog):
-    def __init__(self, server_id: int, host: str, admin_login: str, parent=None):
+    def __init__(self, server_id: int, host: str, admin_login: str,
+                 device_type: str = "linux", parent=None):
         super().__init__(parent)
 
         self.server_id = server_id
         self.host = host
+        self._rotate_fn = _ROTATE_FN.get(device_type, rotate_linux_password)
         self.admin_login = admin_login
         self._api = CredentialsApi()
 
@@ -169,7 +177,7 @@ class PasswordRotationDialog(QDialog):
             # Шаг 2: меняем пароль на сервере по SSH с машины фронтенда
             self.apply_btn.setText("Меняю пароль по SSH...")
             try:
-                rotate_linux_password(
+                self._rotate_fn(
                     host=self.host,
                     username=current_username,
                     current_password=current_password,
