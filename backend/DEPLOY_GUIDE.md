@@ -46,6 +46,7 @@ docker compose ps
 
 ```bash
 cat init.sql | docker compose exec -T postgres psql -U login_ppm -d ppm_database
+cat migrate_add_device_type.sql | docker compose exec -T postgres psql -U login_ppm -d ppm_database
 ```
 
 Проверка:
