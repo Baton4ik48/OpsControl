@@ -34,10 +34,7 @@ services:
     environment:
       TZ: Europe/Moscow
       VAULT_ADDR: http://127.0.0.1:8200
-      #VAULT_DISABLE_MLOCK: "true" #Для astra linux надо включить
-    security_opt:
-      #- apparmor: unconfined #Для astra linux надо включить
-      #- seccomp: unconfined #Для astra linux надо включить
+    privileged: "true" # Включить на астра линукс, временное решение
     volumes:
       - vault_data:/vault/data
       - ./vault-config:/vault/config
