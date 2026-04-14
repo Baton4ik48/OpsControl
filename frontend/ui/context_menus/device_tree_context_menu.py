@@ -88,12 +88,15 @@ class DeviceTreeContextMenu:
             )
 
             if port == 22:
+                # device_type хранится на родительском узле сервера, не на порту
+                device_type = item.parent().data(0, self.tree.ROLE_DEVICE_TYPE) or "linux"
                 rotate_action = menu.addAction(
                     self.tree.icon_key,
                     "Сменить пароль"
                 )
                 rotate_action.triggered.connect(
-                    lambda: self.tree.rotate_password_requested.emit(server_id, ip)
+                    lambda checked=False, dt=device_type:
+                        self.tree.rotate_password_requested.emit(server_id, ip, dt)
                 )
 
             menu.addSeparator()
