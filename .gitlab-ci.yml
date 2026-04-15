@@ -4,6 +4,8 @@ stages:
 test-job:
   stage: test
   tags:
-    - home
+    - docker
+  image: alpine:latest
   script:
-    - echo "CI работает"
+    - echo "CI OK"
+    - docker ps
