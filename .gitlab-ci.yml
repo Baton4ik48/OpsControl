@@ -5,8 +5,7 @@ test-job:
   stage: test
   tags:
     - docker
-  image: alpine:latest
+  image: docker:24
   script:
-    - echo "CI OK"
     - docker ps
     
