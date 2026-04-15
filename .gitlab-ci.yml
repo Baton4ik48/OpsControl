@@ -9,3 +9,4 @@ test-job:
   script:
     - echo "CI OK"
     - docker ps
+    
