@@ -7,6 +7,7 @@ router = APIRouter(
 )
 
 
+
 @router.get("")
 def get_status():
     return {
