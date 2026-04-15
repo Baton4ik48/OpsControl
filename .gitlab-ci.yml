@@ -3,5 +3,7 @@ stages:
 
 test-job:
   stage: test
+  tags:
+    - home
   script:
-    - echo "GitLab CI работает"
+    - echo "CI работает"
