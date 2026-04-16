@@ -105,11 +105,12 @@ def rotate_linux_password(
         except (SSHException, socket.timeout, TimeoutError, OSError) as e:
             raise SSHRotateError(f"SSH ошибка при подключении: {e}")
 
-        # NOPASSWD: sudo не читает пароль из stdin — передаём только данные для chpasswd.
-        # current_password использован выше для SSH-аутентификации, больше не нужен.
+        # sudo -S читает пароль из stdin (первая строка), остальное идёт в chpasswd.
+        # Работает как с NOPASSWD так и без него.
         command = (
-            f"printf '%s:%s\\n' {shlex.quote(username)} {shlex.quote(new_password)} "
-            f"| sudo chpasswd 2>&1"
+            f"printf '%s\\n%s:%s\\n' {shlex.quote(current_password)} "
+            f"{shlex.quote(username)} {shlex.quote(new_password)} "
+            f"| sudo -S chpasswd 2>&1"
         )
 
         try:

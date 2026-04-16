@@ -84,7 +84,19 @@ class TreeController(QObject):
 
         self._update_port_status(server_id, port)
 
-        self.tree.render(self._data)
+        port_data = self._get_port_data(server_id, port)
+        if port_data is not None:
+            self.tree.update_port_item(server_id, port, port_data)
+
+    def _get_port_data(self, server_id, port):
+        for b in self._data:
+            for s in b["servers"]:
+                if s["id"] != server_id:
+                    continue
+                for p in s["ports"]:
+                    if p["port"] == port:
+                        return p
+        return None
 
     def _update_port_status(self, server_id, port):
         now = datetime.now(timezone.utc).isoformat()
@@ -137,6 +149,30 @@ class TreeController(QObject):
     # =========================
     # Контекст меню
     # =========================
+
+    def refresh_branch(self, branch_name: str):
+        if not self._data:
+            return
+
+        branch = next((b for b in self._data if b["name"] == branch_name), None)
+        if not branch:
+            return
+
+        servers = branch.get("servers", [])
+        total_ports = sum(len(s["ports"]) for s in servers)
+        if total_ports == 0:
+            return
+
+        self.busy.start(f"Проверка портов филиала «{branch_name}»…")
+        self._pending_ports = total_ports
+
+        def on_checked(server_id, port, ok):
+            self._on_port_checked(server_id, port, ok)
+            self._pending_ports -= 1
+            if self._pending_ports == 0:
+                self.busy.stop()
+
+        self.checker.check_ports(servers, on_checked, self.api)
 
     def refresh_server(self, server_id: int, ip: str):
         for b in self._data:

@@ -76,14 +76,15 @@ def handle_system_error(parent, error: Exception):
             parent,
             "Утилита не найдена",
             "Не найдена системная SSH-утилита.\n\n"
-            "Убедитесь, что plink (Windows) или sshpass (Linux) установлены и доступны в PATH."
+            "Windows: установите PuTTY или KiTTY и добавьте в PATH.\n"
+            "Linux: установите пакет sshpass."
         )
         return
 
     if isinstance(error, RuntimeError):
 
         message_map = {
-            "PLINK_NOT_FOUND": "Не найден plink.\nУстановите PuTTY и добавьте в PATH.",
+            "PUTTY_NOT_FOUND": "Не найден PuTTY или KiTTY.\nУстановите PuTTY (или KiTTY) и добавьте в PATH.",
             "SSHPASS_NOT_FOUND": "Не найден sshpass.\nУстановите пакет sshpass.",
             "RDP_ONLY_WINDOWS": "RDP доступен только на Windows.",
             "UNSUPPORTED_PROTOCOL": "Данный протокол не поддерживается."

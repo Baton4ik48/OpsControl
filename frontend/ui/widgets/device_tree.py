@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from PyQt6.QtWidgets import (
     QTreeWidget,
     QTreeWidgetItem,
-    QHeaderView
+    QHeaderView,
 )
 from PyQt6.QtGui import QIcon, QFont, QColor, QBrush
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QSize, QModelIndex
@@ -86,7 +86,7 @@ def _password_age_color(credentials_updated_at, rotation_days):
     """Возвращает QColor для столбца 'Дата обновления пароля' по % оставшегося срока.
 
     Пороги (от суммарного интервала):
-      ≥ 50%  → зелёный
+      ≥ 50%  → None  (норма — дефолтный белый, не засоряем)
       ≥ 22%  → жёлтый
       ≥  9%  → оранжевый
        < 9%  → красный (или истёк)
@@ -102,13 +102,13 @@ def _password_age_color(credentials_updated_at, rotation_days):
         days_remaining = max(0.0, rotation_days - days_elapsed)
         pct = days_remaining / rotation_days
         if pct >= 0.50:
-            return QColor(80, 200, 80)
+            return None                      # всё хорошо — цвет не нужен
         elif pct >= 0.22:
-            return QColor(210, 210, 50)
+            return QColor(210, 210, 50)      # жёлтый
         elif pct >= 0.09:
-            return QColor(210, 130, 30)
+            return QColor(210, 130, 30)      # оранжевый
         else:
-            return QColor(210, 60, 60)
+            return QColor(210, 60, 60)       # красный
     except Exception:
         return None
 
@@ -122,6 +122,7 @@ class DeviceTree(QTreeWidget):
     ROLE_IP = ROLE_IP
     ROLE_DEVICE_TYPE = ROLE_DEVICE_TYPE
 
+    refresh_branch_requested = pyqtSignal(str)            # branch_name
     refresh_server_requested = pyqtSignal(int, str)
     refresh_port_requested = pyqtSignal(int, int, str)
     open_protocol_requested = pyqtSignal(int, int, str, str)
@@ -185,9 +186,11 @@ class DeviceTree(QTreeWidget):
         self._brush_port_up    = QBrush(QColor(18, 48, 30))   # зелёный тинт
         self._brush_port_down  = QBrush(QColor(58, 20, 20))   # красный тинт
 
-        # ===== Цвета текста =====
-        self._brush_text_down  = QBrush(QColor(220, 100, 100))
-        self._brush_text_muted = QBrush(QColor(130, 145, 160))
+        # ===== Цвета текста (QSS color убран — красим только программно) =====
+        self._brush_text_branch = QBrush(QColor(0xcf, 0xd8, 0xdc))  # ветки / серверы
+        self._brush_text_port   = QBrush(QColor(0x9f, 0xbf, 0xc2))  # порты (дефолт)
+        self._brush_text_down   = QBrush(QColor(220, 100, 100))      # имя порта DOWN
+        self._brush_text_muted  = QBrush(QColor(130, 145, 160))      # дата при DOWN без кредов
 
         # ===== Context menu вынесен =====
         self.context_menu = DeviceTreeContextMenu(self)
@@ -267,6 +270,7 @@ class DeviceTree(QTreeWidget):
             branch_item.setSizeHint(0, QSize(0, 20))
             for col in range(5):
                 branch_item.setBackground(col, self._brush_branch_bg)
+                branch_item.setForeground(col, self._brush_text_branch)
             self.addTopLevelItem(branch_item)
             # Растягиваем название филиала на всю ширину — как section header
             self.setFirstColumnSpanned(
@@ -283,6 +287,8 @@ class DeviceTree(QTreeWidget):
                 ])
                 server_item.setFont(0, self._font_server)
                 server_item.setSizeHint(0, QSize(0, 15))
+                for col in range(5):
+                    server_item.setForeground(col, self._brush_text_branch)
 
                 server_item.setData(0, ROLE_TYPE, "server")
                 server_item.setData(0, ROLE_SERVER_ID, srv["id"])
@@ -320,6 +326,12 @@ class DeviceTree(QTreeWidget):
                     port_item.setIcon(2, icon)
                     port_item.setSizeHint(0, QSize(0, 12))
 
+                    # Дефолтный цвет текста для всех столбцов порта
+                    # (QSS больше не задаёт color для item:!has-children,
+                    #  поэтому выставляем программно — иначе будет белый)
+                    for col in range(5):
+                        port_item.setForeground(col, self._brush_text_port)
+
                     # Цвет фона и текста по статусу
                     if state is True:
                         for col in range(5):
@@ -337,7 +349,7 @@ class DeviceTree(QTreeWidget):
                     age_color = _password_age_color(
                         p.get("credentials_updated_at"), rotation_days
                     )
-                    if age_color:
+                    if age_color is not None:
                         port_item.setForeground(4, QBrush(age_color))
                     elif state is False:
                         port_item.setForeground(4, self._brush_text_muted)
@@ -391,6 +403,57 @@ class DeviceTree(QTreeWidget):
                         return port_item
 
         return None
+
+    def update_port_item(self, server_id: int, port: int, port_data: dict):
+        """Точечно обновляет строку порта без полного rebuild дерева."""
+        item = self._find_port_item(server_id, port)
+        if not item:
+            return
+
+        state = port_data.get("is_up")
+
+        if state is True:
+            item.setText(2, "up")
+            item.setIcon(2, self.icon_up)
+            for col in range(5):
+                item.setBackground(col, self._brush_port_up)
+                item.setForeground(col, self._brush_text_port)
+        elif state is False:
+            item.setText(2, "down")
+            item.setIcon(2, self.icon_down)
+            for col in range(5):
+                item.setBackground(col, self._brush_port_down)
+                item.setForeground(col, self._brush_text_port)
+            item.setForeground(0, self._brush_text_down)
+        else:
+            item.setText(2, "unknown")
+            item.setIcon(2, self.icon_unknown)
+            for col in range(5):
+                item.setBackground(col, QBrush())
+                item.setForeground(col, self._brush_text_port)
+
+        # Подсветка даты по % срока
+        rotation_days = (
+            self.user_settings.get("password_rotation_days")
+            if self.user_settings else None
+        )
+        age_color = _password_age_color(
+            port_data.get("credentials_updated_at"), rotation_days
+        )
+        if age_color is not None:
+            item.setForeground(4, QBrush(age_color))
+        elif state is False:
+            item.setForeground(4, self._brush_text_muted)
+        else:
+            item.setForeground(4, self._brush_text_port)
+
+        tooltip = _build_port_tooltip(
+            state,
+            port_data.get("last_success"),
+            port_data.get("last_failure"),
+        )
+        item.setToolTip(0, tooltip)
+        item.setToolTip(2, tooltip)
 
     def show_credentials(self, server_id: int, port: int, username: str, password: str, mnemonic: str = ""):
         item = self._find_port_item(server_id, port)
