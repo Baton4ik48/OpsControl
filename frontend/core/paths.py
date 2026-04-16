@@ -1,5 +1,6 @@
 import os
 import sys
+from pathlib import Path
 
 
 def get_base_path():
@@ -22,3 +23,7 @@ FIREWALL_TEMPLATE_PATH = os.path.join(
 )
 
 LOG_DIR = os.path.join(BASE_DIR, "logs")
+
+
+def path_to_file_uri(path):
+    return Path(path).as_uri()

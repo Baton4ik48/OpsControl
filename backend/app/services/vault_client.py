@@ -10,6 +10,16 @@ class VaultReadError(Exception):
     pass
 
 
+class VaultSealedError(Exception):
+    """Vault запечатан — нужна ручная операция unseal."""
+    pass
+
+
+class VaultUnavailableError(Exception):
+    """Vault недоступен по сети или вернул неожиданный статус."""
+    pass
+
+
 class VaultClient:
     def __init__(self):
         self.addr = settings.VAULT_ADDR.rstrip("/")
@@ -24,20 +34,49 @@ class VaultClient:
     # APPROLE LOGIN (для backend)
     # ==========================================
 
+    def check_sealed(self) -> None:
+        """Бросает VaultSealedError или VaultUnavailableError если Vault недоступен."""
+        try:
+            resp = requests.get(
+                f"{self.addr}/v1/sys/health",
+                timeout=self.http_timeout,
+            )
+        except requests.exceptions.ConnectionError:
+            raise VaultUnavailableError(f"Vault недоступен по адресу {self.addr}")
+        except requests.exceptions.Timeout:
+            raise VaultUnavailableError(f"Vault не ответил за {self.http_timeout}с")
+
+        # 200 = healthy, 429 = standby (тоже ОК), 501 = не инициализирован, 503 = запечатан
+        if resp.status_code == 503:
+            raise VaultSealedError("Vault запечатан (sealed) — выполните unseal")
+        if resp.status_code == 501:
+            raise VaultUnavailableError("Vault не инициализирован")
+        if resp.status_code not in (200, 429):
+            raise VaultUnavailableError(f"Vault /sys/health вернул {resp.status_code}")
+
     def _approle_login(self) -> str:
+        self.check_sealed()
+
         url = f"{self.addr}/v1/auth/approle/login"
 
-        resp = requests.post(
-            url,
-            json={
-                "role_id": self.role_id,
-                "secret_id": self.secret_id,
-            },
-            timeout=self.http_timeout,
-        )
+        try:
+            resp = requests.post(
+                url,
+                json={
+                    "role_id": self.role_id,
+                    "secret_id": self.secret_id,
+                },
+                timeout=self.http_timeout,
+            )
+        except requests.exceptions.RequestException as e:
+            raise VaultUnavailableError(f"Не удалось подключиться к Vault: {e}")
 
+        if resp.status_code == 400:
+            raise VaultAuthError(
+                "AppRole: неверный role_id или secret_id — проверьте .env"
+            )
         if resp.status_code != 200:
-            raise VaultAuthError(resp.text)
+            raise VaultAuthError(f"AppRole login вернул {resp.status_code}: {resp.text}")
 
         data = resp.json()
         token = data["auth"]["client_token"]

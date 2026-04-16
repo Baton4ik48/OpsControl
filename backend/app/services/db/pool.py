@@ -10,9 +10,26 @@ logger = logging.getLogger("postgres")
 pool: SimpleConnectionPool | None = None
 
 
-def init_pool(retries: int = 5, delay: int = 2):
+class ServiceUnavailableError(Exception):
+    """Поднимается когда PostgreSQL или Vault недоступны — возвращаем 503."""
+    pass
+
+
+def init_pool(retries: int = 5, delay: int = 2) -> bool:
+    """
+    Инициализирует пул подключений к PostgreSQL.
+    Никогда не бросает исключений — при ошибке логирует причину и возвращает False.
+    Возвращает True при успехе.
+    """
     global pool
-    creds = get_db_credentials()
+
+    # Получаем учётные данные (может обращаться к Vault)
+    try:
+        creds = get_db_credentials()
+    except Exception as e:
+        logger.error("Не удалось получить учётные данные для БД: %s", e)
+        pool = None
+        return False
 
     for attempt in range(1, retries + 1):
         try:
@@ -28,13 +45,18 @@ def init_pool(retries: int = 5, delay: int = 2):
                 options=f"-c statement_timeout={settings.POSTGRES_QUERY_TIMEOUT * 1000}",
             )
             logger.info("PostgreSQL pool initialized")
-            return
+            return True
         except OperationalError as e:
-            logger.warning(f"Attempt {attempt}: {e}")
-            print("⚠️ POOL RECREATE TRIGGERED:", type(e), e)
+            logger.warning("Попытка %d/%d подключения к PostgreSQL: %s", attempt, retries, e)
             time.sleep(delay)
 
-    raise RuntimeError("PostgreSQL unavailable")
+    logger.error(
+        "PostgreSQL недоступен после %d попыток — бэкенд работает без БД. "
+        "Запросы к БД будут возвращать 503 до восстановления соединения.",
+        retries,
+    )
+    pool = None
+    return False
 
 
 def close_pool():
@@ -48,7 +70,7 @@ def _execute(fn, retries: int = 1):
     global pool
     last_exc = None
 
-    for _ in range(retries + 1):
+    for attempt in range(retries + 1):
         conn = None
         local_pool = pool
 
@@ -57,9 +79,17 @@ def _execute(fn, retries: int = 1):
                 init_pool()
                 local_pool = pool
 
+            if local_pool is None:
+                raise ServiceUnavailableError(
+                    "PostgreSQL недоступен — повторите запрос позже"
+                )
+
             conn = local_pool.getconn()
             result = fn(conn)
             return result
+
+        except ServiceUnavailableError:
+            raise
 
         except (
             OperationalError,
@@ -67,13 +97,13 @@ def _execute(fn, retries: int = 1):
             errors.InvalidAuthorizationSpecification,
             errors.InsufficientPrivilege,
         ) as e:
-
             last_exc = e
-            logger.warning(f"Pool error, recreating: {type(e).__name__}: {e}")
+            logger.warning("Pool error (attempt %d): %s: %s", attempt + 1, type(e).__name__, e)
 
             if conn:
                 try:
                     local_pool.putconn(conn, close=True)
+                    conn = None
                 except Exception:
                     pass
 
@@ -88,4 +118,6 @@ def _execute(fn, retries: int = 1):
                 except Exception:
                     pass
 
-    raise last_exc
+    raise ServiceUnavailableError(
+        f"PostgreSQL недоступен после {retries + 1} попыток: {last_exc}"
+    )
