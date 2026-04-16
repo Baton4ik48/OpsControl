@@ -1,8 +1,12 @@
-stages:
+stagstages:
   - test
+  #- build
+  #- deploy
 
 test-job:
   stage: test
+  tags:
+    - docker
   image: python:3.11
 
   services:
@@ -44,4 +48,3 @@ test-job:
 
     # Запуск скрипта Vault
     - sh backend/scripts/vault-init.sh
-    
