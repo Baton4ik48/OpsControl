@@ -29,20 +29,21 @@ test-job:
     VAULT_ADMIN_PASSWORD: admin
     
   script:
-      # Ждём Postgres
+    # Ждём Postgres
     - echo "Ждём postgres..."
     - until pg_isready -h postgres -p 5432; do sleep 1; done
-
-    # Проверка доступности БД
     - python backend/scripts/connect-pg-test.py
 
-    # Инициализация БД (правильно)
     - echo "Применяем init.sql..."
     - PGPASSWORD=$POSTGRES_PASSWORD psql -h postgres -U $POSTGRES_USER -d $POSTGRES_DB -f backend/scripts/init.sql
 
     # Ждём Vault
     - echo "Ждём vault..."
     - until curl -s -o /dev/null -w "%{http_code}" http://vault:8200/v1/sys/health | grep -q "200"; do sleep 1; done
+
+    # Резолвим IP postgres для Vault
+    - export POSTGRES_IP=$(getent hosts postgres | awk '{print $1}')
+    - echo "Postgres IP = $POSTGRES_IP"
 
     # Запуск скрипта Vault
     - sh backend/scripts/vault-init.sh
