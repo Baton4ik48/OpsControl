@@ -1,42 +1,30 @@
 #!/bin/sh
-# =========================================================
-# Vault Production Init Script
-# Запускать ТОЛЬКО после init + unseal + login
-# =========================================================
-
 set -e
 
-echo "🔍 Проверка VAULT_TOKEN..."
+echo "🔍 Проверка ENV..."
 
 if [ -z "$VAULT_TOKEN" ]; then
   echo "❌ VAULT_TOKEN не установлен"
   exit 1
 fi
 
-echo "🔍 Проверка ENV..."
-
 if [ -z "$POSTGRES_USER" ] || [ -z "$POSTGRES_PASSWORD" ] || [ -z "$VAULT_DATABASE_ROLE_NAME" ]; then
-  echo "❌ Не заданы переменные окружения (POSTGRES_USER / POSTGRES_PASSWORD / VAULT_DATABASE_ROLE_NAME)"
+  echo "❌ Не заданы переменные окружения"
   exit 1
 fi
 
-echo "⏳ Ожидание Vault (init)..."
+echo "⏳ Проверка Vault API..."
 
-until vault status 2>/dev/null | grep -q "Initialized.*true"; do
-  sleep 2
+until curl -s http://vault:8200/v1/sys/health | grep -q '"sealed":false'; do
+  sleep 1
 done
 
-echo "⏳ Ожидание Vault (unseal)..."
-
-until vault status 2>/dev/null | grep -q "Sealed.*false"; do
-  sleep 2
-done
-
-echo "✅ Vault готов"
+echo "✅ Vault доступен"
 
 # =========================================================
 # 1. Database Secrets Engine
 # =========================================================
+
 echo "📦 Настройка Database engine..."
 
 vault secrets enable database 2>/dev/null || true
@@ -59,6 +47,7 @@ echo "✅ Database engine готов"
 # =========================================================
 # 2. KV v2 Engine
 # =========================================================
+
 echo "📦 Настройка KV engine..."
 
 vault secrets enable -path=credentials kv-v2 2>/dev/null || true
@@ -68,6 +57,7 @@ echo "✅ KV engine готов"
 # =========================================================
 # 3. Политики
 # =========================================================
+
 echo "📜 Создание политик..."
 
 vault policy write ppm-db-policy - <<EOF
@@ -88,27 +78,29 @@ EOF
 echo "✅ Политики созданы"
 
 # =========================================================
-# 4. AppRole для backend
+# 4. AppRole
 # =========================================================
+
 echo "🔑 Настройка AppRole..."
 
 vault auth enable approle 2>/dev/null || true
 
 vault write auth/approle/role/backend-app \
   token_policies="ppm-db-policy,ppm-admin-policy" \
-  token_period=1h \
-  token_num_uses=0
+  token_ttl=1h \
+  token_max_ttl=4h
 
 ROLE_ID=$(vault read -field=role_id auth/approle/role/backend-app/role-id)
 SECRET_ID=$(vault write -field=secret_id -f auth/approle/role/backend-app/secret-id)
 
 echo "✅ AppRole готов"
-echo "   VAULT_ROLE_ID=${ROLE_ID}"
-echo "   VAULT_SECRET_ID=${SECRET_ID}"
+echo "VAULT_ROLE_ID=${ROLE_ID}"
+echo "VAULT_SECRET_ID=${SECRET_ID}"
 
 # =========================================================
-# 5. Userpass для администратора
+# 5. Userpass
 # =========================================================
+
 echo "👤 Настройка Userpass..."
 
 vault auth enable userpass 2>/dev/null || true
@@ -117,16 +109,8 @@ vault write auth/userpass/users/admin \
   password="${VAULT_ADMIN_PASSWORD}" \
   policies="ppm-admin-policy"
 
-echo "✅ Userpass готов (login: admin)"
+echo "✅ Userpass готов"
 
-# =========================================================
-# ИТОГО
-# =========================================================
-echo ""
 echo "=========================================="
-echo "  Vault настроен (PROD)"
-echo "=========================================="
-echo "  VAULT_ROLE_ID=${ROLE_ID}"
-echo "  VAULT_SECRET_ID=${SECRET_ID}"
-echo "  Admin login: admin"
+echo "Vault (DEV) настроен"
 echo "=========================================="

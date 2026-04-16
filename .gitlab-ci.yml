@@ -46,4 +46,4 @@ test-job:
     - echo "Postgres IP = $POSTGRES_IP"
 
     # Запуск скрипта Vault
-    - sh backend/scripts/vault-init.sh
+    - sh backend/scripts/vault-init-dev.sh
