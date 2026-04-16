@@ -1,5 +1,3 @@
-GitLab push test
-
 # OpsControl — Production Deployment Guide
 
 ---
