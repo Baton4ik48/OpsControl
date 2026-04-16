@@ -27,16 +27,6 @@ test-job:
     
   script:
       # Ждём Postgres
-    - echo "=== DEBUG ENV ==="
-    - env | grep POSTGRES || true
-
-    - echo "=== DNS ==="
-    - getent hosts postgres || true
-
-    - echo "=== PORT CHECK ==="
-    - apt-get update && apt-get install -y netcat-openbsd || true
-    - nc -zv postgres 5432 || true
-
     - echo "Ждём postgres..."
     - until pg_isready -h postgres -p 5432; do sleep 1; done
 
@@ -47,9 +37,16 @@ test-job:
     - echo "Применяем init.sql..."
     - PGPASSWORD=$POSTGRES_PASSWORD psql -h postgres -U $POSTGRES_USER -d $POSTGRES_DB -f backend/scripts/init.sql
 
+    # Ждём Vault (debug)
+    - echo "=== VAULT DEBUG ==="
+    - which curl || echo "curl NOT FOUND"
+    - getent hosts vault || echo "vault DNS FAIL"
+    - curl -v http://vault:8200/v1/sys/health || true
+    - echo "=== END DEBUG ==="
+
     # Ждём Vault
-    - echo "Ждём vault..."
-    - until curl -s -o /dev/null -w "%{http_code}" http://vault:8200/v1/sys/health | grep -q "200"; do sleep 1; done
+    #- echo "Ждём vault..."
+    #- until curl -s -o /dev/null -w "%{http_code}" http://vault:8200/v1/sys/health | grep -q "200"; do sleep 1; done
 
     # Запуск скрипта Vault
     - sh backend/scripts/vault-init.sh
