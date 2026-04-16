@@ -25,6 +25,15 @@ class DeviceTreeContextMenu:
         # ФИЛИАЛ
         # =========================
         if item_type is None:
+            branch_name = item.text(0)
+            refresh_branch = menu.addAction(
+                self.tree.icon_update,
+                "Опросить филиал"
+            )
+            refresh_branch.triggered.connect(
+                lambda: self.tree.refresh_branch_requested.emit(branch_name)
+            )
+            menu.addSeparator()
             if item.isExpanded():
                 action = menu.addAction("Свернуть филиал")
                 action.triggered.connect(lambda: item.setExpanded(False))

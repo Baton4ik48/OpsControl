@@ -28,23 +28,19 @@ class ProtocolLauncher:
     def _open_ssh(user, password, host, port):
 
         if sys.platform.startswith("win"):
-
-            if not shutil.which("plink"):
-                raise RuntimeError("PLINK_NOT_FOUND")
+            # KiTTY — форк PuTTY с улучшениями, тот же API
+            # PuTTY — классика, широко распространена
+            # Оба принимают -pw без shell, спецсимволы не ломаются
+            client = shutil.which("kitty") or shutil.which("putty")
+            if not client:
+                raise RuntimeError("PUTTY_NOT_FOUND")
 
             subprocess.Popen([
-                "cmd",
-                "/c",
-                "start",
-                "cmd",
-                "/k",
-                "plink",
+                client,
                 "-ssh",
                 f"{user}@{host}",
-                "-P",
-                str(port),
-                "-pw",
-                password
+                "-P", str(port),
+                "-pw", password,
             ])
 
         elif sys.platform.startswith("linux"):

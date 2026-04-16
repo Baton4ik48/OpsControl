@@ -5,11 +5,9 @@ QTreeWidget {
 
 QTreeWidget::item {
     height: 20px;
-    color: #cfd8dc;
 }
 
 QTreeWidget::item:!has-children {
-    color: #9fbfc2;   /* мягкий вторичный */
     font-size: 9pt;
 }
 

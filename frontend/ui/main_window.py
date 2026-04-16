@@ -99,6 +99,7 @@ class MainWindow(QWidget):
         self.controller.loaded.connect(self.on_tree_loaded)
         self.controller.error_occurred.connect(self._on_api_error)
 
+        self.tree.refresh_branch_requested.connect(self.controller.refresh_branch)
         self.tree.refresh_server_requested.connect(self.controller.refresh_server)
         self.tree.refresh_port_requested.connect(self.controller.refresh_port)
         self.tree.open_protocol_requested.connect(self.controller.connect_protocol)
