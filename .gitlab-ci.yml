@@ -26,7 +26,7 @@ test-job:
     VAULT_TOKEN: root
 
   before_script:
-    - apt-get update
+    #- apt-get update
     - apt-get install -y postgresql-client curl
     - pip install psycopg2-binary
 
@@ -44,7 +44,7 @@ test-job:
 
     # Ждём Vault
     - echo "Ждём vault..."
-    - until curl -s http://vault:8200/v1/sys/health | grep -q '"sealed":false'; do sleep 1; done
+    - until curl -s -o /dev/null -w "%{http_code}" http://vault:8200/v1/sys/health | grep -q "200"; do sleep 1; done
 
     # Запуск скрипта Vault
     - sh backend/scripts/vault-init.sh
