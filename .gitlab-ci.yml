@@ -19,6 +19,6 @@ test-job:
     - pip install psycopg2-binary
   script:
     - echo "Ждём postgres..."
-    - sleep 10
+    - sleep 5
     - python backend/scripts/connect-pg-test.py
 
