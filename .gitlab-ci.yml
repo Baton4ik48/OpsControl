@@ -47,3 +47,5 @@ test-job:
 
     # Запуск скрипта Vault
     - sh backend/scripts/vault-init-dev.sh
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev"'
