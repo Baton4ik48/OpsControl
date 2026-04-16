@@ -2,7 +2,7 @@ import psycopg2
 import sys
 
 print("Тест подключения к БД")
-      
+
 try:
     conn = psycopg2.connect(
         host="postgres",
