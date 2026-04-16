@@ -20,17 +20,17 @@ if [ -z "$POSTGRES_USER" ] || [ -z "$POSTGRES_PASSWORD" ] || [ -z "$VAULT_DATABA
   exit 1
 fi
 
-echo "⏳ Ожидание Vault (init)..."
+# echo "⏳ Ожидание Vault (init)..."
 
-until vault status 2>/dev/null | grep -q "Initialized.*true"; do
-  sleep 2
-done
+# until vault status 2>/dev/null | grep -q "Initialized.*true"; do
+#   sleep 2
+# done
 
-echo "⏳ Ожидание Vault (unseal)..."
+# echo "⏳ Ожидание Vault (unseal)..."
 
-until vault status 2>/dev/null | grep -q "Sealed.*false"; do
-  sleep 2
-done
+# until vault status 2>/dev/null | grep -q "Sealed.*false"; do
+#   sleep 2
+# done
 
 echo "✅ Vault готов"
 
