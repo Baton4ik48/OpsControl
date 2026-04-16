@@ -38,7 +38,7 @@ services:
     volumes:
       - vault_data:/vault/data
       - ./vault-config:/vault/config
-      - ./vault-init.sh:/vault-init.sh:ro
+      - ./script/vault-init.sh:/vault-init.sh:ro
     ports:
       - "8200:8200"
     cap_add:
