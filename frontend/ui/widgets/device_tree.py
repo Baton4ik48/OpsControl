@@ -28,7 +28,11 @@ def format_dt(value):
         return "нет данных"
 
     dt = datetime.fromisoformat(value)
-    local = dt.replace(tzinfo=timezone.utc).astimezone()
+
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+
+    local = dt.astimezone()
     return local.strftime("%d.%m.%Y %H:%M")
 
 
