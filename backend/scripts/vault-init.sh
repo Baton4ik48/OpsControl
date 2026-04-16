@@ -32,14 +32,14 @@ fi
 #   sleep 2
 # done
 
-echo "✅ Vault готов"
+# echo "✅ Vault готов"
 
-# =========================================================
-# 1. Database Secrets Engine
-# =========================================================
-echo "📦 Настройка Database engine..."
+# # =========================================================
+# # 1. Database Secrets Engine
+# # =========================================================
+# echo "📦 Настройка Database engine..."
 
-vault secrets enable database 2>/dev/null || true
+# vault secrets enable database 2>/dev/null || true
 
 vault write database/config/ppm-db \
   plugin_name=postgresql-database-plugin \
