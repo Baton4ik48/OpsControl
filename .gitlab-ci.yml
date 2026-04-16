@@ -7,7 +7,7 @@ test-job:
   stage: test
   tags:
     - docker
-  image: python:3.11
+  image: localhost:5050/root/opscontrol/ci-image:latest
 
   services:
     - name: postgres:15
@@ -24,11 +24,6 @@ test-job:
     POSTGRES_PASSWORD: 7946130q!
     VAULT_ADDR: http://vault:8200
     VAULT_TOKEN: root
-
-  before_script:
-    #- apt-get update
-    - apt-get install -y postgresql-client curl
-    - pip install psycopg2-binary
 
   script:
     # Ждём Postgres
