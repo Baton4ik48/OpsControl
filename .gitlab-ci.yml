@@ -1,4 +1,4 @@
-stagstages:
+stages:
   - test
   #- build
   #- deploy
