@@ -22,8 +22,11 @@ test-job:
     POSTGRES_DB: ppm_database
     POSTGRES_USER: login_ppm
     POSTGRES_PASSWORD: $PG_SECRET
+    
     VAULT_ADDR: http://vault:8200
     VAULT_TOKEN: root
+    VAULT_DATABASE_ROLE_NAME: postgres-dynamic
+    VAULT_ADMIN_PASSWORD: admin
     
   script:
       # Ждём Postgres
@@ -36,13 +39,6 @@ test-job:
     # Инициализация БД (правильно)
     - echo "Применяем init.sql..."
     - PGPASSWORD=$POSTGRES_PASSWORD psql -h postgres -U $POSTGRES_USER -d $POSTGRES_DB -f backend/scripts/init.sql
-
-    # Ждём Vault (debug)
-    #- echo "=== VAULT DEBUG ==="
-    #- which curl || echo "curl NOT FOUND"
-    #- getent hosts vault || echo "vault DNS FAIL"
-    #- curl -v http://vault:8200/v1/sys/health || true
-    #- echo "=== END DEBUG ==="
 
     # Ждём Vault
     - echo "Ждём vault..."
