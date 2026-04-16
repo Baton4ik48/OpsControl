@@ -21,10 +21,10 @@ test-job:
     POSTGRES_PORT: 5432
     POSTGRES_DB: ppm_database
     POSTGRES_USER: login_ppm
-    POSTGRES_PASSWORD: 7946130q!
+    POSTGRES_PASSWORD: $POSTGRES_PASSWORD
     VAULT_ADDR: http://vault:8200
     VAULT_TOKEN: root
-
+    
   script:
     # Ждём Postgres
     - echo "Ждём postgres..."
