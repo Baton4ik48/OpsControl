@@ -14,7 +14,7 @@ test-job:
       alias: postgres
     - name: hashicorp/vault:1.15
       alias: vault
-      command: ["vault", "server", "-dev", "-dev-root-token-id=root"]
+      command: ["vault", "server", "-dev", "-dev-root-token-id=root", "-dev-listen-address=0.0.0.0:8200"]
 
   variables:
     POSTGRES_HOST: postgres
@@ -38,15 +38,15 @@ test-job:
     - PGPASSWORD=$POSTGRES_PASSWORD psql -h postgres -U $POSTGRES_USER -d $POSTGRES_DB -f backend/scripts/init.sql
 
     # Ждём Vault (debug)
-    - echo "=== VAULT DEBUG ==="
-    - which curl || echo "curl NOT FOUND"
-    - getent hosts vault || echo "vault DNS FAIL"
-    - curl -v http://vault:8200/v1/sys/health || true
-    - echo "=== END DEBUG ==="
+    #- echo "=== VAULT DEBUG ==="
+    #- which curl || echo "curl NOT FOUND"
+    #- getent hosts vault || echo "vault DNS FAIL"
+    #- curl -v http://vault:8200/v1/sys/health || true
+    #- echo "=== END DEBUG ==="
 
     # Ждём Vault
-    #- echo "Ждём vault..."
-    #- until curl -s -o /dev/null -w "%{http_code}" http://vault:8200/v1/sys/health | grep -q "200"; do sleep 1; done
+    - echo "Ждём vault..."
+    - until curl -s -o /dev/null -w "%{http_code}" http://vault:8200/v1/sys/health | grep -q "200"; do sleep 1; done
 
     # Запуск скрипта Vault
     - sh backend/scripts/vault-init.sh
