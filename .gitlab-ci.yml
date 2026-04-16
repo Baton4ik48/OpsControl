@@ -26,8 +26,17 @@ test-job:
     VAULT_TOKEN: root
     
   script:
-    # Ждём Postgres
-    - echo $POSTGRES_PASSWORD
+      # Ждём Postgres
+    - echo "=== DEBUG ENV ==="
+    - env | grep POSTGRES || true
+
+    - echo "=== DNS ==="
+    - getent hosts postgres || true
+
+    - echo "=== PORT CHECK ==="
+    - apt-get update && apt-get install -y netcat-openbsd || true
+    - nc -zv postgres 5432 || true
+
     - echo "Ждём postgres..."
     - until pg_isready -h postgres -p 5432; do sleep 1; done
 
