@@ -21,4 +21,4 @@ test-job:
     - echo "Ждём postgres..."
     - sleep 5
     - python backend/scripts/connect-pg-test.py
-
+  

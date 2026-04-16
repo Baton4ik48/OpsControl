@@ -274,6 +274,58 @@ class SettingsDialog(QDialog):
 
         tabs.addTab(password_tab, "Правила генерации паролей")
 
+        # =====================================================
+        # TAB 6 — Парольная политика
+        # =====================================================
+        policy_tab = QWidget()
+        policy_layout_wrapper = QVBoxLayout(policy_tab)
+
+        desc_policy = QLabel(
+            "Определяет, через сколько дней пароль считается устаревшим.\n"
+            "Дата смены пароля в дереве устройств подсвечивается цветом\n"
+            "в зависимости от оставшегося времени до истечения срока.")
+        desc_policy.setWordWrap(True)
+        desc_policy.setObjectName("settingsDescription")
+        desc_policy.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        policy_layout_wrapper.addWidget(desc_policy)
+
+        policy_group = QGroupBox("Срок действия пароля")
+        policy_layout = QVBoxLayout(policy_group)
+
+        policy_layout.addWidget(QLabel("Интервал смены пароля (дней):"))
+        self.spin_rotation_days = QSpinBox()
+        self.spin_rotation_days.setRange(1, 365)
+        self.spin_rotation_days.setSuffix(" дн.")
+        self.spin_rotation_days.setValue(
+            self.settings.get("password_rotation_days") or 31
+        )
+        policy_layout.addWidget(self.spin_rotation_days)
+
+        legend_layout = QVBoxLayout()
+        legend_items = [
+            ("#50C850", "≥ 50% срока осталось (зелёный)"),
+            ("#D2D232", "22–49% срока осталось (жёлтый)"),
+            ("#D28218", "9–21% срока осталось (оранжевый)"),
+            ("#D23C3C", "< 9% срока осталось или истёк (красный)"),
+        ]
+        for color, text in legend_items:
+            row = QHBoxLayout()
+            dot = QLabel("■")
+            dot.setStyleSheet(f"color: {color}; font-size: 14px;")
+            lbl = QLabel(text)
+            row.addWidget(dot)
+            row.addWidget(lbl)
+            row.addStretch()
+            legend_layout.addLayout(row)
+
+        policy_layout.addSpacing(8)
+        policy_layout.addLayout(legend_layout)
+
+        policy_layout_wrapper.addWidget(policy_group)
+        policy_layout_wrapper.addStretch()
+
+        tabs.addTab(policy_tab, "Парольная политика")
+
         # =========================
         # КНОПКИ
         # =========================
@@ -326,6 +378,8 @@ class SettingsDialog(QDialog):
         self.spin_words.valueChanged.connect(lambda: self._mark_dirty("password"))
         self.spin_letters.valueChanged.connect(lambda: self._mark_dirty("password"))
         self.spin_digits.valueChanged.connect(lambda: self._mark_dirty("password"))
+
+        self.spin_rotation_days.valueChanged.connect(lambda: self._mark_dirty("policy"))
 
         # =========================
         # CONTROLLER
@@ -413,6 +467,9 @@ class SettingsDialog(QDialog):
             self.settings.set("password_word_count", self.spin_words.value())
             self.settings.set("password_letters_per_word", self.spin_letters.value())
             self.settings.set("password_digit_count", self.spin_digits.value())
+
+        if "policy" in self._dirty_tabs:
+            self.settings.set("password_rotation_days", self.spin_rotation_days.value())
 
         self.settings.save()
 

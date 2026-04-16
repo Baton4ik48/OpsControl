@@ -1,14 +1,18 @@
 import requests
-from app.services.db.pool import _execute
+from app.services.db.pool import _execute, ServiceUnavailableError
+from app.services.vault_client import VaultSealedError, VaultUnavailableError
 from app.config import settings
 
 
 def get_overall_status() -> str:
     postgres_ok = check_postgres()
-    vault_ok = check_vault()
+    vault_status = check_vault()
 
-    if postgres_ok and vault_ok:
+    if postgres_ok and vault_status == "ok":
         return "ok"
+
+    if vault_status == "sealed":
+        return "degraded"
 
     return "degraded"
 
@@ -28,7 +32,7 @@ def check_postgres() -> bool:
         _execute(work)
         return True
 
-    except Exception:
+    except (ServiceUnavailableError, Exception):
         return False
 
 
@@ -36,13 +40,13 @@ def check_postgres() -> bool:
 # VAULT HEALTH
 # ==========================
 
-def check_vault() -> bool:
+def check_vault() -> str:
+    """Возвращает: 'ok' | 'sealed' | 'offline'"""
     try:
-        r = requests.get(
-            f"{settings.VAULT_ADDR}/v1/sys/health",
-            timeout=settings.VAULT_HTTP_TIMEOUT,
-        )
-        return r.status_code == 200
-
-    except Exception:
-        return False
+        from app.services.vault_client import get_vault_client
+        get_vault_client().check_sealed()
+        return "ok"
+    except VaultSealedError:
+        return "sealed"
+    except (VaultUnavailableError, Exception):
+        return "offline"

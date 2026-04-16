@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from datetime import datetime, timezone
 
 from PyQt6.QtWidgets import (
@@ -9,7 +10,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QIcon, QFont, QColor, QBrush
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QSize, QModelIndex
 
-from core.paths import ICONS_DIR
+from core.paths import ICONS_DIR, path_to_file_uri
 from ui.context_menus.device_tree_context_menu import DeviceTreeContextMenu
 
 
@@ -32,7 +33,7 @@ def format_dt(value):
 
 
 def _icon_img(icon_path, size=13):
-    return f'<img src="file://{icon_path}" width="{size}" height="{size}">'
+    return f'<img src="{path_to_file_uri(icon_path)}" width="{size}" height="{size}">'
 
 
 def _build_port_tooltip(state, last_success, last_failure):
@@ -81,6 +82,37 @@ def _build_port_tooltip(state, last_success, last_failure):
     return f'<table cellspacing="3">{"".join(rows)}</table>'
 
 
+def _password_age_color(credentials_updated_at, rotation_days):
+    """Возвращает QColor для столбца 'Дата обновления пароля' по % оставшегося срока.
+
+    Пороги (от суммарного интервала):
+      ≥ 50%  → зелёный
+      ≥ 22%  → жёлтый
+      ≥  9%  → оранжевый
+       < 9%  → красный (или истёк)
+    """
+    if not credentials_updated_at or not rotation_days:
+        return None
+    try:
+        dt = datetime.fromisoformat(credentials_updated_at)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        now = datetime.now(timezone.utc)
+        days_elapsed = (now - dt).total_seconds() / 86400
+        days_remaining = max(0.0, rotation_days - days_elapsed)
+        pct = days_remaining / rotation_days
+        if pct >= 0.50:
+            return QColor(80, 200, 80)
+        elif pct >= 0.22:
+            return QColor(210, 210, 50)
+        elif pct >= 0.09:
+            return QColor(210, 130, 30)
+        else:
+            return QColor(210, 60, 60)
+    except Exception:
+        return None
+
+
 class DeviceTree(QTreeWidget):
 
     # делаем роли доступными для context menu
@@ -101,6 +133,7 @@ class DeviceTree(QTreeWidget):
 
         self._credential_timers = {}
         self._has_rendered = False
+        self.user_settings = None
 
         self.setHeaderLabels([
             "Устройство",
@@ -295,6 +328,18 @@ class DeviceTree(QTreeWidget):
                         for col in range(5):
                             port_item.setBackground(col, self._brush_port_down)
                         port_item.setForeground(0, self._brush_text_down)
+
+                    # Подсветка даты смены пароля по % оставшегося срока
+                    rotation_days = (
+                        self.user_settings.get("password_rotation_days")
+                        if self.user_settings else None
+                    )
+                    age_color = _password_age_color(
+                        p.get("credentials_updated_at"), rotation_days
+                    )
+                    if age_color:
+                        port_item.setForeground(4, QBrush(age_color))
+                    elif state is False:
                         port_item.setForeground(4, self._brush_text_muted)
 
                     port_item.setData(0, ROLE_TYPE, "port")

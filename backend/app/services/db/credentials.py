@@ -69,8 +69,8 @@ def upsert_vault_path(server_id: int, port: int, vault_path: str) -> None:
     def work(conn):
         cur = conn.cursor()
         cur.execute("""
-            INSERT INTO credentials (server_id, port, vault_path)
-            VALUES (%s, %s, %s)
+            INSERT INTO credentials (server_id, port, vault_path, updated_at)
+            VALUES (%s, %s, %s, CURRENT_TIMESTAMP)
             ON CONFLICT (server_id, port)
             DO UPDATE SET
                 vault_path = EXCLUDED.vault_path,
