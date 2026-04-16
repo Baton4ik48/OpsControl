@@ -3,22 +3,45 @@ stages:
 
 test-job:
   stage: test
-  tags:
-    - docker
   image: python:3.11
+
   services:
     - name: postgres:15
       alias: postgres
+    - name: hashicorp/vault:1.15
+      alias: vault
+      command: ["vault", "server", "-dev", "-dev-root-token-id=root"]
+
   variables:
     POSTGRES_HOST: postgres
     POSTGRES_PORT: 5432
     POSTGRES_DB: ppm_database
     POSTGRES_USER: login_ppm
     POSTGRES_PASSWORD: ***REMOVED-SEE-INCIDENT***
+    VAULT_ADDR: http://vault:8200
+    VAULT_TOKEN: root
+
   before_script:
+    - apt-get update
+    - apt-get install -y postgresql-client curl
     - pip install psycopg2-binary
+
   script:
+    # Ждём Postgres
     - echo "Ждём postgres..."
-    - sleep 5
+    - until pg_isready -h postgres -p 5432; do sleep 1; done
+
+    # Проверка доступности БД
     - python backend/scripts/connect-pg-test.py
-  
+
+    # Инициализация БД (правильно)
+    - echo "Применяем init.sql..."
+    - PGPASSWORD=$POSTGRES_PASSWORD psql -h postgres -U $POSTGRES_USER -d $POSTGRES_DB -f backend/scripts/init.sql
+
+    # Ждём Vault
+    - echo "Ждём vault..."
+    - until curl -s http://vault:8200/v1/sys/health | grep -q '"sealed":false'; do sleep 1; done
+
+    # Запуск скрипта Vault
+    - sh backend/scripts/vault-init.sh
+    
