@@ -27,6 +27,7 @@ test-job:
     
   script:
     # Ждём Postgres
+    - echo $POSTGRES_PASSWORD
     - echo "Ждём postgres..."
     - until pg_isready -h postgres -p 5432; do sleep 1; done
 
