@@ -6,7 +6,7 @@ test-job:
   tags:
     - docker
   image: python:3.11
-  services: 
+  services:
     - name: postgres:15
       alias: postgres
   variables:
@@ -20,16 +20,21 @@ test-job:
   script:
     - echo "Ждём postgres..."
     - sleep 10
-
+    
     - echo "Пробуем подключиться к БД"
-    - python - <<EOF
+    - |
+      python -c "
       import psycopg2
-
-      conn = psycopg2.connect(
-          host="postgres",
-          dbname="ppm_database",
-          user="login_ppm",
-          password="***REMOVED-SEE-INCIDENT***"
-      )
-
-      print("CONNECTED OK")
+      try:
+          conn = psycopg2.connect(
+              host='postgres',
+              dbname='ppm_database',
+              user='login_ppm',
+              password='***REMOVED-SEE-INCIDENT***'
+          )
+          print('CONNECTED OK')
+          conn.close()
+      except Exception as e:
+          print(f'ERROR: {e}')
+          exit(1)
+      "
