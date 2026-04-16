@@ -91,6 +91,12 @@ def _execute(fn, retries: int = 1):
         except ServiceUnavailableError:
             raise
 
+        except errors.UndefinedTable as e:
+            logger.error("Схема БД не инициализирована: %s", e)
+            raise ServiceUnavailableError(
+                "База данных не инициализирована"
+            )
+
         except (
             OperationalError,
             InterfaceError,

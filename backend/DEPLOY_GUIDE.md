@@ -20,6 +20,10 @@ backend/
 ```
 
 ---
+## Шаг 0 — Сборка image backend
+
+docker build -t name-backend:latest .
+
 
 ## 🚀 Шаг 1 — Запуск контейнеров
 
@@ -36,9 +40,9 @@ docker compose ps
 
 Должно быть:
 
-* ppm-postgres
-* ppm-vault
-* ppm-backend
+* *-postgres
+* *-vault
+* *-backend
 
 ---
 
