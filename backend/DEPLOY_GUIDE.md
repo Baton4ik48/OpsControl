@@ -95,7 +95,7 @@ Sealed: false
 ⚠️ Это root токен, только для настройки Vault
 
 ```bash
-docker compose exec -e VAULT_TOKEN=рут_токен vault sh /vault-init.sh
+docker compose exec -e VAULT_TOKEN=hvs.cnIkuzn36jdYm72zPS1Crn4N  vault sh /vault-init.sh
 ```
 
 На выходе получишь:
