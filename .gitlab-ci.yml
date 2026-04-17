@@ -55,6 +55,7 @@ lint:
   timeout: 2 minutes
   script:
     - ruff check backend/
+    - echo black --version
     - black --check backend/
 
 # test-job:
@@ -70,8 +71,7 @@ lint:
 #       alias: vault
 #       command: ["vault", "server", "-dev", "-dev-root-token-id=root", "-dev-listen-address=0.0.0.0:8200"]
 
-   script:
-    - echo black --version
+   #script:
 #     # Ждём Postgres
 #     - echo "Ждём postgres..."
 #     - until pg_isready -h postgres -p 5432; do sleep 1; done
