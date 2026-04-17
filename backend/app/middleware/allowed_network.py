@@ -14,6 +14,10 @@ class AllowedNetworkMiddleware(BaseHTTPMiddleware):
 
         ip = ipaddress.ip_address(client_ip)
 
+        # нормализация IPv4-mapped IPv6
+        if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped:
+            ip = ip.ipv4_mapped
+
         allowed = any(ip in network for network in self.allowed_networks)
 
         if not allowed:

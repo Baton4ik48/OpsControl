@@ -53,7 +53,7 @@ class VaultClient:
             raise VaultSealedError("Vault запечатан (sealed) — выполните unseal")
         if resp.status_code == 501:
             raise VaultUnavailableError("Vault не инициализирован")
-        if resp.status_code not in (200, 429):
+        if resp.status_code not in (200, 429, 472, 473):
             raise VaultUnavailableError(f"Vault /sys/health вернул {resp.status_code}")
 
     def _approle_login(self) -> str:
@@ -73,18 +73,23 @@ class VaultClient:
         except requests.exceptions.RequestException as e:
             raise VaultUnavailableError(f"Не удалось подключиться к Vault: {e}")
 
+        # Обработка HTTP-статусов
         if resp.status_code == 400:
             raise VaultAuthError(
                 "AppRole: неверный role_id или secret_id — проверьте .env"
             )
         if resp.status_code != 200:
-            raise VaultAuthError(
+            raise VaultUnavailableError(
                 f"AppRole login вернул {resp.status_code}: {resp.text}"
             )
 
-        data = resp.json()
-        token = data["auth"]["client_token"]
-        ttl = data["auth"]["lease_duration"]
+        try:
+            data = resp.json()
+            token = data["auth"]["client_token"]
+            ttl = data["auth"]["lease_duration"]
+        except (ValueError, KeyError) as e:
+            # ValueError - битый JSON, KeyError - нет нужного поля
+            raise VaultUnavailableError(f"Некорректный ответ Vault: {e}")
 
         print("\n[DEBUG] AppRole token issued:")
         print(f"        token = {token}")
@@ -107,18 +112,25 @@ class VaultClient:
     def _renew_token(self) -> bool:
         url = f"{self.addr}/v1/auth/token/renew-self"
 
-        resp = requests.post(
-            url,
-            headers={"X-Vault-Token": self._backend_token},
-            timeout=self.http_timeout,
-        )
+        try:
+            resp = requests.post(
+                url,
+                headers={"X-Vault-Token": self._backend_token},
+                timeout=self.http_timeout,
+            )
+        except requests.exceptions.RequestException:
+            return False
 
-        if resp.status_code == 200:
+        if resp.status_code != 200:
+            return False
+
+        try:
             ttl = resp.json()["auth"]["lease_duration"]
-            print(f"[VAULT] Backend token renewed (ttl={ttl}s)")
-            return True
+        except (ValueError, KeyError):
+            return False
 
-        return False
+        print(f"[VAULT] Backend token renewed (ttl={ttl}s)")
+        return True
 
     # ==========================================
     # USER LOGIN (GUI → Vault userpass)
@@ -126,24 +138,33 @@ class VaultClient:
 
     def login_userpass(self, username: str, password: str) -> str:
         username = username.lower()
+        url = f"{self.addr}/v1/auth/userpass/login/{username}"
 
-        url = f"{self.addr}" f"/v1/auth/userpass/login/{username}"
-
-        resp = requests.post(
-            url,
-            json={"password": password},
-            timeout=self.http_timeout,
-        )
+        try:
+            resp = requests.post(
+                url,
+                json={"password": password},
+                timeout=self.http_timeout,
+            )
+        except requests.exceptions.RequestException as e:
+            raise VaultUnavailableError(f"Vault недоступен: {e}") from e
 
         if resp.status_code != 200:
             raise VaultAuthError(resp.text)
 
-        return resp.json()["auth"]["client_token"]
+        try:
+            data = resp.json()
+        except ValueError as e:
+            raise VaultUnavailableError("Некорректный JSON от Vault") from e
+
+        try:
+            return data["auth"]["client_token"]
+        except KeyError as e:
+            raise VaultAuthError("Vault не вернул client_token") from e
 
     # ==========================================
     # READ KV (user token)
     # ==========================================
-
     def read_kv_v2(self, token: str, vault_path: str) -> dict:
         if not vault_path.startswith("credentials/"):
             raise VaultReadError("Invalid vault path")
@@ -151,16 +172,32 @@ class VaultClient:
         path = vault_path.replace("credentials/", "")
         url = f"{self.addr}/v1/credentials/data/{path}"
 
-        resp = requests.get(
-            url,
-            headers={"Authorization": f"Bearer {token}"},
-            timeout=self.http_timeout,
-        )
+        try:
+            resp = requests.get(
+                url,
+                headers={"X-Vault-Token": token},
+                timeout=self.http_timeout,
+            )
+        except requests.exceptions.Timeout:
+            raise VaultReadError(f"Vault не ответил за {self.http_timeout}с")
+        except requests.exceptions.RequestException as e:
+            raise VaultReadError(f"Vault недоступен: {e}") from e
 
         if resp.status_code != 200:
             raise VaultReadError(resp.text)
 
-        return resp.json()["data"]["data"]
+        if not resp.content:
+            raise VaultReadError("Пустой ответ от Vault")
+
+        try:
+            data = resp.json()
+        except ValueError as e:
+            raise VaultReadError("Vault вернул невалидный JSON") from e
+
+        try:
+            return data["data"]["data"]
+        except KeyError as e:
+            raise VaultReadError("Некорректная структура ответа Vault") from e
 
     # ==========================================
     # WRITE KV (backend AppRole token)
@@ -174,12 +211,15 @@ class VaultClient:
         path = vault_path.replace("credentials/", "")
         url = f"{self.addr}/v1/credentials/data/{path}"
 
-        resp = requests.post(
-            url,
-            headers={"X-Vault-Token": token},
-            json={"data": data},
-            timeout=self.http_timeout,
-        )
+        try:
+            resp = requests.post(
+                url,
+                headers={"X-Vault-Token": token},
+                json={"data": data},
+                timeout=self.http_timeout,
+            )
+        except requests.exceptions.RequestException as e:
+            raise VaultReadError(f"Vault недоступен: {e}") from e
 
         if resp.status_code not in (200, 204):
             raise VaultReadError(resp.text)
@@ -190,23 +230,27 @@ class VaultClient:
 
     def read_database_creds(self) -> dict:
         token = self._get_backend_token()
-
         url = f"{self.addr}/v1/database/creds/{self.database_role}"
 
-        resp = requests.get(
-            url,
-            headers={"X-Vault-Token": token},
-            timeout=self.http_timeout,
-        )
+        try:
+            resp = requests.get(
+                url,
+                headers={"X-Vault-Token": token},
+                timeout=self.http_timeout,
+            )
+        except requests.exceptions.RequestException as e:
+            raise VaultReadError(f"Vault недоступен: {e}") from e
 
         if resp.status_code != 200:
             raise VaultReadError(resp.text)
 
-        body = resp.json()
-
-        username = body["data"]["username"]
-        lease_id = body["lease_id"]
-        ttl = body["lease_duration"]
+        try:
+            body = resp.json()
+            username = body["data"]["username"]
+            lease_id = body["lease_id"]
+            ttl = body["lease_duration"]
+        except (ValueError, KeyError) as e:
+            raise VaultReadError(f"Malformed Vault response: {e}") from e
 
         print("\n[VAULT] NEW DB CREDS ISSUED")
         print(f"        username = {username}")
