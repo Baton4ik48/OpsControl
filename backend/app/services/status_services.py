@@ -1,6 +1,7 @@
 from app.services.db.pool import _execute, ServiceUnavailableError
 from app.services.vault_client import VaultSealedError, VaultUnavailableError
 
+
 def get_overall_status() -> str:
     postgres_ok = check_postgres()
     vault_status = check_vault()
@@ -18,8 +19,10 @@ def get_overall_status() -> str:
 # POSTGRES HEALTH
 # ==========================
 
+
 def check_postgres() -> bool:
     try:
+
         def work(conn):
             cur = conn.cursor()
             cur.execute("SELECT 1")
@@ -37,10 +40,12 @@ def check_postgres() -> bool:
 # VAULT HEALTH
 # ==========================
 
+
 def check_vault() -> str:
     """Возвращает: 'ok' | 'sealed' | 'offline'"""
     try:
         from app.services.vault_client import get_vault_client
+
         get_vault_client().check_sealed()
         return "ok"
     except VaultSealedError:

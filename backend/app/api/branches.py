@@ -3,15 +3,18 @@ from app.services.db.branches import (
     load_branches,
     create_branch,
     delete_branch,
-    update_branch
+    update_branch,
 )
 from pydantic import BaseModel
 
+
 class BranchUpdate(BaseModel):
     name: str
-    
+
+
 class BranchCreate(BaseModel):
     name: str
+
 
 router = APIRouter(prefix="/branches", tags=["branches"])
 
@@ -24,19 +27,13 @@ def ensure_found(affected: int, entity: str):
 @router.get("")
 def get_branches():
     rows = load_branches()
-    return {
-        "success": True,
-        "data": [{"id": r[0], "name": r[1]} for r in rows]
-    }
+    return {"success": True, "data": [{"id": r[0], "name": r[1]} for r in rows]}
 
 
 @router.post("")
 def create_branch_api(payload: BranchCreate):
     new_id = create_branch(payload.name)
-    return {
-        "success": True,
-        "data": {"id": new_id}
-    }
+    return {"success": True, "data": {"id": new_id}}
 
 
 @router.put("/{branch_id}")

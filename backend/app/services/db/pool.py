@@ -12,6 +12,7 @@ pool: SimpleConnectionPool | None = None
 
 class ServiceUnavailableError(Exception):
     """Поднимается когда PostgreSQL или Vault недоступны — возвращаем 503."""
+
     pass
 
 
@@ -47,7 +48,9 @@ def init_pool(retries: int = 5, delay: int = 2) -> bool:
             logger.info("PostgreSQL pool initialized")
             return True
         except OperationalError as e:
-            logger.warning("Попытка %d/%d подключения к PostgreSQL: %s", attempt, retries, e)
+            logger.warning(
+                "Попытка %d/%d подключения к PostgreSQL: %s", attempt, retries, e
+            )
             time.sleep(delay)
 
     logger.error(
@@ -93,9 +96,7 @@ def _execute(fn, retries: int = 1):
 
         except errors.UndefinedTable as e:
             logger.error("Схема БД не инициализирована: %s", e)
-            raise ServiceUnavailableError(
-                "База данных не инициализирована"
-            )
+            raise ServiceUnavailableError("База данных не инициализирована")
 
         except (
             OperationalError,
@@ -104,7 +105,9 @@ def _execute(fn, retries: int = 1):
             errors.InsufficientPrivilege,
         ) as e:
             last_exc = e
-            logger.warning("Pool error (attempt %d): %s: %s", attempt + 1, type(e).__name__, e)
+            logger.warning(
+                "Pool error (attempt %d): %s: %s", attempt + 1, type(e).__name__, e
+            )
 
             if conn:
                 try:

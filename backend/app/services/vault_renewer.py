@@ -31,9 +31,11 @@ async def vault_renew_loop(interval: int = 900):
             if vault._renew_token():
                 logger.info("Vault token renewed")
             else:
-                logger.warning("Vault token renew failed → попытка re-login через AppRole")
+                logger.warning(
+                    "Vault token renew failed → попытка re-login через AppRole"
+                )
                 vault._backend_token = None
-                vault._get_backend_token()   # бросит исключение если AppRole недоступен
+                vault._get_backend_token()  # бросит исключение если AppRole недоступен
                 logger.info("Vault re-login успешен")
 
         except VaultSealedError as e:
@@ -41,13 +43,12 @@ async def vault_renew_loop(interval: int = 900):
                 "Vault запечатан — обновление токена отложено до unseal. %s", e
             )
         except VaultUnavailableError as e:
-            logger.warning(
-                "Vault недоступен — обновление токена отложено. %s", e
-            )
+            logger.warning("Vault недоступен — обновление токена отложено. %s", e)
         except VaultAuthError as e:
             logger.error(
                 "Vault AppRole: ошибка авторизации при обновлении токена. "
-                "Проверьте VAULT_ROLE_ID / VAULT_SECRET_ID в .env. Ошибка: %s", e
+                "Проверьте VAULT_ROLE_ID / VAULT_SECRET_ID в .env. Ошибка: %s",
+                e,
             )
         except Exception as e:
             logger.error("Неожиданная ошибка в vault_renew_loop: %s", e)

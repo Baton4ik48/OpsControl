@@ -13,10 +13,7 @@ from app.services.credentials import (
     RotateError,
 )
 
-router = APIRouter(
-    prefix="/credentials",
-    tags=["credentials"]
-)
+router = APIRouter(prefix="/credentials", tags=["credentials"])
 
 
 class ShowCredentialsRequest(BaseModel):
@@ -54,10 +51,7 @@ def show_credentials_api(
             client_ip=client_ip,
         )
 
-        return {
-            "success": True,
-            "data": creds
-        }
+        return {"success": True, "data": creds}
 
     except TooManyLoginAttempts as e:
         return JSONResponse(
@@ -65,22 +59,16 @@ def show_credentials_api(
             content={
                 "error_code": "LOGIN_THROTTLED",
                 "retry_after": e.retry_after_seconds,
-            }
+            },
         )
 
     except InvalidMasterPassword:
         return JSONResponse(
-            status_code=403,
-            content={
-                "error_code": "INVALID_MASTER_PASSWORD"
-            }
+            status_code=403, content={"error_code": "INVALID_MASTER_PASSWORD"}
         )
 
     except CredentialsNotFound:
-        raise HTTPException(
-            status_code=404,
-            detail="Credentials not found"
-        )
+        raise HTTPException(status_code=404, detail="Credentials not found")
 
 
 @router.post("/verify-admin")
@@ -105,15 +93,12 @@ def verify_admin_api(
             content={
                 "error_code": "LOGIN_THROTTLED",
                 "retry_after": e.retry_after_seconds,
-            }
+            },
         )
 
     except InvalidMasterPassword:
         return JSONResponse(
-            status_code=403,
-            content={
-                "error_code": "INVALID_MASTER_PASSWORD"
-            }
+            status_code=403, content={"error_code": "INVALID_MASTER_PASSWORD"}
         )
 
 
@@ -127,10 +112,7 @@ def upsert_credentials_api(data: UpsertCredentialsRequest):
             password=data.password,
         )
 
-        return {
-            "success": True,
-            "data": {"vault_path": vault_path}
-        }
+        return {"success": True, "data": {"vault_path": vault_path}}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -167,17 +149,15 @@ def rotate_credentials_api(data: RotateCredentialsRequest, request: Request):
             content={
                 "error_code": "LOGIN_THROTTLED",
                 "retry_after": e.retry_after_seconds,
-            }
+            },
         )
 
     except InvalidMasterPassword:
         return JSONResponse(
-            status_code=403,
-            content={"error_code": "INVALID_MASTER_PASSWORD"}
+            status_code=403, content={"error_code": "INVALID_MASTER_PASSWORD"}
         )
 
     except RotateError as e:
         return JSONResponse(
-            status_code=422,
-            content={"error_code": "ROTATE_FAILED", "detail": str(e)}
+            status_code=422, content={"error_code": "ROTATE_FAILED", "detail": str(e)}
         )

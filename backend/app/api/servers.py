@@ -8,13 +8,13 @@ from app.services.db.servers import (
     load_servers,
     create_server,
     delete_server,
-    update_server
+    update_server,
 )
 
 router = APIRouter(prefix="/servers", tags=["servers"])
 
 _DOMAIN_RE = re.compile(
-    r'^(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$'
+    r"^(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$"
 )
 
 
@@ -82,18 +82,22 @@ def ensure_found(affected: int, entity: str):
 # READ
 # ==========================
 
+
 @router.get("/by-branch/{branch_id}")
 def get_servers(branch_id: int):
     rows = load_servers(branch_id)
     return {
         "success": True,
-        "data": [{"id": r[0], "name": r[1], "ip": r[2], "device_type": r[3]} for r in rows]
+        "data": [
+            {"id": r[0], "name": r[1], "ip": r[2], "device_type": r[3]} for r in rows
+        ],
     }
 
 
 # ==========================
 # CREATE
 # ==========================
+
 
 @router.post("")
 def create_server_api(payload: ServerCreate):
@@ -110,6 +114,7 @@ def create_server_api(payload: ServerCreate):
 # UPDATE (атомарный)
 # ==========================
 
+
 @router.put("/{server_id}")
 def update_server_api(server_id: int, payload: ServerUpdate):
     affected = update_server(
@@ -125,6 +130,7 @@ def update_server_api(server_id: int, payload: ServerUpdate):
 # ==========================
 # DELETE
 # ==========================
+
 
 @router.delete("/{server_id}")
 def delete_server_api(server_id: int):

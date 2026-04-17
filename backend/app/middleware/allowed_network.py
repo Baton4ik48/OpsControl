@@ -3,12 +3,11 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 import ipaddress
 
+
 class AllowedNetworkMiddleware(BaseHTTPMiddleware):
     def __init__(self, app, allowed_networks: list[str]):
         super().__init__(app)
-        self.allowed_networks = [
-            ipaddress.ip_network(net) for net in allowed_networks
-        ]
+        self.allowed_networks = [ipaddress.ip_network(net) for net in allowed_networks]
 
     async def dispatch(self, request: Request, call_next):
         client_ip = request.client.host
@@ -22,8 +21,8 @@ class AllowedNetworkMiddleware(BaseHTTPMiddleware):
                 status_code=403,
                 content={
                     "detail": "Access denied from this network",
-                    "client_ip": client_ip
-                }
+                    "client_ip": client_ip,
+                },
             )
 
         return await call_next(request)

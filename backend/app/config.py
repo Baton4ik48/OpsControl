@@ -8,13 +8,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 APP_ENV = os.getenv("APP_ENV", "dev")
 
-load_dotenv(
-    dotenv_path=BASE_DIR / ".env",
-    override=(APP_ENV == "dev")
-)
+load_dotenv(dotenv_path=BASE_DIR / ".env", override=(APP_ENV == "dev"))
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 CONFIG_PATH = BASE_DIR / "config" / "config.yaml"
+
 
 class Settings:
     def __init__(self):
@@ -25,7 +23,6 @@ class Settings:
         self.VAULT_SECRET_ID = os.getenv("VAULT_SECRET_ID")
         self.VAULT_DATABASE_ROLE_NAME = os.getenv("VAULT_DATABASE_ROLE_NAME")
 
-        
         self.POSTGRES_HOST = os.getenv("POSTGRES_HOST")
         self.POSTGRES_PORT = int(os.getenv("POSTGRES_PORT", 5432))
         self.POSTGRES_DB = os.getenv("POSTGRES_DB")
@@ -44,5 +41,6 @@ class Settings:
         self.LOGIN_THROTTLE_ENABLED = login["enabled"]
         self.LOGIN_MAX_ATTEMPTS = login.get("max_attempts", 3)
         self.LOGIN_BLOCK_SECONDS = login.get("block_seconds", 120)
+
 
 settings = Settings()

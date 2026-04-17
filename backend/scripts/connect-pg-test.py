@@ -5,10 +5,7 @@ print("Тест подключения к БД")
 
 try:
     conn = psycopg2.connect(
-        host="postgres",
-        dbname="ppm_database",
-        user="login_ppm",
-        password="7946130q!"
+        host="postgres", dbname="ppm_database", user="login_ppm", password="7946130q!"
     )
     print("CONNECTED OK")
     conn.close()

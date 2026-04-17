@@ -12,11 +12,13 @@ class VaultReadError(Exception):
 
 class VaultSealedError(Exception):
     """Vault запечатан — нужна ручная операция unseal."""
+
     pass
 
 
 class VaultUnavailableError(Exception):
     """Vault недоступен по сети или вернул неожиданный статус."""
+
     pass
 
 
@@ -76,7 +78,9 @@ class VaultClient:
                 "AppRole: неверный role_id или secret_id — проверьте .env"
             )
         if resp.status_code != 200:
-            raise VaultAuthError(f"AppRole login вернул {resp.status_code}: {resp.text}")
+            raise VaultAuthError(
+                f"AppRole login вернул {resp.status_code}: {resp.text}"
+            )
 
         data = resp.json()
         token = data["auth"]["client_token"]
@@ -123,10 +127,7 @@ class VaultClient:
     def login_userpass(self, username: str, password: str) -> str:
         username = username.lower()
 
-        url = (
-            f"{self.addr}"
-            f"/v1/auth/userpass/login/{username}"
-        )
+        url = f"{self.addr}" f"/v1/auth/userpass/login/{username}"
 
         resp = requests.post(
             url,
