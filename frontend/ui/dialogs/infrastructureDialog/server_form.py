@@ -20,8 +20,10 @@ def is_valid_host(value: str) -> bool:
 
 
 DEVICE_TYPES = [
-    ("Linux-сервер", "linux"),
-    ("Коммутатор Natex", "natex"),
+    ("Linux-сервер",      "linux"),
+    ("Windows-сервер",    "windows"),
+    ("Коммутатор Nateks", "nateks"),
+    ("Коммутатор Cisco",  "cisco"),
 ]
 
 

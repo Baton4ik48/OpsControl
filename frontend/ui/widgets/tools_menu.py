@@ -1,4 +1,5 @@
-from PyQt6.QtWidgets import QMenuBar, QMessageBox
+from PyQt6.QtWidgets import QMenuBar, QMessageBox, QWidget, QHBoxLayout, QLabel
+from PyQt6.QtCore import pyqtSignal, Qt
 from core.api.credentials import CredentialsApi
 from core.api.base import ApiError
 from ui.dialogs.credentials_dialog import CredentialsDialog
@@ -6,26 +7,67 @@ from ui.dialogs.firewall_dialog import FirewallDialog
 from ui.dialogs.infrastructure_dialog import InfrastructureManagerDialog
 
 
+class _StatusIndicator(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 12, 0)
+        layout.setSpacing(14)
+
+        self._up   = QLabel("● —")
+        self._down = QLabel("● —")
+        self._up.setStyleSheet(
+            "color:#81c995; font-size:9pt; font-weight:bold; background:transparent;"
+        )
+        self._down.setStyleSheet(
+            "color:#ef9a9a; font-size:9pt; font-weight:bold; background:transparent;"
+        )
+        self._up.setMinimumWidth(60)
+        self._down.setMinimumWidth(60)
+        self._up.setToolTip("Серверов доступно")
+        self._down.setToolTip("Серверов недоступно")
+
+        layout.addWidget(self._up)
+        layout.addWidget(self._down)
+
+    def update_counts(self, up: int, down: int):
+        self._up.setText(f"● {up}")
+        self._down.setText(f"● {down}")
+
+
 class ToolsMenu(QMenuBar):
+    infrastructure_closed = pyqtSignal()
+    statistics_requested  = pyqtSignal()
+
     def __init__(self, user_settings, parent=None):
         super().__init__(parent)
 
         self._settings = user_settings
         self._credentials_api = CredentialsApi()
 
+        # =========================
+        # Общее
+        # =========================
+        general_menu = self.addMenu("Общее")
+
+        stats_action = general_menu.addAction("Статистика")
+        stats_action.triggered.connect(self.statistics_requested.emit)
+
+        # =========================
+        # Инструменты
+        # =========================
         tools_menu = self.addMenu("Инструменты")
 
         # =========================
-        # xFirewall
+        # Индикатор статусов
         # =========================
-        xfirewall_menu = tools_menu.addMenu("xFirewall")
+        self._status = _StatusIndicator()
+        self.setCornerWidget(self._status, Qt.Corner.TopRightCorner)
 
+        xfirewall_menu = tools_menu.addMenu("xFirewall")
         firewall_action = xfirewall_menu.addAction("Сгенерировать правила")
         firewall_action.triggered.connect(self.open_firewall_generator)
 
-        # =========================
-        # Infrastructure Manager
-        # =========================
         tools_menu.addSeparator()
 
         bd_menu = tools_menu.addMenu("Управление БД")
@@ -33,7 +75,8 @@ class ToolsMenu(QMenuBar):
         infra_action = bd_menu.addAction("Управление инфраструктурой")
         infra_action.triggered.connect(self.open_infrastructure_manager)
 
-        package_action = bd_menu.addAction("Пакетная загрузка в БД")
+    def update_server_counts(self, up: int, down: int):
+        self._status.update_counts(up, down)
 
     # -------------------------------------
 
@@ -56,17 +99,9 @@ class ToolsMenu(QMenuBar):
             self._credentials_api.verify_admin(username, master_password)
         except ApiError as e:
             if e.status_code == 403:
-                QMessageBox.warning(
-                    self,
-                    "Доступ запрещён",
-                    "Неверный мастер-пароль."
-                )
+                QMessageBox.warning(self, "Доступ запрещён", "Неверный мастер-пароль.")
             elif e.status_code == 429:
-                QMessageBox.warning(
-                    self,
-                    "Слишком много попыток",
-                    f"Попробуйте через {e.retry_after} сек."
-                )
+                QMessageBox.warning(self, "Слишком много попыток", f"Попробуйте через {e.retry_after} сек.")
             else:
                 QMessageBox.critical(self, "Ошибка", e.message)
             return
@@ -74,3 +109,4 @@ class ToolsMenu(QMenuBar):
         dlg = InfrastructureManagerDialog(self)
         dlg.setModal(True)
         dlg.exec()
+        self.infrastructure_closed.emit()

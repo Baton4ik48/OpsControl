@@ -19,30 +19,30 @@ log = get_logger(__name__)
 class TreeController(QObject):
     loaded = pyqtSignal()
     error_occurred = pyqtSignal(ApiError)
+    checking_started  = pyqtSignal()
+    checking_finished = pyqtSignal()
 
     def __init__(self, api, tree, user_settings, busy):
         super().__init__()
         self.api = api
         self.tree = tree
         self.user_settings = user_settings
-        self.busy = busy    
+        self.busy = busy
         self.tree.set_user_settings(self.user_settings)
 
         self._data = None
         self._runtime_status = {}
         self.checker = PortCheckManager(max_threads=10)
         self._worker = None
+        self._check_count = 0
 
     # =========================
     # ЗАГРУЗКА ДЕРЕВА
     # =========================
     def start_load(self):
-        self.busy.start("Загрузка топологии сети...")
-
         self._worker = TreeLoaderWorker(self.api)
         self._worker.success.connect(self._on_loaded)
         self._worker.error.connect(self._on_error)
-        self._worker.finished.connect(self.busy.stop)
         self._worker.start()
 
     def _on_loaded(self, data):
@@ -58,26 +58,26 @@ class TreeController(QObject):
     # =========================
     # ПРОВЕРКА ПОРТОВ
     # =========================
+    def _begin_check(self, n: int):
+        if n == 0:
+            return
+        if self._check_count == 0:
+            self.checking_started.emit()
+        self._check_count += n
+
+    def _end_one(self):
+        self._check_count -= 1
+        if self._check_count == 0:
+            self.checking_finished.emit()
+
     def refresh_all(self):
         if not self._data:
             return
 
-        self.busy.start("Проверка портов…")
-
-        self._pending_ports = 0
-
         servers = [s for b in self._data for s in b["servers"]]
-        for s in servers:
-            self._pending_ports += len(s["ports"])
-
-        def on_checked(server_id, port, ok):
-            self._on_port_checked(server_id, port, ok)
-            self._pending_ports -= 1
-            if self._pending_ports == 0:
-                self.busy.stop()
-
-        self.checker.check_ports(servers, on_checked, self.api)
-
+        n = sum(len(s["ports"]) for s in servers)
+        self._begin_check(n)
+        self.checker.check_ports(servers, self._on_port_checked, self.api)
 
     def _on_port_checked(self, server_id, port, ok):
         self._runtime_status[(server_id, port)] = ok
@@ -87,6 +87,8 @@ class TreeController(QObject):
         port_data = self._get_port_data(server_id, port)
         if port_data is not None:
             self.tree.update_port_item(server_id, port, port_data)
+
+        self._end_one()
 
     def _get_port_data(self, server_id, port):
         for b in self._data:
@@ -159,20 +161,9 @@ class TreeController(QObject):
             return
 
         servers = branch.get("servers", [])
-        total_ports = sum(len(s["ports"]) for s in servers)
-        if total_ports == 0:
-            return
-
-        self.busy.start(f"Проверка портов филиала «{branch_name}»…")
-        self._pending_ports = total_ports
-
-        def on_checked(server_id, port, ok):
-            self._on_port_checked(server_id, port, ok)
-            self._pending_ports -= 1
-            if self._pending_ports == 0:
-                self.busy.stop()
-
-        self.checker.check_ports(servers, on_checked, self.api)
+        n = sum(len(s["ports"]) for s in servers)
+        self._begin_check(n)
+        self.checker.check_ports(servers, self._on_port_checked, self.api)
 
     def refresh_server(self, server_id: int, ip: str):
         for b in self._data:
@@ -180,25 +171,11 @@ class TreeController(QObject):
                 if s["id"] != server_id:
                     continue
 
-                ports_count = len(s["ports"])
-                if ports_count == 0:
+                if not s["ports"]:
                     return
 
-                self.busy.start(f"Проверка доступности портов на сервере {ip}…")
-                self._pending_ports = ports_count
-
-                def on_checked(sid, port, ok):
-                    self._on_port_checked(sid, port, ok)
-
-                    self._pending_ports -= 1
-                    if self._pending_ports == 0:
-                        self.busy.stop()
-
-                self.checker.check_ports(
-                    [s],
-                    on_checked,
-                    self.api
-                )
+                self._begin_check(len(s["ports"]))
+                self.checker.check_ports([s], self._on_port_checked, self.api)
                 return
 
 
@@ -212,19 +189,10 @@ class TreeController(QObject):
                     if p["port"] != port:
                         continue
 
-                    self.busy.start(f"Проверка порта {port} сервера {ip}…")
-
-                    def on_checked(sid, port, ok):
-                        self._on_port_checked(sid, port, ok)
-                        self.busy.stop()
-
+                    self._begin_check(1)
                     self.checker.check_ports(
-                        [{
-                            "id": server_id,
-                            "ip": s["ip"],
-                            "ports": [p]
-                        }],
-                        on_checked,
+                        [{"id": server_id, "ip": s["ip"], "ports": [p]}],
+                        self._on_port_checked,
                         self.api
                     )
                     return

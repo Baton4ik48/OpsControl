@@ -92,13 +92,13 @@ def report_port_result(server_id: int, port: int, ok: bool) -> int:
         if ok:
             cur.execute("""
                 UPDATE ports
-                SET last_success = CURRENT_TIMESTAMP
+                SET last_success = (NOW() AT TIME ZONE 'UTC')
                 WHERE server_id = %s AND port = %s
             """, (server_id, port))
         else:
             cur.execute("""
                 UPDATE ports
-                SET last_failure = CURRENT_TIMESTAMP
+                SET last_failure = (NOW() AT TIME ZONE 'UTC')
                 WHERE server_id = %s AND port = %s
             """, (server_id, port))
 
@@ -132,7 +132,7 @@ def update_vault_path(server_id: int, port: int, new_path: str) -> int:
             ON CONFLICT (server_id, port)
             DO UPDATE SET
                 vault_path = EXCLUDED.vault_path,
-                updated_at = CURRENT_TIMESTAMP
+                updated_at = (NOW() AT TIME ZONE 'UTC')
         """, (server_id, port, cleaned_path))
 
         conn.commit()
