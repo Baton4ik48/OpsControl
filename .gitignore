@@ -41,8 +41,8 @@ main.spec
 
 frontend/build
 frontend/dist
-frontend/venv
-
+venv
+.vscode
 # ================================
 # Примечание
 # ================================
