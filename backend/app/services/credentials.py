@@ -1,5 +1,5 @@
 from app.services.vault_client import get_vault_client, VaultAuthError, VaultReadError
-from app.services.db.credentials import (
+from app.services.db.credentials_db import (
     get_vault_path_by_server_port,
     upsert_vault_path,
     touch_credentials_updated_at,

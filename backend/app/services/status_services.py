@@ -1,4 +1,4 @@
-from app.services.db.pool import _execute, ServiceUnavailableError
+from app.services.db.pool_db import _execute, ServiceUnavailableError
 from app.services.vault_client import VaultSealedError, VaultUnavailableError
 
 

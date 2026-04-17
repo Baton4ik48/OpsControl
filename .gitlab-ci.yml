@@ -39,23 +39,22 @@
 
 
 stages:
-  - lint
+  - Validate
   #- test
   #- build
   #- deploy
 
 # ============================================
-# Stage 1: Lint
+# Stage 1: Validate
 # ============================================
-lint:
-  stage: lint
+Validate_job:
+  stage: Validate
   tags:
   - docker
   image: localhost:5050/root/opscontrol/lint-image:v1
   timeout: 2 minutes
   script:
     - ruff check backend/
-    - black --version
     - black --check backend/
 
 # test-job:

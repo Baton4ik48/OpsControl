@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from app.services.db.pool import init_pool, close_pool, ServiceUnavailableError
+from app.services.db.pool_db import init_pool, close_pool, ServiceUnavailableError
 from app.services.vault_renewer import vault_renew_loop
 from app.api.router import router as api_router
 from app.middleware.allowed_network import AllowedNetworkMiddleware

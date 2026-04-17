@@ -1,4 +1,4 @@
-from app.services.db.pool import _execute
+from app.services.db.pool_db import _execute
 
 
 def load_tree():
