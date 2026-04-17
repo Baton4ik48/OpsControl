@@ -64,10 +64,7 @@ class MainWindow(QWidget):
         # =========================
         self.api = ApiClient()
         self.controller = TreeController(
-            self.api,
-            self.tree,
-            self.user_settings,
-            self.busy
+            self.api, self.tree, self.user_settings, self.busy
         )
 
         # =========================
@@ -91,8 +88,12 @@ class MainWindow(QWidget):
 
         self.controller.loaded.connect(self.on_tree_loaded)
         self.controller.error_occurred.connect(self._on_api_error)
-        self.controller.checking_started.connect(lambda: self.sidebar.set_actions_enabled(False))
-        self.controller.checking_finished.connect(lambda: self.sidebar.set_actions_enabled(True))
+        self.controller.checking_started.connect(
+            lambda: self.sidebar.set_actions_enabled(False)
+        )
+        self.controller.checking_finished.connect(
+            lambda: self.sidebar.set_actions_enabled(True)
+        )
         self.controller.checking_finished.connect(self._update_status_counts)
 
         self.tree.refresh_branch_requested.connect(self.controller.refresh_branch)
@@ -166,18 +167,22 @@ class MainWindow(QWidget):
     # =========================
     # PASSWORD ROTATION
     # =========================
-    def _open_password_rotation(self, server_id: int, ip: str, device_type: str = "linux"):
+    def _open_password_rotation(
+        self, server_id: int, ip: str, device_type: str = "linux"
+    ):
         if device_type == "windows":
             QMessageBox.information(
                 self,
                 "Смена пароля — Windows",
                 "Автоматическая смена пароля для Windows-серверов не реализована.\n\n"
                 "Смените пароль вручную: Управление компьютером → "
-                "Локальные пользователи и группы → Пользователи."
+                "Локальные пользователи и группы → Пользователи.",
             )
             return
         admin_login = self.user_settings.get("admin_login") or ""
-        dlg = PasswordRotationDialog(server_id, ip, admin_login, device_type=device_type, parent=self)
+        dlg = PasswordRotationDialog(
+            server_id, ip, admin_login, device_type=device_type, parent=self
+        )
         dlg.exec()
 
     # =========================
@@ -205,7 +210,7 @@ class MainWindow(QWidget):
                 QMessageBox.information(
                     self,
                     "Требуется перезапуск",
-                    "Сетевые изменения вступят в силу после перезапуска приложения."
+                    "Сетевые изменения вступят в силу после перезапуска приложения.",
                 )
 
     # =========================
@@ -214,10 +219,10 @@ class MainWindow(QWidget):
     def exit_app(self):
         reply = QMessageBox.question(
             self,
-            'Подтверждение',
-            'Вы уверены, что хотите выйти?',
+            "Подтверждение",
+            "Вы уверены, что хотите выйти?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
+            QMessageBox.StandardButton.No,
         )
 
         if reply == QMessageBox.StandardButton.Yes:

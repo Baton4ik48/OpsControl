@@ -2,17 +2,21 @@ import re
 import socket
 import time
 import paramiko
-from paramiko.ssh_exception import NoValidConnectionsError, AuthenticationException, SSHException
+from paramiko.ssh_exception import (
+    NoValidConnectionsError,
+    AuthenticationException,
+    SSHException,
+)
 
 from core.ssh_rotate_linux import SSHRotateError, _try_auth
 
 
 # ANSI escape-последовательности — встречаются в выводе некоторых устройств
-_ANSI_RE = re.compile(r'\x1b\[[0-9;]*[mGKHABCDJr]')
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*[mGKHABCDJr]")
 
 
 def _strip_ansi(text: str) -> str:
-    return _ANSI_RE.sub('', text)
+    return _ANSI_RE.sub("", text)
 
 
 def _wait_prompt(channel, expected: str, timeout: int = 15) -> str:
@@ -125,7 +129,9 @@ def rotate_cisco_password(
                 look_for_keys=False,
             )
         except AuthenticationException:
-            raise SSHRotateError("Ошибка аутентификации SSH — неверные текущие учётные данные")
+            raise SSHRotateError(
+                "Ошибка аутентификации SSH — неверные текущие учётные данные"
+            )
         except NoValidConnectionsError:
             raise SSHRotateError(f"Не удалось подключиться к {host}:{port}")
         except (SSHException, socket.timeout, TimeoutError, OSError) as e:

@@ -3,7 +3,8 @@ from core.port_checker import check_port
 
 
 class PortCheckSignals(QObject):
-    result = pyqtSignal(int, int, bool)  
+    result = pyqtSignal(int, int, bool)
+
 
 class PortCheckWorker(QRunnable):
     def __init__(self, server_id, ip, port, api):
@@ -17,15 +18,7 @@ class PortCheckWorker(QRunnable):
     def run(self):
         ok = check_port(self.ip, self.port)
         try:
-            self.api.ports.report_result(
-                self.server_id,
-                self.port,
-                ok
-            )
+            self.api.ports.report_result(self.server_id, self.port, ok)
         except Exception:
             pass
-        self.signals.result.emit(
-            self.server_id,
-            self.port,
-            ok
-        )
+        self.signals.result.emit(self.server_id, self.port, ok)

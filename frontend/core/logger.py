@@ -21,7 +21,7 @@ def _create_handler(filename, level, max_level=None):
         os.path.join(LOG_DIR, filename),
         maxBytes=5 * 1024 * 1024,
         backupCount=5,
-        encoding="utf-8"
+        encoding="utf-8",
     )
     handler.setLevel(level)
 
@@ -29,13 +29,11 @@ def _create_handler(filename, level, max_level=None):
         handler.addFilter(MaxLevelFilter(max_level))
 
     formatter = logging.Formatter(
-        fmt="%(asctime)s | %(levelname)-8s | %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
+        fmt="%(asctime)s | %(levelname)-8s | %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
     )
 
     handler.setFormatter(formatter)
     return handler
-
 
 
 def setup_logging():
@@ -47,24 +45,12 @@ def setup_logging():
     root.setLevel(logging.DEBUG)
 
     root.addHandler(
-        _create_handler(
-            "app.log",
-            level=logging.INFO,
-            max_level=logging.WARNING
-        )
+        _create_handler("app.log", level=logging.INFO, max_level=logging.WARNING)
     )
 
     # errors.log: ERROR +
-    root.addHandler(
-        _create_handler(
-            "errors.log",
-            level=logging.ERROR
-        )
-    )
-
-
+    root.addHandler(_create_handler("errors.log", level=logging.ERROR))
 
 
 def get_logger(name: str):
     return logging.getLogger(name)
-

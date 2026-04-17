@@ -31,5 +31,3 @@ class BusyOverlay(QWidget):
 
     def hide_overlay(self):
         self.hide()
-
-

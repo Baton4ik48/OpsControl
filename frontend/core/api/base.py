@@ -4,6 +4,7 @@ from core.logger import get_logger
 
 log = get_logger(__name__)
 
+
 class ApiError(Exception):
     def __init__(
         self,
@@ -40,12 +41,7 @@ class BaseApi:
         url = f"{self.base_url}{path}"
 
         try:
-            r = self.session.request(
-                method,
-                url,
-                timeout=(3, 30),
-                **kwargs
-            )
+            r = self.session.request(method, url, timeout=(3, 30), **kwargs)
 
             if not r.ok:
                 try:
@@ -67,8 +63,7 @@ class BaseApi:
 
             if not data.get("success", False):
                 raise ApiError(
-                    data.get("detail", "Unknown API error"),
-                    status_code=r.status_code
+                    data.get("detail", "Unknown API error"), status_code=r.status_code
                 )
 
             return data.get("data")

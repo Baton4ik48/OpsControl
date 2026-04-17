@@ -24,7 +24,6 @@ class Sidebar(QFrame):
         self.icon_update_all = QIcon(os.path.join(ICONS_DIR, "update_icon_all.png"))
         self.icon_down_all = QIcon(os.path.join(ICONS_DIR, "status_down_all.png"))
 
-
         self.setObjectName("Sidebar")
         self.setFixedWidth(170)
 

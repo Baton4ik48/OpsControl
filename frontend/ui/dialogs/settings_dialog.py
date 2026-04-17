@@ -1,9 +1,18 @@
 import os
 from PyQt6.QtWidgets import (
-    QDialog, QWidget, QVBoxLayout, QHBoxLayout,
-    QCheckBox, QSpinBox, QLabel, QPushButton,
-    QMessageBox, QFileDialog, QLineEdit,
-    QGroupBox, QTabWidget
+    QDialog,
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QCheckBox,
+    QSpinBox,
+    QLabel,
+    QPushButton,
+    QMessageBox,
+    QFileDialog,
+    QLineEdit,
+    QGroupBox,
+    QTabWidget,
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
@@ -46,7 +55,7 @@ class SettingsDialog(QDialog):
         tabs.setDocumentMode(True)
         main_layout.addWidget(tabs)
         tabs.tabBar().setExpanding(True)
-        tabs.tabBar().setUsesScrollButtons(False)   
+        tabs.tabBar().setUsesScrollButtons(False)
 
         # =====================================================
         # TAB 1 — ОБЩИЕ
@@ -56,8 +65,9 @@ class SettingsDialog(QDialog):
 
         # --- Авторизация ---
         desc_general = QLabel(
-        "Основные параметры работы приложения.\n"
-        "Логин администратора и поведение автообновления.")
+            "Основные параметры работы приложения.\n"
+            "Логин администратора и поведение автообновления."
+        )
         desc_general.setWordWrap(True)
         desc_general.setObjectName("settingsDescription")
         desc_general.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -76,16 +86,12 @@ class SettingsDialog(QDialog):
         auto_layout = QVBoxLayout(auto_group)
 
         self.auto_refresh_checkbox = QCheckBox("Включить автообновление")
-        self.auto_refresh_checkbox.setChecked(
-            self.settings.get("auto_refresh_enabled")
-        )
+        self.auto_refresh_checkbox.setChecked(self.settings.get("auto_refresh_enabled"))
 
         self.interval_spin = QSpinBox()
         self.interval_spin.setRange(30, 3600)
         self.interval_spin.setSuffix(" сек")
-        self.interval_spin.setValue(
-            self.settings.get("auto_refresh_interval_sec")
-        )
+        self.interval_spin.setValue(self.settings.get("auto_refresh_interval_sec"))
 
         auto_layout.addWidget(self.auto_refresh_checkbox)
         auto_layout.addWidget(QLabel("Интервал обновления:"))
@@ -105,7 +111,8 @@ class SettingsDialog(QDialog):
 
         desc_backend = QLabel(
             "Настройки подключения к серверу.\n"
-            "Используется ручная настройка если сервер работает на нестандартном адресе.")
+            "Используется ручная настройка если сервер работает на нестандартном адресе."
+        )
         desc_backend.setWordWrap(True)
         desc_backend.setObjectName("settingsDescription")
         desc_backend.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -113,9 +120,7 @@ class SettingsDialog(QDialog):
         backend_group = QGroupBox("Cервер")
         backend_layout = QVBoxLayout(backend_group)
 
-        self.backend_override_checkbox = QCheckBox(
-            "Ручная настройка адреса сервера"
-        )
+        self.backend_override_checkbox = QCheckBox("Ручная настройка адреса сервера")
         self.backend_override_checkbox.setChecked(
             self.settings.get("backend_override_enabled")
         )
@@ -125,9 +130,7 @@ class SettingsDialog(QDialog):
 
         self.backend_port_spin = QSpinBox()
         self.backend_port_spin.setRange(1, 65535)
-        self.backend_port_spin.setValue(
-            self.settings.get("backend_port") or 0
-        )
+        self.backend_port_spin.setValue(self.settings.get("backend_port") or 0)
 
         backend_layout.addWidget(self.backend_override_checkbox)
         backend_layout.addWidget(QLabel("Адрес сервера:"))
@@ -147,7 +150,8 @@ class SettingsDialog(QDialog):
         web_layout_wrapper = QVBoxLayout(web_tab)
         desc_web = QLabel(
             "Определяет, какие порты открываются через браузер.\n"
-            "Формат: порт:протокол (например: 80:http,443:https).")
+            "Формат: порт:протокол (например: 80:http,443:https)."
+        )
         desc_web.setWordWrap(True)
         desc_web.setObjectName("settingsDescription")
         desc_web.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -160,10 +164,7 @@ class SettingsDialog(QDialog):
         self.web_ports_input = QLineEdit()
 
         web_ports = self.settings.get("web_ports") or []
-        formatted = [
-            f'{entry["port"]}:{entry["scheme"]}'
-            for entry in web_ports
-        ]
+        formatted = [f'{entry["port"]}:{entry["scheme"]}' for entry in web_ports]
         self.web_ports_input.setText(",".join(formatted))
 
         web_layout.addWidget(self.web_ports_input)
@@ -180,7 +181,8 @@ class SettingsDialog(QDialog):
         external_layout_wrapper = QVBoxLayout(external_tab)
         desc_external = QLabel(
             "Настройка запуска внешнего приложения для определённого порта.\n"
-            "При выборе сервера с этим портом будет запущена указанная программа.")
+            "При выборе сервера с этим портом будет запущена указанная программа."
+        )
         desc_external.setWordWrap(True)
         desc_external.setObjectName("settingsDescription")
         desc_external.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -234,7 +236,8 @@ class SettingsDialog(QDialog):
 
         desc_password = QLabel(
             "Настройки генерации паролей.\n"
-            "Пароль = число + первые N букв от каждого слова в QWERTY-раскладке.")
+            "Пароль = число + первые N букв от каждого слова в QWERTY-раскладке."
+        )
         desc_password.setWordWrap(True)
         desc_password.setObjectName("settingsDescription")
         desc_password.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -283,7 +286,8 @@ class SettingsDialog(QDialog):
         desc_policy = QLabel(
             "Определяет, через сколько дней пароль считается устаревшим.\n"
             "Дата смены пароля в дереве устройств подсвечивается цветом\n"
-            "в зависимости от оставшегося времени до истечения срока.")
+            "в зависимости от оставшегося времени до истечения срока."
+        )
         desc_policy.setWordWrap(True)
         desc_policy.setObjectName("settingsDescription")
         desc_policy.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -346,34 +350,34 @@ class SettingsDialog(QDialog):
         # =========================
         # SIGNALS
         # =========================
-        self.auto_refresh_checkbox.toggled.connect(
-            self._update_auto_refresh_enabled
-        )
-        self.backend_override_checkbox.toggled.connect(
-            self._update_backend_enabled
-        )
+        self.auto_refresh_checkbox.toggled.connect(self._update_auto_refresh_enabled)
+        self.backend_override_checkbox.toggled.connect(self._update_backend_enabled)
 
-        self._update_auto_refresh_enabled(
-            self.auto_refresh_checkbox.isChecked()
-        )
-        self._update_backend_enabled(
-            self.backend_override_checkbox.isChecked()
-        )
+        self._update_auto_refresh_enabled(self.auto_refresh_checkbox.isChecked())
+        self._update_backend_enabled(self.backend_override_checkbox.isChecked())
 
         # --- dirty tracking (подключаем после установки начальных значений) ---
         self.admin_login_input.textChanged.connect(lambda: self._mark_dirty("general"))
         self.auto_refresh_checkbox.toggled.connect(lambda: self._mark_dirty("general"))
         self.interval_spin.valueChanged.connect(lambda: self._mark_dirty("general"))
 
-        self.backend_override_checkbox.toggled.connect(lambda: self._mark_dirty("backend"))
+        self.backend_override_checkbox.toggled.connect(
+            lambda: self._mark_dirty("backend")
+        )
         self.backend_host_input.textChanged.connect(lambda: self._mark_dirty("backend"))
         self.backend_port_spin.valueChanged.connect(lambda: self._mark_dirty("backend"))
 
         self.web_ports_input.textChanged.connect(lambda: self._mark_dirty("web"))
 
-        self.external_name_input.textChanged.connect(lambda: self._mark_dirty("external"))
-        self.external_port_spin.valueChanged.connect(lambda: self._mark_dirty("external"))
-        self.external_path_input.textChanged.connect(lambda: self._mark_dirty("external"))
+        self.external_name_input.textChanged.connect(
+            lambda: self._mark_dirty("external")
+        )
+        self.external_port_spin.valueChanged.connect(
+            lambda: self._mark_dirty("external")
+        )
+        self.external_path_input.textChanged.connect(
+            lambda: self._mark_dirty("external")
+        )
 
         self.spin_words.valueChanged.connect(lambda: self._mark_dirty("password"))
         self.spin_letters.valueChanged.connect(lambda: self._mark_dirty("password"))
@@ -393,7 +397,6 @@ class SettingsDialog(QDialog):
         self.setMinimumWidth(550)
         self.setMinimumHeight(300)
 
-
     # =====================================================
     # SAVE
     # =====================================================
@@ -406,20 +409,18 @@ class SettingsDialog(QDialog):
             return
 
         if "general" in self._dirty_tabs:
-            self.settings.set("admin_login",
-                              self.admin_login_input.text().strip())
-            self.settings.set("auto_refresh_enabled",
-                              self.auto_refresh_checkbox.isChecked())
-            self.settings.set("auto_refresh_interval_sec",
-                              self.interval_spin.value())
+            self.settings.set("admin_login", self.admin_login_input.text().strip())
+            self.settings.set(
+                "auto_refresh_enabled", self.auto_refresh_checkbox.isChecked()
+            )
+            self.settings.set("auto_refresh_interval_sec", self.interval_spin.value())
 
         if "backend" in self._dirty_tabs:
-            self.settings.set("backend_override_enabled",
-                              self.backend_override_checkbox.isChecked())
-            self.settings.set("backend_host",
-                              self.backend_host_input.text().strip())
-            self.settings.set("backend_port",
-                              self.backend_port_spin.value())
+            self.settings.set(
+                "backend_override_enabled", self.backend_override_checkbox.isChecked()
+            )
+            self.settings.set("backend_host", self.backend_host_input.text().strip())
+            self.settings.set("backend_port", self.backend_port_spin.value())
 
         if "web" in self._dirty_tabs:
             raw = self.web_ports_input.text().strip()
@@ -434,10 +435,7 @@ class SettingsDialog(QDialog):
                 scheme_part = scheme_part.strip().lower()
 
                 if port_part.isdigit() and scheme_part in ("http", "https"):
-                    web_ports.append({
-                        "port": int(port_part),
-                        "scheme": scheme_part
-                    })
+                    web_ports.append({"port": int(port_part), "scheme": scheme_part})
 
             self.settings.set("web_ports", web_ports)
 
@@ -450,16 +448,10 @@ class SettingsDialog(QDialog):
             if name and port and path:
                 if not os.path.exists(path):
                     QMessageBox.warning(
-                        self,
-                        "Ошибка",
-                        "Указанный путь к приложению не существует."
+                        self, "Ошибка", "Указанный путь к приложению не существует."
                     )
                 else:
-                    external_apps.append({
-                        "name": name,
-                        "port": port,
-                        "path": path
-                    })
+                    external_apps.append({"name": name, "port": port, "path": path})
 
             self.settings.set("external_apps", external_apps)
 
@@ -481,10 +473,7 @@ class SettingsDialog(QDialog):
 
     def _browse_external_path(self):
         file_path, _ = QFileDialog.getOpenFileName(
-            self,
-            "Выберите приложение",
-            "",
-            "Executable (*.exe);;All files (*)"
+            self, "Выберите приложение", "", "Executable (*.exe);;All files (*)"
         )
         if file_path:
             self.external_path_input.setText(file_path)
@@ -497,7 +486,10 @@ class SettingsDialog(QDialog):
         self.backend_port_spin.setEnabled(enabled)
 
     def _update_length_hint(self):
-        total = self.spin_digits.value() + self.spin_words.value() * self.spin_letters.value()
+        total = (
+            self.spin_digits.value()
+            + self.spin_words.value() * self.spin_letters.value()
+        )
         self.length_hint.setText(f"Итоговая длина пароля: {total} символов")
 
     def _set_status(self, status: str):
@@ -505,12 +497,10 @@ class SettingsDialog(QDialog):
             "ok": ("status_ok_icon.png", "Сервер доступен"),
             "degraded": ("status_warn_icon.png", "Некоторые сервисы недоступны"),
             "offline": ("status_offline_icon.png", "Сервер недоступен"),
-            "unknown": ("status_unknown.png", "Проверка сервера...")
+            "unknown": ("status_unknown.png", "Проверка сервера..."),
         }
 
         icon, text = icons.get(status, icons["unknown"])
 
-        self.status_icon.setPixmap(
-            QIcon(os.path.join(ICONS_DIR, icon)).pixmap(16, 16)
-        )
+        self.status_icon.setPixmap(QIcon(os.path.join(ICONS_DIR, icon)).pixmap(16, 16))
         self.status_text.setText(text)

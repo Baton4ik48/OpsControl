@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 def get_base_path():
-    if hasattr(sys, '_MEIPASS'):
+    if hasattr(sys, "_MEIPASS"):
         return sys._MEIPASS
     return os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -17,10 +17,7 @@ CONFIG_DIR = os.path.join(CORE_DIR, "config")
 ICONS_DIR = os.path.join(RESOURCES_DIR, "icons")
 TEMPLATES_DIR = os.path.join(RESOURCES_DIR, "templates")
 
-FIREWALL_TEMPLATE_PATH = os.path.join(
-    TEMPLATES_DIR,
-    "firewall_template.xlsx"
-)
+FIREWALL_TEMPLATE_PATH = os.path.join(TEMPLATES_DIR, "firewall_template.xlsx")
 
 LOG_DIR = os.path.join(BASE_DIR, "logs")
 

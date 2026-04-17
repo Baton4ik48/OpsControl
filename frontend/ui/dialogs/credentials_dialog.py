@@ -1,8 +1,12 @@
 import os
 
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QLabel,
-    QLineEdit, QPushButton, QMessageBox
+    QDialog,
+    QVBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QMessageBox,
 )
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QIcon
@@ -29,9 +33,15 @@ class CredentialsDialog(QDialog):
         layout = QVBoxLayout(self)
 
         if mode == "ssh":
-            layout.addWidget(QLabel("Введите мастер-пароль для подключения к серверу(SSH):"))
+            layout.addWidget(
+                QLabel("Введите мастер-пароль для подключения к серверу(SSH):")
+            )
         elif mode == "infra":
-            layout.addWidget(QLabel("Введите мастер-пароль для доступа к управлению инфраструктурой:"))
+            layout.addWidget(
+                QLabel(
+                    "Введите мастер-пароль для доступа к управлению инфраструктурой:"
+                )
+            )
         else:
             layout.addWidget(QLabel("Введите пароль администратора:"))
 
@@ -58,4 +68,3 @@ class CredentialsDialog(QDialog):
         self.submitted.emit(password)
         self.admin_input.clear()
         self.accept()
-

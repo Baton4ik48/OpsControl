@@ -1,5 +1,6 @@
 import socket
 
+
 def check_port(ip, port, timeout=2):
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -9,5 +10,3 @@ def check_port(ip, port, timeout=2):
         return result == 0
     except Exception:
         return False
-
-
