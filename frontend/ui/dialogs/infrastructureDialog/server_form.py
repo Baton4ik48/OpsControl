@@ -6,7 +6,7 @@ from PyQt6.QtCore import pyqtSignal
 
 # метка домена: буквы, цифры, дефис (не в начале/конце), 1–63 символа
 _DOMAIN_RE = re.compile(
-    r'^(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$'
+    r"^(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$"
 )
 
 
@@ -20,15 +20,15 @@ def is_valid_host(value: str) -> bool:
 
 
 DEVICE_TYPES = [
-    ("Linux-сервер",      "linux"),
-    ("Windows-сервер",    "windows"),
+    ("Linux-сервер", "linux"),
+    ("Windows-сервер", "windows"),
     ("Коммутатор Nateks", "nateks"),
-    ("Коммутатор Cisco",  "cisco"),
+    ("Коммутатор Cisco", "cisco"),
 ]
 
 
 class ServerForm(QWidget):
-    saved = pyqtSignal(str, str, str)   # name, ip, device_type
+    saved = pyqtSignal(str, str, str)  # name, ip, device_type
     error = pyqtSignal(str)
 
     def __init__(self):

@@ -3,7 +3,11 @@ import shlex
 import socket
 import sys
 import paramiko
-from paramiko.ssh_exception import NoValidConnectionsError, AuthenticationException, SSHException
+from paramiko.ssh_exception import (
+    NoValidConnectionsError,
+    AuthenticationException,
+    SSHException,
+)
 
 
 class SSHRotateError(Exception):
@@ -22,7 +26,7 @@ def _wipe(s: str) -> None:
     if not s:
         return
     try:
-        offset = sys.getsizeof('') - 1
+        offset = sys.getsizeof("") - 1
         ctypes.memset(id(s) + offset, 0, len(s))
     except Exception:
         pass
@@ -99,7 +103,9 @@ def rotate_linux_password(
                 look_for_keys=False,
             )
         except AuthenticationException:
-            raise SSHRotateError("Ошибка аутентификации SSH — неверные текущие учётные данные")
+            raise SSHRotateError(
+                "Ошибка аутентификации SSH — неверные текущие учётные данные"
+            )
         except NoValidConnectionsError:
             raise SSHRotateError(f"Не удалось подключиться к {host}:{port}")
         except (SSHException, socket.timeout, TimeoutError, OSError) as e:
@@ -123,8 +129,11 @@ def rotate_linux_password(
         else:
             if exit_code != 0:
                 real_error = "\n".join(
-                    line for line in raw_output.splitlines()
-                    if not any(s in line.lower() for s in ["password for", "пароль для"])
+                    line
+                    for line in raw_output.splitlines()
+                    if not any(
+                        s in line.lower() for s in ["password for", "пароль для"]
+                    )
                 ).strip()
                 raise SSHRotateError(
                     f"Ошибка смены пароля: {real_error or f'exit code {exit_code}'}"

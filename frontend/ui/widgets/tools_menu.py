@@ -14,7 +14,7 @@ class _StatusIndicator(QWidget):
         layout.setContentsMargins(0, 0, 12, 0)
         layout.setSpacing(14)
 
-        self._up   = QLabel("● —")
+        self._up = QLabel("● —")
         self._down = QLabel("● —")
         self._up.setStyleSheet(
             "color:#81c995; font-size:9pt; font-weight:bold; background:transparent;"
@@ -37,7 +37,7 @@ class _StatusIndicator(QWidget):
 
 class ToolsMenu(QMenuBar):
     infrastructure_closed = pyqtSignal()
-    statistics_requested  = pyqtSignal()
+    statistics_requested = pyqtSignal()
 
     def __init__(self, user_settings, parent=None):
         super().__init__(parent)
@@ -101,7 +101,11 @@ class ToolsMenu(QMenuBar):
             if e.status_code == 403:
                 QMessageBox.warning(self, "Доступ запрещён", "Неверный мастер-пароль.")
             elif e.status_code == 429:
-                QMessageBox.warning(self, "Слишком много попыток", f"Попробуйте через {e.retry_after} сек.")
+                QMessageBox.warning(
+                    self,
+                    "Слишком много попыток",
+                    f"Попробуйте через {e.retry_after} сек.",
+                )
             else:
                 QMessageBox.critical(self, "Ошибка", e.message)
             return

@@ -32,9 +32,9 @@ def generate_firewall_rules(file_path: str) -> list[str]:
             port_parts.append(f"{proto.strip()} dport {port.strip()}")
 
         cmd = (
-            f'firewall forward add {rule_id} '
+            f"firewall forward add {rule_id} "
             f'rule "{rule_name}" '
-            f'src {src} dst {dst} '
+            f"src {src} dst {dst} "
             f'{" ".join(port_parts)} pass'
         )
 

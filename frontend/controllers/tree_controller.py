@@ -16,10 +16,11 @@ from ui.error_handler import handle_system_error
 
 log = get_logger(__name__)
 
+
 class TreeController(QObject):
     loaded = pyqtSignal()
     error_occurred = pyqtSignal(ApiError)
-    checking_started  = pyqtSignal()
+    checking_started = pyqtSignal()
     checking_finished = pyqtSignal()
 
     def __init__(self, api, tree, user_settings, busy):
@@ -137,17 +138,15 @@ class TreeController(QObject):
 
         for b in self._data:
             bad = [
-                s for s in b["servers"]
+                s
+                for s in b["servers"]
                 if any(p.get("is_up") is False for p in s["ports"])
             ]
             if bad:
-                result.append({
-                    "name": b["name"],
-                    "servers": bad
-                })
+                result.append({"name": b["name"], "servers": bad})
 
         self.tree.render(result)
-    
+
     # =========================
     # Контекст меню
     # =========================
@@ -178,7 +177,6 @@ class TreeController(QObject):
                 self.checker.check_ports([s], self._on_port_checked, self.api)
                 return
 
-
     def refresh_port(self, server_id: int, port: int, ip: str):
         for b in self._data:
             for s in b["servers"]:
@@ -193,10 +191,9 @@ class TreeController(QObject):
                     self.checker.check_ports(
                         [{"id": server_id, "ip": s["ip"], "ports": [p]}],
                         self._on_port_checked,
-                        self.api
+                        self.api,
                     )
                     return
-
 
     def show_credentials(self, server_id: int, port: int, ip: str):
         dlg = CredentialsDialog(ip, port)
@@ -219,7 +216,7 @@ class TreeController(QObject):
             server_id=server_id,
             port=port,
             username=admin_login,
-            master_password=master_password
+            master_password=master_password,
         )
 
         def on_success(data):
@@ -240,7 +237,9 @@ class TreeController(QObject):
         self._credentials_worker.error.connect(on_error)
         self._credentials_worker.start()
 
-    def connect_protocol(self, server_id: int, port: int, ip: str, _unused_protocol: str):
+    def connect_protocol(
+        self, server_id: int, port: int, ip: str, _unused_protocol: str
+    ):
         settings = self.user_settings
         external_apps = settings.get("external_apps") or []
         web_ports = settings.get("web_ports") or []
@@ -302,13 +301,9 @@ class TreeController(QObject):
         dlg = CredentialsDialog(ip, port, mode=protocol)
 
         dlg.submitted.connect(
-            lambda master_password:
-                self._start_protocol_worker(
-                    server_id,
-                    port,
-                    master_password,
-                    protocol
-                )
+            lambda master_password: self._start_protocol_worker(
+                server_id, port, master_password, protocol
+            )
         )
 
         dlg.exec()
@@ -323,7 +318,7 @@ class TreeController(QObject):
             server_id=server_id,
             port=port,
             username=admin_login,
-            master_password=master_password
+            master_password=master_password,
         )
 
         def on_success(data):
@@ -355,6 +350,3 @@ class TreeController(QObject):
             for s in b["servers"]:
                 if s["id"] == server_id:
                     return s["ip"]
-
-
-

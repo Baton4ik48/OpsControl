@@ -1,5 +1,6 @@
 from PyQt6.QtWidgets import QMenu
 
+
 class DeviceTreeContextMenu:
     def __init__(self, tree):
         self.tree = tree
@@ -26,10 +27,7 @@ class DeviceTreeContextMenu:
         # =========================
         if item_type is None:
             branch_name = item.text(0)
-            refresh_branch = menu.addAction(
-                self.tree.icon_update,
-                "Опросить филиал"
-            )
+            refresh_branch = menu.addAction(self.tree.icon_update, "Опросить филиал")
             refresh_branch.triggered.connect(
                 lambda: self.tree.refresh_branch_requested.emit(branch_name)
             )
@@ -70,10 +68,7 @@ class DeviceTreeContextMenu:
 
             menu.addSeparator()
 
-            refresh_action = menu.addAction(
-                self.tree.icon_update,
-                "Обновить сервер"
-            )
+            refresh_action = menu.addAction(self.tree.icon_update, "Обновить сервер")
             refresh_action.triggered.connect(
                 lambda: self.tree.refresh_server_requested.emit(server_id, ip)
             )
@@ -87,33 +82,28 @@ class DeviceTreeContextMenu:
 
             self._add_connect_action(menu, server_id, ip, port)
 
-            show_action = menu.addAction(
-                self.tree.icon_show,
-                "Показать учётные данные"
-            )
+            show_action = menu.addAction(self.tree.icon_show, "Показать учётные данные")
             show_action.triggered.connect(
-                lambda checked=False, p=port:
-                    self.tree.show_credentials_requested.emit(server_id, p, ip)
+                lambda checked=False, p=port: self.tree.show_credentials_requested.emit(
+                    server_id, p, ip
+                )
             )
 
             if port == 22:
                 # device_type хранится на родительском узле сервера, не на порту
-                device_type = item.parent().data(0, self.tree.ROLE_DEVICE_TYPE) or "linux"
-                rotate_action = menu.addAction(
-                    self.tree.icon_key,
-                    "Сменить пароль"
+                device_type = (
+                    item.parent().data(0, self.tree.ROLE_DEVICE_TYPE) or "linux"
                 )
+                rotate_action = menu.addAction(self.tree.icon_key, "Сменить пароль")
                 rotate_action.triggered.connect(
-                    lambda checked=False, dt=device_type:
-                        self.tree.rotate_password_requested.emit(server_id, ip, dt)
+                    lambda checked=False, dt=device_type: self.tree.rotate_password_requested.emit(
+                        server_id, ip, dt
+                    )
                 )
 
             menu.addSeparator()
 
-            refresh_action = menu.addAction(
-                self.tree.icon_update,
-                "Обновить порт"
-            )
+            refresh_action = menu.addAction(self.tree.icon_update, "Обновить порт")
             refresh_action.triggered.connect(
                 lambda: self.tree.refresh_port_requested.emit(server_id, port, ip)
             )
@@ -178,6 +168,7 @@ class DeviceTreeContextMenu:
 
         action = menu.addAction(icon, text)
         action.triggered.connect(
-            lambda checked=False, p=port:
-                self.tree.open_protocol_requested.emit(server_id, p, ip, "")
+            lambda checked=False, p=port: self.tree.open_protocol_requested.emit(
+                server_id, p, ip, ""
+            )
         )

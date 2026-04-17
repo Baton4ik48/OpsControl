@@ -7,14 +7,12 @@ FRONTEND_DIR = Path(__file__).resolve().parent.parent
 
 APP_ENV = os.getenv("APP_ENV", "dev")
 
-load_dotenv(
-    dotenv_path=FRONTEND_DIR / ".env",
-    override=(APP_ENV == "dev")
-)
+load_dotenv(dotenv_path=FRONTEND_DIR / ".env", override=(APP_ENV == "dev"))
 
 print("ENV BACKEND_SCHEME =", os.getenv("BACKEND_SCHEME"))
 print("ENV BACKEND_HOST =", os.getenv("BACKEND_HOST"))
 print("ENV BACKEND_PORT =", os.getenv("BACKEND_PORT"))
+
 
 class Settings:
     def __init__(self):

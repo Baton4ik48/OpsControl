@@ -1,5 +1,6 @@
 from PyQt6.QtCore import QObject, pyqtSignal
 
+
 class BusyManager(QObject):
     started = pyqtSignal(str)
     finished = pyqtSignal()

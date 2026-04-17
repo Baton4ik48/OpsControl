@@ -1,7 +1,12 @@
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QSplitter, QLabel,
-    QStackedWidget, QMessageBox,
-    QInputDialog, QWidget
+    QDialog,
+    QVBoxLayout,
+    QSplitter,
+    QLabel,
+    QStackedWidget,
+    QMessageBox,
+    QInputDialog,
+    QWidget,
 )
 from PyQt6.QtCore import Qt
 from controllers.infrastructure_controller import InfrastructureController
@@ -52,14 +57,13 @@ class InfrastructureManagerDialog(QDialog):
         right_layout.addStretch()
 
         self.stack = QStackedWidget()
-        self.stack.setMaximumWidth(420) 
+        self.stack.setMaximumWidth(420)
         self.stack.setSizePolicy(
             self.stack.sizePolicy().horizontalPolicy(),
-            self.stack.sizePolicy().verticalPolicy())
+            self.stack.sizePolicy().verticalPolicy(),
+        )
 
-        right_layout.addWidget(
-            self.stack,
-            alignment=Qt.AlignmentFlag.AlignHCenter)
+        right_layout.addWidget(self.stack, alignment=Qt.AlignmentFlag.AlignHCenter)
 
         right_layout.addStretch()
 
@@ -200,28 +204,37 @@ class InfrastructureManagerDialog(QDialog):
             self.controller.create_branch(name.strip())
 
     def confirm_delete_branch(self, branch_id):
-        if QMessageBox.question(
-            self,
-            "Удаление филиала",
-            "Вы уверены? Будут удалены все серверы, порты и учетные данные.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-        ) == QMessageBox.StandardButton.Yes:
+        if (
+            QMessageBox.question(
+                self,
+                "Удаление филиала",
+                "Вы уверены? Будут удалены все серверы, порты и учетные данные.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            == QMessageBox.StandardButton.Yes
+        ):
             self.controller.delete_branch(branch_id)
 
     def confirm_delete_server(self, server_id):
-        if QMessageBox.question(
-            self,
-            "Удаление сервера",
-            "Вы уверены? Будут удалены все порты и учетные данные.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-        ) == QMessageBox.StandardButton.Yes:
+        if (
+            QMessageBox.question(
+                self,
+                "Удаление сервера",
+                "Вы уверены? Будут удалены все порты и учетные данные.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            == QMessageBox.StandardButton.Yes
+        ):
             self.controller.delete_server(server_id)
 
     def confirm_delete_port(self, server_id, port):
-        if QMessageBox.question(
-            self,
-            "Удаление порта",
-            "Вы уверены?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-        ) == QMessageBox.StandardButton.Yes:
+        if (
+            QMessageBox.question(
+                self,
+                "Удаление порта",
+                "Вы уверены?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            == QMessageBox.StandardButton.Yes
+        ):
             self.controller.delete_port(server_id, port)

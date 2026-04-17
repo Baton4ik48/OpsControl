@@ -11,7 +11,7 @@ class CredentialsApi(BaseApi):
                 "port": port,
                 "username": username,
                 "master_password": master_password,
-            }
+            },
         )
 
     def verify_admin(self, username: str, master_password: str):
@@ -20,7 +20,7 @@ class CredentialsApi(BaseApi):
             json={
                 "username": username,
                 "master_password": master_password,
-            }
+            },
         )
 
     def upsert(self, server_id: int, port: int, username: str, password: str):
@@ -31,7 +31,7 @@ class CredentialsApi(BaseApi):
                 "port": port,
                 "username": username,
                 "password": password,
-            }
+            },
         )
 
     def rotate(
@@ -52,5 +52,5 @@ class CredentialsApi(BaseApi):
                 "username": username,
                 "master_password": master_password,
                 "mnemonic": mnemonic,
-            }
+            },
         )

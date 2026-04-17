@@ -3,8 +3,16 @@ import re
 from datetime import datetime, timezone
 
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QScrollArea, QWidget,
-    QPushButton, QLabel, QGridLayout, QFrame, QSizePolicy
+    QDialog,
+    QVBoxLayout,
+    QHBoxLayout,
+    QScrollArea,
+    QWidget,
+    QPushButton,
+    QLabel,
+    QGridLayout,
+    QFrame,
+    QSizePolicy,
 )
 from PyQt6.QtGui import QIcon
 from PyQt6.QtCore import Qt
@@ -16,12 +24,15 @@ from core.paths import ICONS_DIR, path_to_file_uri
 # Данные
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 def _extract_type(name: str) -> str:
-    return re.sub(r'\s*\([^)]*\)\s*$', '', name).strip()
+    return re.sub(r"\s*\([^)]*\)\s*$", "", name).strip()
+
 
 def _extract_project(name: str) -> str | None:
-    m = re.search(r'\(([^)]+)\)\s*$', name)
+    m = re.search(r"\(([^)]+)\)\s*$", name)
     return m.group(1).strip() if m else None
+
 
 def _build_stats(data: list) -> dict:
     branches: list[str] = []
@@ -36,32 +47,35 @@ def _build_stats(data: list) -> dict:
         by_branch[bname] = []
 
         for server in branch.get("servers", []):
-            name    = server["name"]
+            name = server["name"]
             eq_type = _extract_type(name)
             project = _extract_project(name)
-            ports   = server.get("ports", [])
+            ports = server.get("ports", [])
 
             total_servers += 1
             by_type[eq_type] = by_type.get(eq_type, 0) + 1
             if project:
                 by_project[project] = by_project.get(project, 0) + 1
-            by_branch[bname].append({
-                "type":  eq_type,
-                "name":  name,
-                "ports": ports,
-            })
+            by_branch[bname].append(
+                {
+                    "type": eq_type,
+                    "name": name,
+                    "ports": ports,
+                }
+            )
 
     return {
-        "branches":      branches,
+        "branches": branches,
         "total_servers": total_servers,
-        "by_project":    dict(sorted(by_project.items())),
-        "by_branch":     by_branch,
+        "by_project": dict(sorted(by_project.items())),
+        "by_branch": by_branch,
     }
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Статус и тултип — тот же формат что в device_tree.py
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 def _fmt_dt(value: str | None) -> str:
     if not value:
@@ -74,9 +88,11 @@ def _fmt_dt(value: str | None) -> str:
     except Exception:
         return value
 
+
 def _icon_img(name: str) -> str:
     path = os.path.join(ICONS_DIR, name)
     return f'<img src="{path_to_file_uri(path)}" width="13" height="13">'
+
 
 def _port_row(state, last_success, last_failure) -> list[str]:
     """Строки HTML-таблицы для одного порта — идентично device_tree."""
@@ -84,38 +100,39 @@ def _port_row(state, last_success, last_failure) -> list[str]:
     if state is True:
         rows.append(
             f'<tr><td>{_icon_img("status_up.png")}</td>'
-            f'<td>&nbsp;<b>Онлайн</b></td></tr>'
+            f"<td>&nbsp;<b>Онлайн</b></td></tr>"
         )
         if last_failure:
             rows.append(
                 f'<tr><td>{_icon_img("status_down.png")}</td>'
-                f'<td>&nbsp;Последний раз недоступен:&nbsp;{_fmt_dt(last_failure)}</td></tr>'
+                f"<td>&nbsp;Последний раз недоступен:&nbsp;{_fmt_dt(last_failure)}</td></tr>"
             )
     elif state is False:
         if last_success:
             rows.append(
                 f'<tr><td>{_icon_img("status_down.png")}</td>'
-                f'<td>&nbsp;Последний раз был в сети:&nbsp;{_fmt_dt(last_success)}</td></tr>'
+                f"<td>&nbsp;Последний раз был в сети:&nbsp;{_fmt_dt(last_success)}</td></tr>"
             )
         else:
             rows.append(
                 f'<tr><td>{_icon_img("status_down.png")}</td>'
-                f'<td>&nbsp;В сети не наблюдался</td></tr>'
+                f"<td>&nbsp;В сети не наблюдался</td></tr>"
             )
     else:
         if last_success:
             rows.append(
                 f'<tr><td>{_icon_img("status_up.png")}</td>'
-                f'<td>&nbsp;Последний раз в сети:&nbsp;{_fmt_dt(last_success)}</td></tr>'
+                f"<td>&nbsp;Последний раз в сети:&nbsp;{_fmt_dt(last_success)}</td></tr>"
             )
         if last_failure:
             rows.append(
                 f'<tr><td>{_icon_img("status_down.png")}</td>'
-                f'<td>&nbsp;Последний раз недоступен:&nbsp;{_fmt_dt(last_failure)}</td></tr>'
+                f"<td>&nbsp;Последний раз недоступен:&nbsp;{_fmt_dt(last_failure)}</td></tr>"
             )
         if not last_success and not last_failure:
             rows.append('<tr><td colspan="2">Статус неизвестен</td></tr>')
     return rows
+
 
 def _build_tooltip(server: dict) -> str:
     """HTML-тултип с детализацией по всем портам сервера."""
@@ -127,20 +144,26 @@ def _build_tooltip(server: dict) -> str:
         port = p.get("port", "?")
         rows.append(
             f'<tr><td colspan="2" style="color:#90a4ae; padding-top:4px;">'
-            f'Порт&nbsp;{port}</td></tr>'
+            f"Порт&nbsp;{port}</td></tr>"
         )
-        rows.extend(_port_row(
-            p.get("is_up"),
-            p.get("last_success"),
-            p.get("last_failure"),
-        ))
+        rows.extend(
+            _port_row(
+                p.get("is_up"),
+                p.get("last_success"),
+                p.get("last_failure"),
+            )
+        )
     return f'<table cellspacing="3">{"".join(rows)}</table>'
+
 
 def _server_status(ports: list) -> str:
     known = [p.get("is_up") for p in ports if p.get("is_up") is not None]
-    if not known:        return "unknown"
-    if all(s is True  for s in known): return "up"
-    if all(s is False for s in known): return "down"
+    if not known:
+        return "unknown"
+    if all(s is True for s in known):
+        return "up"
+    if all(s is False for s in known):
+        return "down"
     return "partial"
 
 
@@ -148,21 +171,21 @@ def _server_status(ports: list) -> str:
 # Цветовая схема (только динамические — статичные перенесены в statistics.qss)
 # ──────────────────────────────────────────────────────────────────────────────
 
-_BG       = "#0f1b1e"
-_CARD     = "#111f25"
-_HDR      = "#132d37"
-_ACCENT   = "#4fc3f7"
-_ACCENT2  = "#81d4fa"
-_TEXT     = "#d8d8d8"
+_BG = "#0f1b1e"
+_CARD = "#111f25"
+_HDR = "#132d37"
+_ACCENT = "#4fc3f7"
+_ACCENT2 = "#81d4fa"
+_TEXT = "#d8d8d8"
 _TEXT_DIM = "#90a4ae"
-_GREEN    = "#80cbc4"
-_BORDER   = "#1e3a42"
-_TAG_BOR  = "#2a5566"
+_GREEN = "#80cbc4"
+_BORDER = "#1e3a42"
+_TAG_BOR = "#2a5566"
 
 # bg / border / text по статусу
 _STATUS: dict[str, tuple[str, str, str]] = {
-    "up":      ("#0d2a1a", "#2e7d52", "#81c995"),
-    "down":    ("#2a0d0d", "#7d2e2e", "#ef9a9a"),
+    "up": ("#0d2a1a", "#2e7d52", "#81c995"),
+    "down": ("#2a0d0d", "#7d2e2e", "#ef9a9a"),
     "partial": ("#2a1a0d", "#7d5a2e", "#ffcc80"),
     "unknown": ("#1a2e36", "#2a5566", "#90a4ae"),
 }
@@ -172,15 +195,22 @@ _STATUS: dict[str, tuple[str, str, str]] = {
 # Виджет: сворачиваемая секция
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class _CollapsibleSection(QFrame):
-    def __init__(self, title: str, badge: str = "",
-                 expanded: bool = False, branch: bool = False, parent=None):
+    def __init__(
+        self,
+        title: str,
+        badge: str = "",
+        expanded: bool = False,
+        branch: bool = False,
+        parent=None,
+    ):
         super().__init__(parent)
         self.setFrameShape(QFrame.Shape.NoFrame)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
 
-        self._title    = title
-        self._badge    = badge
+        self._title = title
+        self._badge = badge
         self._expanded = expanded
 
         root = QVBoxLayout(self)
@@ -198,7 +228,9 @@ class _CollapsibleSection(QFrame):
 
         self._body = QWidget()
         self._body.setStyleSheet(f"background: {_CARD};")
-        self._body.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
+        self._body.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum
+        )
         body_l = QVBoxLayout(self._body)
         body_l.setContentsMargins(14, 8, 14, 10)
         body_l.setSpacing(6)
@@ -224,11 +256,13 @@ class _CollapsibleSection(QFrame):
 # Вспомогательные строители виджетов
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 def _divider() -> QFrame:
     f = QFrame()
     f.setFrameShape(QFrame.Shape.HLine)
     f.setStyleSheet(f"color:{_BORDER}; background:{_BORDER}; max-height:1px;")
     return f
+
 
 def _h_label(text: str, size: int = 11, color: str = _ACCENT2) -> QLabel:
     lbl = QLabel(text)
@@ -238,32 +272,38 @@ def _h_label(text: str, size: int = 11, color: str = _ACCENT2) -> QLabel:
     )
     return lbl
 
+
 def _plain_label(text: str, color: str = _TEXT_DIM) -> QLabel:
     lbl = QLabel(text)
     lbl.setStyleSheet(f"color:{color}; background:transparent; font-size:9pt;")
     return lbl
+
 
 def _branch_label(text: str) -> QLabel:
     lbl = QLabel(f"  •  {text}")
     lbl.setStyleSheet(f"color:{_TEXT_DIM}; background:transparent; font-size:9pt;")
     return lbl
 
+
 def _status_tag(server: dict) -> QLabel:
     """Плашка оборудования: цвет по статусу, тултип с детализацией по портам."""
-    status       = _server_status(server["ports"])
+    status = _server_status(server["ports"])
     bg, bor, txt = _STATUS[status]
     lbl = QLabel(server["type"])
-    lbl.setStyleSheet(f"""
+    lbl.setStyleSheet(
+        f"""
         QLabel {{
             background-color:{bg}; color:{txt};
             border:1px solid {bor}; border-radius:3px;
             padding:3px 8px; font-size:9pt;
         }}
-    """)
+    """
+    )
     lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
     if server["ports"]:
         lbl.setToolTip(_build_tooltip(server))
     return lbl
+
 
 def _equipment_grid(servers: list[dict], cols: int = 3) -> QWidget:
     w = QWidget()
@@ -291,6 +331,7 @@ def _equipment_grid(servers: list[dict], cols: int = 3) -> QWidget:
 # Диалог
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class StatisticsDialog(QDialog):
     def __init__(self, data: list | None, parent=None):
         super().__init__(parent)
@@ -298,10 +339,10 @@ class StatisticsDialog(QDialog):
         self.setWindowTitle("Статистика инфраструктуры")
         self.setWindowIcon(QIcon(os.path.join(ICONS_DIR, "app_icon.png")))
         self.setWindowFlags(
-            Qt.WindowType.Window |
-            Qt.WindowType.WindowCloseButtonHint |
-            Qt.WindowType.WindowMaximizeButtonHint |
-            Qt.WindowType.WindowMinimizeButtonHint
+            Qt.WindowType.Window
+            | Qt.WindowType.WindowCloseButtonHint
+            | Qt.WindowType.WindowMaximizeButtonHint
+            | Qt.WindowType.WindowMinimizeButtonHint
         )
         self.resize(700, 780)
         self.setStyleSheet(f"background-color:{_BG}; color:{_TEXT};")
@@ -328,11 +369,11 @@ class StatisticsDialog(QDialog):
 
         # Скролл
         scroll = QScrollArea()
-        scroll.setObjectName("StatScrollArea")   # → statistics.qss
+        scroll.setObjectName("StatScrollArea")  # → statistics.qss
         scroll.setWidgetResizable(True)
 
         content = QWidget()
-        content.setObjectName("ScrollContent")   # → statistics.qss
+        content.setObjectName("ScrollContent")  # → statistics.qss
         cl = QVBoxLayout(content)
         cl.setContentsMargins(16, 12, 16, 16)
         cl.setSpacing(4)
@@ -363,10 +404,10 @@ class StatisticsDialog(QDialog):
         root.addLayout(btn_row)
 
     def _fill(self, layout: QVBoxLayout, stats: dict):
-        branches   = stats["branches"]
+        branches = stats["branches"]
         by_project = stats["by_project"]
-        total      = stats["total_servers"]
-        by_branch  = stats["by_branch"]
+        total = stats["total_servers"]
+        by_branch = stats["by_branch"]
 
         # Филиалы
         sec = _CollapsibleSection("Филиалы", badge=str(len(branches)), expanded=False)
@@ -401,7 +442,9 @@ class StatisticsDialog(QDialog):
                 c.setStyleSheet(
                     f"color:{_GREEN}; font-weight:bold; font-size:9pt; background:transparent;"
                 )
-                row.addWidget(n); row.addWidget(d); row.addWidget(c)
+                row.addWidget(n)
+                row.addWidget(d)
+                row.addWidget(c)
                 row.addStretch()
                 card_l.addLayout(row)
             layout.addWidget(card)
@@ -418,9 +461,9 @@ class StatisticsDialog(QDialog):
         leg_l.setContentsMargins(0, 0, 0, 6)
         leg_l.setSpacing(16)
         for status, label in (
-            ("up",      "все порты доступны"),
+            ("up", "все порты доступны"),
             ("partial", "часть портов"),
-            ("down",    "нет доступных"),
+            ("down", "нет доступных"),
             ("unknown", "не проверялось"),
         ):
             _, _, txt = _STATUS[status]
@@ -433,7 +476,8 @@ class StatisticsDialog(QDialog):
             row = QHBoxLayout()
             row.setContentsMargins(0, 0, 0, 0)
             row.setSpacing(4)
-            row.addWidget(dot); row.addWidget(lbl)
+            row.addWidget(dot)
+            row.addWidget(lbl)
             leg_l.addLayout(row)
         leg_l.addStretch()
         layout.addWidget(legend)
@@ -442,8 +486,10 @@ class StatisticsDialog(QDialog):
         layout.addWidget(_h_label("По филиалам"))
         for bname, servers in by_branch.items():
             sec = _CollapsibleSection(
-                bname, badge=f"{len(servers)} шт.",
-                expanded=False, branch=True,
+                bname,
+                badge=f"{len(servers)} шт.",
+                expanded=False,
+                branch=True,
             )
             if servers:
                 sec.add(_equipment_grid(servers, cols=3))

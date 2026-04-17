@@ -1,5 +1,6 @@
 from core.api.base import BaseApi
 
+
 class ServerApi(BaseApi):
 
     def get_by_branch(self, branch_id: int):
@@ -13,7 +14,7 @@ class ServerApi(BaseApi):
                 "name": name,
                 "ip": ip,
                 "device_type": device_type,
-            }
+            },
         )
 
     def update(self, server_id: int, name: str, ip: str, device_type: str = "linux"):
@@ -23,7 +24,7 @@ class ServerApi(BaseApi):
                 "name": name,
                 "ip": ip,
                 "device_type": device_type,
-            }
+            },
         )
 
     def delete_server(self, server_id: int):

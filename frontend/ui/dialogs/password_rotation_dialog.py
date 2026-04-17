@@ -2,9 +2,16 @@ import os
 import re
 
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QFormLayout, QLineEdit,
-    QPushButton, QHBoxLayout, QLabel, QMessageBox,
-    QSpacerItem, QSizePolicy
+    QDialog,
+    QVBoxLayout,
+    QFormLayout,
+    QLineEdit,
+    QPushButton,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QSpacerItem,
+    QSizePolicy,
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
@@ -27,8 +34,14 @@ _ROTATE_FN = {
 
 
 class PasswordRotationDialog(QDialog):
-    def __init__(self, server_id: int, host: str, admin_login: str,
-                 device_type: str = "linux", parent=None):
+    def __init__(
+        self,
+        server_id: int,
+        host: str,
+        admin_login: str,
+        device_type: str = "linux",
+        parent=None,
+    ):
         super().__init__(parent)
 
         self.server_id = server_id
@@ -115,8 +128,13 @@ class PasswordRotationDialog(QDialog):
         msg.setText(text)
         min_w = max(320, len(title) * 11 + 160)
         msg.layout().addItem(
-            QSpacerItem(min_w, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding),
-            msg.layout().rowCount(), 0, 1, msg.layout().columnCount(),
+            QSpacerItem(
+                min_w, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding
+            ),
+            msg.layout().rowCount(),
+            0,
+            1,
+            msg.layout().columnCount(),
         )
         msg.exec()
 
@@ -141,7 +159,9 @@ class PasswordRotationDialog(QDialog):
             return
 
         if not new_pass:
-            self._msgbox(QMessageBox.Icon.Warning, "Ошибка", "Новый пароль не может быть пустым")
+            self._msgbox(
+                QMessageBox.Icon.Warning, "Ошибка", "Новый пароль не может быть пустым"
+            )
             return
 
         self.apply_btn.setEnabled(False)
@@ -165,9 +185,15 @@ class PasswordRotationDialog(QDialog):
                 )
             except ApiError as e:
                 if e.status_code == 403:
-                    self._msgbox(QMessageBox.Icon.Warning, "Ошибка", "Неверный мастер-пароль")
+                    self._msgbox(
+                        QMessageBox.Icon.Warning, "Ошибка", "Неверный мастер-пароль"
+                    )
                 elif e.status_code == 429:
-                    self._msgbox(QMessageBox.Icon.Warning, "Заблокировано", f"Попробуйте через {e.retry_after} сек.")
+                    self._msgbox(
+                        QMessageBox.Icon.Warning,
+                        "Заблокировано",
+                        f"Попробуйте через {e.retry_after} сек.",
+                    )
                 else:
                     self._msgbox(QMessageBox.Icon.Critical, "Ошибка", e.message)
                 self.apply_btn.setEnabled(True)
@@ -238,7 +264,7 @@ class PasswordRotationDialog(QDialog):
                     f"Новый пароль: {new_pass}\n\n"
                     f"Введите мастер-пароль и нажмите «Повторить запись» "
                     f"или сохраните пароль вручную.\n\n"
-                    f"Ошибка: {e.message}"
+                    f"Ошибка: {e.message}",
                 )
                 self.apply_btn.setText("Повторить запись в Vault")
                 self.apply_btn.setEnabled(True)

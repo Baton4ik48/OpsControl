@@ -41,44 +41,43 @@ def _icon_img(icon_path, size=13):
 
 
 def _build_port_tooltip(state, last_success, last_failure):
-    icon_up   = os.path.join(ICONS_DIR, "status_up.png")
+    icon_up = os.path.join(ICONS_DIR, "status_up.png")
     icon_down = os.path.join(ICONS_DIR, "status_down.png")
 
     rows = []
 
     if state is True:
         rows.append(
-            f'<tr><td>{_icon_img(icon_up)}</td>'
-            f'<td>&nbsp;<b>Онлайн</b></td></tr>'
+            f"<tr><td>{_icon_img(icon_up)}</td>" f"<td>&nbsp;<b>Онлайн</b></td></tr>"
         )
         if last_failure:
             rows.append(
-                f'<tr><td>{_icon_img(icon_down)}</td>'
-                f'<td>&nbsp;Последний раз недоступен:&nbsp;{format_dt(last_failure)}</td></tr>'
+                f"<tr><td>{_icon_img(icon_down)}</td>"
+                f"<td>&nbsp;Последний раз недоступен:&nbsp;{format_dt(last_failure)}</td></tr>"
             )
 
     elif state is False:
         if last_success:
             rows.append(
-                f'<tr><td>{_icon_img(icon_down)}</td>'
-                f'<td>&nbsp;Последний раз был в сети:&nbsp;{format_dt(last_success)}</td></tr>'
+                f"<tr><td>{_icon_img(icon_down)}</td>"
+                f"<td>&nbsp;Последний раз был в сети:&nbsp;{format_dt(last_success)}</td></tr>"
             )
         else:
             rows.append(
-                f'<tr><td>{_icon_img(icon_down)}</td>'
-                f'<td>&nbsp;В сети не наблюдался</td></tr>'
+                f"<tr><td>{_icon_img(icon_down)}</td>"
+                f"<td>&nbsp;В сети не наблюдался</td></tr>"
             )
 
     else:
         if last_success:
             rows.append(
-                f'<tr><td>{_icon_img(icon_up)}</td>'
-                f'<td>&nbsp;Последний раз в сети:&nbsp;{format_dt(last_success)}</td></tr>'
+                f"<tr><td>{_icon_img(icon_up)}</td>"
+                f"<td>&nbsp;Последний раз в сети:&nbsp;{format_dt(last_success)}</td></tr>"
             )
         if last_failure:
             rows.append(
-                f'<tr><td>{_icon_img(icon_down)}</td>'
-                f'<td>&nbsp;Последний раз недоступен:&nbsp;{format_dt(last_failure)}</td></tr>'
+                f"<tr><td>{_icon_img(icon_down)}</td>"
+                f"<td>&nbsp;Последний раз недоступен:&nbsp;{format_dt(last_failure)}</td></tr>"
             )
         if not last_success and not last_failure:
             rows.append('<tr><td colspan="2">Статус неизвестен</td></tr>')
@@ -106,13 +105,13 @@ def _password_age_color(credentials_updated_at, rotation_days):
         days_remaining = max(0.0, rotation_days - days_elapsed)
         pct = days_remaining / rotation_days
         if pct >= 0.50:
-            return None                      # всё хорошо — цвет не нужен
+            return None  # всё хорошо — цвет не нужен
         elif pct >= 0.22:
-            return QColor(210, 210, 50)      # жёлтый
+            return QColor(210, 210, 50)  # жёлтый
         elif pct >= 0.09:
-            return QColor(210, 130, 30)      # оранжевый
+            return QColor(210, 130, 30)  # оранжевый
         else:
-            return QColor(210, 60, 60)       # красный
+            return QColor(210, 60, 60)  # красный
     except Exception:
         return None
 
@@ -126,7 +125,7 @@ class DeviceTree(QTreeWidget):
     ROLE_IP = ROLE_IP
     ROLE_DEVICE_TYPE = ROLE_DEVICE_TYPE
 
-    refresh_branch_requested = pyqtSignal(str)            # branch_name
+    refresh_branch_requested = pyqtSignal(str)  # branch_name
     refresh_server_requested = pyqtSignal(int, str)
     refresh_port_requested = pyqtSignal(int, int, str)
     open_protocol_requested = pyqtSignal(int, int, str, str)
@@ -140,13 +139,9 @@ class DeviceTree(QTreeWidget):
         self._has_rendered = False
         self.user_settings = None
 
-        self.setHeaderLabels([
-            "Устройство",
-            "IP",
-            "Статус",
-            "Учётные данные",
-            "Дата обновления пароля"
-        ])
+        self.setHeaderLabels(
+            ["Устройство", "IP", "Статус", "Учётные данные", "Дата обновления пароля"]
+        )
 
         # ===== Icons =====
         self.icon_up = QIcon(os.path.join(ICONS_DIR, "status_up.png"))
@@ -186,15 +181,17 @@ class DeviceTree(QTreeWidget):
         self._font_server.setWeight(QFont.Weight.DemiBold)
 
         # ===== Цвета фона строк =====
-        self._brush_branch_bg  = QBrush(QColor(42, 54, 66))   # section header
-        self._brush_port_up    = QBrush(QColor(18, 48, 30))   # зелёный тинт
-        self._brush_port_down  = QBrush(QColor(58, 20, 20))   # красный тинт
+        self._brush_branch_bg = QBrush(QColor(42, 54, 66))  # section header
+        self._brush_port_up = QBrush(QColor(18, 48, 30))  # зелёный тинт
+        self._brush_port_down = QBrush(QColor(58, 20, 20))  # красный тинт
 
         # ===== Цвета текста (QSS color убран — красим только программно) =====
-        self._brush_text_branch = QBrush(QColor(0xcf, 0xd8, 0xdc))  # ветки / серверы
-        self._brush_text_port   = QBrush(QColor(0x9f, 0xbf, 0xc2))  # порты (дефолт)
-        self._brush_text_down   = QBrush(QColor(220, 100, 100))      # имя порта DOWN
-        self._brush_text_muted  = QBrush(QColor(130, 145, 160))      # дата при DOWN без кредов
+        self._brush_text_branch = QBrush(QColor(0xCF, 0xD8, 0xDC))  # ветки / серверы
+        self._brush_text_port = QBrush(QColor(0x9F, 0xBF, 0xC2))  # порты (дефолт)
+        self._brush_text_down = QBrush(QColor(220, 100, 100))  # имя порта DOWN
+        self._brush_text_muted = QBrush(
+            QColor(130, 145, 160)
+        )  # дата при DOWN без кредов
 
         # ===== Context menu вынесен =====
         self.context_menu = DeviceTreeContextMenu(self)
@@ -249,7 +246,10 @@ class DeviceTree(QTreeWidget):
             branch = self.topLevelItem(i)
             for j in range(branch.childCount()):
                 server = branch.child(j)
-                if item_type == "server" and server.data(0, ROLE_SERVER_ID) == server_id:
+                if (
+                    item_type == "server"
+                    and server.data(0, ROLE_SERVER_ID) == server_id
+                ):
                     self.setCurrentItem(server)
                     return
                 for k in range(server.childCount()):
@@ -282,13 +282,7 @@ class DeviceTree(QTreeWidget):
             )
 
             for srv in branch.get("servers", []):
-                server_item = QTreeWidgetItem([
-                    srv["name"],
-                    srv["ip"],
-                    "",
-                    "",
-                    ""
-                ])
+                server_item = QTreeWidgetItem([srv["name"], srv["ip"], "", "", ""])
                 server_item.setFont(0, self._font_server)
                 server_item.setSizeHint(0, QSize(0, 15))
                 for col in range(5):
@@ -297,7 +291,9 @@ class DeviceTree(QTreeWidget):
                 server_item.setData(0, ROLE_TYPE, "server")
                 server_item.setData(0, ROLE_SERVER_ID, srv["id"])
                 server_item.setData(0, ROLE_IP, srv["ip"])
-                server_item.setData(0, ROLE_DEVICE_TYPE, srv.get("device_type", "linux"))
+                server_item.setData(
+                    0, ROLE_DEVICE_TYPE, srv.get("device_type", "linux")
+                )
 
                 branch_item.addChild(server_item)
 
@@ -317,13 +313,15 @@ class DeviceTree(QTreeWidget):
 
                     port = p["port"]
 
-                    port_item = QTreeWidgetItem([
-                        f"port {port}",
-                        "",
-                        status_text,
-                        "********",
-                        format_dt(p.get("credentials_updated_at"))
-                    ])
+                    port_item = QTreeWidgetItem(
+                        [
+                            f"port {port}",
+                            "",
+                            status_text,
+                            "********",
+                            format_dt(p.get("credentials_updated_at")),
+                        ]
+                    )
 
                     port_item.setTextAlignment(2, Qt.AlignmentFlag.AlignCenter)
                     port_item.setTextAlignment(3, Qt.AlignmentFlag.AlignCenter)
@@ -348,7 +346,8 @@ class DeviceTree(QTreeWidget):
                     # Подсветка даты смены пароля по % оставшегося срока
                     rotation_days = (
                         self.user_settings.get("password_rotation_days")
-                        if self.user_settings else None
+                        if self.user_settings
+                        else None
                     )
                     age_color = _password_age_color(
                         p.get("credentials_updated_at"), rotation_days
@@ -373,9 +372,7 @@ class DeviceTree(QTreeWidget):
 
                     server_item.addChild(port_item)
 
-                expand_srv = (
-                    not self._has_rendered or srv["id"] in expanded_servers
-                )
+                expand_srv = not self._has_rendered or srv["id"] in expanded_servers
                 server_item.setExpanded(expand_srv)
 
             expand_branch = (
@@ -439,7 +436,8 @@ class DeviceTree(QTreeWidget):
         # Подсветка даты по % срока
         rotation_days = (
             self.user_settings.get("password_rotation_days")
-            if self.user_settings else None
+            if self.user_settings
+            else None
         )
         age_color = _password_age_color(
             port_data.get("credentials_updated_at"), rotation_days
@@ -459,7 +457,14 @@ class DeviceTree(QTreeWidget):
         item.setToolTip(0, tooltip)
         item.setToolTip(2, tooltip)
 
-    def show_credentials(self, server_id: int, port: int, username: str, password: str, mnemonic: str = ""):
+    def show_credentials(
+        self,
+        server_id: int,
+        port: int,
+        username: str,
+        password: str,
+        mnemonic: str = "",
+    ):
         item = self._find_port_item(server_id, port)
         if not item:
             return
@@ -492,7 +497,6 @@ class DeviceTree(QTreeWidget):
         timer.start(CREDENTIALS_SHOW_TIMEOUT_MS)
 
         self._credential_timers[key] = timer
-
 
     def _stop_all_credential_timers(self):
         for timer in self._credential_timers.values():

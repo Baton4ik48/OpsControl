@@ -4,6 +4,7 @@ import shutil
 import webbrowser
 import os
 
+
 class ProtocolLauncher:
 
     @staticmethod
@@ -35,23 +36,30 @@ class ProtocolLauncher:
             if not client:
                 raise RuntimeError("PUTTY_NOT_FOUND")
 
-            subprocess.Popen([
-                client,
-                "-ssh",
-                f"{user}@{host}",
-                "-P", str(port),
-                "-pw", password,
-            ])
+            subprocess.Popen(
+                [
+                    client,
+                    "-ssh",
+                    f"{user}@{host}",
+                    "-P",
+                    str(port),
+                    "-pw",
+                    password,
+                ]
+            )
 
         elif sys.platform.startswith("linux"):
             if not shutil.which("sshpass"):
                 raise RuntimeError("SSHPASS_NOT_FOUND")
-            subprocess.Popen([
-                "x-terminal-emulator",
-                "-e",
-                "bash", "-c",
-                f"sshpass -p '{password}' ssh -o StrictHostKeyChecking=no -p {port} {user}@{host}; exec bash"
-            ])
+            subprocess.Popen(
+                [
+                    "x-terminal-emulator",
+                    "-e",
+                    "bash",
+                    "-c",
+                    f"sshpass -p '{password}' ssh -o StrictHostKeyChecking=no -p {port} {user}@{host}; exec bash",
+                ]
+            )
 
     # =========================
     # RDP
@@ -61,26 +69,24 @@ class ProtocolLauncher:
 
         if not sys.platform.startswith("win"):
             raise RuntimeError("RDP_ONLY_WINDOWS")
-        subprocess.run([
-            "cmdkey",
-            f"/generic:TERMSRV/{host}",
-            f"/user:{user}",
-            f"/pass:{password}"
-        ], check=False)
+        subprocess.run(
+            [
+                "cmdkey",
+                f"/generic:TERMSRV/{host}",
+                f"/user:{user}",
+                f"/pass:{password}",
+            ],
+            check=False,
+        )
 
         try:
-            proc = subprocess.Popen([
-                "mstsc",
-                f"/v:{host}"
-            ])
+            proc = subprocess.Popen(["mstsc", f"/v:{host}"])
 
             proc.wait()
 
         finally:
-            subprocess.run([
-                "cmdkey",
-                f"/delete:TERMSRV/{host}"
-            ], check=False)
+            subprocess.run(["cmdkey", f"/delete:TERMSRV/{host}"], check=False)
+
     # =========================
     # WEB
     # =========================

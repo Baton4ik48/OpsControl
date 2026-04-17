@@ -6,26 +6,18 @@ SETTINGS_FILE = os.path.join(CONFIG_DIR, "settings.json")
 
 DEFAULT_SETTINGS = {
     "admin_login": "AdminGTM",
-
     "auto_refresh_enabled": True,
     "auto_refresh_interval_sec": 300,
-
     "backend_override_enabled": False,
     "backend_scheme": "http",
     "backend_host": "",
     "backend_port": 0,
-    "web_ports": [
-        {"port": 80, "scheme": "http"},
-        {"port": 443, "scheme": "https"}
-    ],
-    
+    "web_ports": [{"port": 80, "scheme": "http"}, {"port": 443, "scheme": "https"}],
     "external_apps": [],
-
     "password_word_count": 3,
     "password_letters_per_word": 4,
     "password_digit_count": 2,
-
-    "password_rotation_days": 31
+    "password_rotation_days": 31,
 }
 
 

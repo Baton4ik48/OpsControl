@@ -15,17 +15,14 @@ def handle_api_error(parent, error: ApiError):
         QMessageBox.warning(
             parent,
             "Слишком много попыток",
-            f"Слишком много попыток входа.\n"
-            f"Повторите через {minutes} мин."
+            f"Слишком много попыток входа.\n" f"Повторите через {minutes} мин.",
         )
         return
 
     # INVALID PASSWORD
     if code == 403 and error.error_code == "INVALID_MASTER_PASSWORD":
         QMessageBox.critical(
-            parent,
-            "Доступ запрещён",
-            "Неверный пароль администратора"
+            parent, "Доступ запрещён", "Неверный пароль администратора"
         )
         return
 
@@ -37,36 +34,29 @@ def handle_api_error(parent, error: ApiError):
         QMessageBox.critical(
             parent,
             "Хранилище недоступно",
-            "Vault временно недоступен.\nПопробуйте позже."
+            "Vault временно недоступен.\nПопробуйте позже.",
         )
 
     elif code == 504:
         QMessageBox.warning(
-            parent,
-            "Таймаут",
-            "Превышено время ожидания ответа от сервера"
+            parent, "Таймаут", "Превышено время ожидания ответа от сервера"
         )
 
     elif code == 500:
         QMessageBox.critical(
             parent,
             "Ошибка сервера",
-            "Внутренняя ошибка сервера.\nОбратитесь к администратору."
+            "Внутренняя ошибка сервера.\nОбратитесь к администратору.",
         )
 
     elif code is None:
         QMessageBox.critical(
-            parent,
-            "Соединение",
-            "Сервер недоступен.\nПроверьте сеть."
+            parent, "Соединение", "Сервер недоступен.\nПроверьте сеть."
         )
 
     else:
-        QMessageBox.critical(
-            parent,
-            "Ошибка",
-            error.message or "Неизвестная ошибка"
-        )
+        QMessageBox.critical(parent, "Ошибка", error.message or "Неизвестная ошибка")
+
 
 def handle_system_error(parent, error: Exception):
     log.exception("System error occurred", exc_info=error)
@@ -77,7 +67,7 @@ def handle_system_error(parent, error: Exception):
             "Утилита не найдена",
             "Не найдена системная SSH-утилита.\n\n"
             "Windows: установите PuTTY или KiTTY и добавьте в PATH.\n"
-            "Linux: установите пакет sshpass."
+            "Linux: установите пакет sshpass.",
         )
         return
 
@@ -87,18 +77,16 @@ def handle_system_error(parent, error: Exception):
             "PUTTY_NOT_FOUND": "Не найден PuTTY или KiTTY.\nУстановите PuTTY (или KiTTY) и добавьте в PATH.",
             "SSHPASS_NOT_FOUND": "Не найден sshpass.\nУстановите пакет sshpass.",
             "RDP_ONLY_WINDOWS": "RDP доступен только на Windows.",
-            "UNSUPPORTED_PROTOCOL": "Данный протокол не поддерживается."
+            "UNSUPPORTED_PROTOCOL": "Данный протокол не поддерживается.",
         }
 
         QMessageBox.critical(
             parent,
             "Ошибка протокола",
-            message_map.get(str(error), "Неизвестная ошибка протокола.")
+            message_map.get(str(error), "Неизвестная ошибка протокола."),
         )
         return
 
     QMessageBox.critical(
-        parent,
-        "Ошибка приложения",
-        "Произошла непредвиденная ошибка."
+        parent, "Ошибка приложения", "Произошла непредвиденная ошибка."
     )

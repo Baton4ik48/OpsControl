@@ -1,9 +1,6 @@
 import os
 
-from PyQt6.QtWidgets import (
-    QWidget, QFormLayout, QLineEdit,
-    QPushButton, QHBoxLayout
-)
+from PyQt6.QtWidgets import QWidget, QFormLayout, QLineEdit, QPushButton, QHBoxLayout
 from PyQt6.QtGui import QIntValidator, QIcon
 from PyQt6.QtCore import pyqtSignal
 

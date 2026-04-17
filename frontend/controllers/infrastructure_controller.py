@@ -6,6 +6,7 @@ from core.api.base import ApiError
 
 from core.workers.infrastructure_worker import InfrastructureWorker
 
+
 class InfrastructureController:
 
     def __init__(self, view, busy):
@@ -55,7 +56,6 @@ class InfrastructureController:
         self._worker.error.connect(self._on_error)
         self._worker.finished.connect(self.busy.hide_overlay)
         self._worker.start()
-
 
     def _on_tree_loaded(self, data):
         self.cached_tree_data = data
@@ -107,9 +107,7 @@ class InfrastructureController:
         def task():
             if new_port != self.current_port:
                 self.port_api.update_port(
-                    self.current_server_id,
-                    self.current_port,
-                    new_port
+                    self.current_server_id, self.current_port, new_port
                 )
                 self.current_port = new_port
 
@@ -135,10 +133,7 @@ class InfrastructureController:
 
     def save_branch(self, name):
         def task():
-            self.branch_api.update_branch(
-                self.current_branch_id,
-                name
-            )
+            self.branch_api.update_branch(self.current_branch_id, name)
 
         self._run_task("Сохранение филиала…", task)
 

@@ -77,10 +77,13 @@ class InfrastructureTree(QTreeWidget):
                 for k in range(server.childCount()):
                     port_item = server.child(k)
                     pd = port_item.data(0, Qt.ItemDataRole.UserRole)
-                    if (pd and selected
-                            and selected[0] == "port"
-                            and pd[1] == selected[1]
-                            and pd[2]["port"] == selected[2]):
+                    if (
+                        pd
+                        and selected
+                        and selected[0] == "port"
+                        and pd[1] == selected[1]
+                        and pd[2]["port"] == selected[2]
+                    ):
                         self.setCurrentItem(port_item)
 
     # =========================================================
@@ -94,35 +97,23 @@ class InfrastructureTree(QTreeWidget):
 
         for branch in data:
             branch_item = QTreeWidgetItem([branch["name"]])
-            branch_item.setData(
-                0,
-                Qt.ItemDataRole.UserRole,
-                ("branch", branch["id"])
-            )
+            branch_item.setData(0, Qt.ItemDataRole.UserRole, ("branch", branch["id"]))
             self.addTopLevelItem(branch_item)
 
             for server in branch["servers"]:
-                server_item = QTreeWidgetItem(
-                    [f"{server['name']} ({server['ip']})"]
-                )
+                server_item = QTreeWidgetItem([f"{server['name']} ({server['ip']})"])
                 server_item.setData(
-                    0,
-                    Qt.ItemDataRole.UserRole,
-                    ("server", server["id"], server)
+                    0, Qt.ItemDataRole.UserRole, ("server", server["id"], server)
                 )
                 branch_item.addChild(server_item)
 
                 for port in server["ports"]:
                     cred_icon = "✔" if port["has_credentials"] else "✖"
 
-                    port_item = QTreeWidgetItem(
-                        [f"{port['port']} {cred_icon}"]
-                    )
+                    port_item = QTreeWidgetItem([f"{port['port']} {cred_icon}"])
 
                     port_item.setData(
-                        0,
-                        Qt.ItemDataRole.UserRole,
-                        ("port", server["id"], port)
+                        0, Qt.ItemDataRole.UserRole, ("port", server["id"], port)
                     )
 
                     vault_path = port.get("vault_path")

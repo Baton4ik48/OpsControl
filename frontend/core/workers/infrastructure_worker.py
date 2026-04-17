@@ -1,5 +1,6 @@
 from PyQt6.QtCore import QThread, pyqtSignal
 
+
 class InfrastructureWorker(QThread):
     success = pyqtSignal(object)
     error = pyqtSignal(Exception)

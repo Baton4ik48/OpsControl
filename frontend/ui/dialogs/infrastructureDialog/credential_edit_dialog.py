@@ -1,6 +1,12 @@
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QFormLayout, QLineEdit,
-    QPushButton, QHBoxLayout, QLabel, QMessageBox
+    QDialog,
+    QVBoxLayout,
+    QFormLayout,
+    QLineEdit,
+    QPushButton,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon

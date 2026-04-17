@@ -1,9 +1,13 @@
 import os
 
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout,
-    QPushButton, QTextEdit,
-    QFileDialog, QMessageBox
+    QDialog,
+    QVBoxLayout,
+    QHBoxLayout,
+    QPushButton,
+    QTextEdit,
+    QFileDialog,
+    QMessageBox,
 )
 from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtCore import Qt
@@ -89,11 +93,7 @@ class FirewallDialog(QDialog):
 
     def open_template(self):
         if not os.path.exists(FIREWALL_TEMPLATE_PATH):
-            QMessageBox.warning(
-                self,
-                "Шаблон не найден",
-                "Файл шаблона отсутствует."
-            )
+            QMessageBox.warning(self, "Шаблон не найден", "Файл шаблона отсутствует.")
             return
 
         os.startfile(FIREWALL_TEMPLATE_PATH)
@@ -102,10 +102,7 @@ class FirewallDialog(QDialog):
 
     def load_excel(self):
         file_path, _ = QFileDialog.getOpenFileName(
-            self,
-            "Выберите Excel файл",
-            "",
-            "Excel Files (*.xlsx)"
+            self, "Выберите Excel файл", "", "Excel Files (*.xlsx)"
         )
 
         if not file_path:
@@ -115,11 +112,7 @@ class FirewallDialog(QDialog):
             commands = generate_firewall_rules(file_path)
 
             if not commands:
-                QMessageBox.warning(
-                    self,
-                    "Нет правил",
-                    "В файле не найдено правил."
-                )
+                QMessageBox.warning(self, "Нет правил", "В файле не найдено правил.")
                 return
 
             self.text.setPlainText("\n".join(commands))
@@ -129,9 +122,7 @@ class FirewallDialog(QDialog):
             self.generated_filename = f"firewall_{rule_name}.txt"
 
             QMessageBox.information(
-                self,
-                "Готово",
-                f"Сгенерировано правил: {len(commands)}"
+                self, "Готово", f"Сгенерировано правил: {len(commands)}"
             )
 
         except Exception as e:
@@ -145,10 +136,7 @@ class FirewallDialog(QDialog):
             return
 
         save_path, _ = QFileDialog.getSaveFileName(
-            self,
-            "Сохранить файл",
-            self.generated_filename,
-            "Text Files (*.txt)"
+            self, "Сохранить файл", self.generated_filename, "Text Files (*.txt)"
         )
 
         if not save_path:

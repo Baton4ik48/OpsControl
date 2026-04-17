@@ -1,11 +1,15 @@
 import sys
+
 # import os
 from PyQt6.QtWidgets import QApplication
+
 # from PyQt6.QtGui import QIcon
 from core.utils.loader_styles import load_styles
 from ui.main_window import MainWindow
 from core.logger import setup_logging
+
 # from core.paths import ICONS_DIR
+
 
 def run():
     setup_logging()
