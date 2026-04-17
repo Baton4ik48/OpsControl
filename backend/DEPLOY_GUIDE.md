@@ -1,7 +1,7 @@
 # OpsControl — Production Deployment Guide
 
 ---
-
+ 
 ## 📁 Структура проекта
 
 ```
