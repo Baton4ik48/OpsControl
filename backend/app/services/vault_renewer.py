@@ -35,7 +35,7 @@ async def vault_renew_loop(interval: int = 900):
                     "Vault token renew failed → попытка re-login через AppRole"
                 )
                 vault._backend_token = None
-                vault._get_backend_token()  # бросит исключение если AppRole недоступен
+                vault._get_backend_token()
                 logger.info("Vault re-login успешен")
 
         except VaultSealedError as e:
