@@ -1,11 +1,11 @@
 from fastapi import APIRouter
-from app.api import branches, servers, ports, credentials, status, tree
+from app.api import branches_api, credentials_api, ports_api, servers_api, status_api, tree_api
 
 router = APIRouter(prefix="/api")
 
-router.include_router(branches.router)
-router.include_router(servers.router)
-router.include_router(ports.router)
-router.include_router(credentials.router)
-router.include_router(status.router)
-router.include_router(tree.router)
+router.include_router(branches_api.router)
+router.include_router(servers_api.router)
+router.include_router(ports_api.router)
+router.include_router(credentials_api.router)
+router.include_router(status_api.router)
+router.include_router(tree_api.router)

@@ -4,7 +4,7 @@ import re
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, field_validator
 
-from app.services.db.servers import (
+from app.services.db.servers_db import (
     load_servers,
     create_server,
     delete_server,

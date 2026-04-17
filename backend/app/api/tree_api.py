@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.services.db.tree import load_tree
+from app.services.db.tree_db import load_tree
 
 router = APIRouter(prefix="/tree", tags=["tree"])
 
