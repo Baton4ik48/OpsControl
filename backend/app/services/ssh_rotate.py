@@ -1,6 +1,10 @@
 import shlex
 import paramiko
-from paramiko.ssh_exception import NoValidConnectionsError, AuthenticationException, SSHException
+from paramiko.ssh_exception import (
+    NoValidConnectionsError,
+    AuthenticationException,
+    SSHException,
+)
 from app.logging import get_logger
 
 logger = get_logger("ssh_rotate")
@@ -64,16 +68,21 @@ def rotate_linux_password(
         if exit_code != 0:
             # фильтруем нормальный sudo prompt из вывода
             real_error = "\n".join(
-                line for line in raw_output.splitlines()
+                line
+                for line in raw_output.splitlines()
                 if not any(s in line.lower() for s in ["password for", "пароль для"])
             ).strip()
             logger.error(f"chpasswd failed (exit={exit_code}): {raw_output!r}")
-            raise SSHRotateError(f"Ошибка смены пароля: {real_error or f'exit code {exit_code}'}")
+            raise SSHRotateError(
+                f"Ошибка смены пароля: {real_error or f'exit code {exit_code}'}"
+            )
 
         logger.info(f"Password rotated OK for {username}@{host}")
 
     except AuthenticationException:
-        raise SSHRotateError("Ошибка аутентификации SSH — неверные текущие учётные данные")
+        raise SSHRotateError(
+            "Ошибка аутентификации SSH — неверные текущие учётные данные"
+        )
 
     except NoValidConnectionsError:
         raise SSHRotateError(f"Не удалось подключиться к {host}:{port}")

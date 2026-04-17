@@ -5,15 +5,19 @@ from app.services.db.pool import _execute
 # READ
 # ==========================
 
+
 def load_ports(server_id: int):
     def work(conn):
         cur = conn.cursor()
-        cur.execute("""
+        cur.execute(
+            """
             SELECT port, last_success, last_failure
             FROM ports
             WHERE server_id = %s
             ORDER BY port
-        """, (server_id,))
+        """,
+            (server_id,),
+        )
         rows = cur.fetchall()
         cur.close()
 
@@ -33,14 +37,18 @@ def load_ports(server_id: int):
 # CREATE
 # ==========================
 
+
 def create_port(server_id: int, port: int) -> int:
     def work(conn):
         cur = conn.cursor()
         try:
-            cur.execute("""
+            cur.execute(
+                """
                 INSERT INTO ports (server_id, port)
                 VALUES (%s, %s)
-            """, (server_id, port))
+            """,
+                (server_id, port),
+            )
             conn.commit()
         except Exception as e:
             print("DB EXCEPTION:", type(e), e)
@@ -56,6 +64,7 @@ def create_port(server_id: int, port: int) -> int:
 # UPDATE
 # ==========================
 
+
 def update_port(server_id: int, old_port: int, new_port: int) -> int:
     def work(conn):
         cur = conn.cursor()
@@ -64,17 +73,23 @@ def update_port(server_id: int, old_port: int, new_port: int) -> int:
             cur.close()
             return 1
 
-        cur.execute("""
+        cur.execute(
+            """
             DELETE FROM credentials
             WHERE server_id = %s AND port = %s
-        """, (server_id, old_port))
+        """,
+            (server_id, old_port),
+        )
 
-        cur.execute("""
+        cur.execute(
+            """
             UPDATE ports
             SET port = %s
             WHERE server_id = %s
               AND port = %s
-        """, (new_port, server_id, old_port))
+        """,
+            (new_port, server_id, old_port),
+        )
 
         affected = cur.rowcount
 
@@ -90,17 +105,23 @@ def report_port_result(server_id: int, port: int, ok: bool) -> int:
         cur = conn.cursor()
 
         if ok:
-            cur.execute("""
+            cur.execute(
+                """
                 UPDATE ports
                 SET last_success = (NOW() AT TIME ZONE 'UTC')
                 WHERE server_id = %s AND port = %s
-            """, (server_id, port))
+            """,
+                (server_id, port),
+            )
         else:
-            cur.execute("""
+            cur.execute(
+                """
                 UPDATE ports
                 SET last_failure = (NOW() AT TIME ZONE 'UTC')
                 WHERE server_id = %s AND port = %s
-            """, (server_id, port))
+            """,
+                (server_id, port),
+            )
 
         affected = cur.rowcount
         conn.commit()
@@ -117,23 +138,29 @@ def update_vault_path(server_id: int, port: int, new_path: str) -> int:
         cleaned_path = (new_path or "").strip()
 
         if cleaned_path == "":
-            cur.execute("""
+            cur.execute(
+                """
                 DELETE FROM credentials
                 WHERE server_id = %s AND port = %s
-            """, (server_id, port))
+            """,
+                (server_id, port),
+            )
 
             conn.commit()
             cur.close()
             return 1
 
-        cur.execute("""
+        cur.execute(
+            """
             INSERT INTO credentials (server_id, port, vault_path)
             VALUES (%s, %s, %s)
             ON CONFLICT (server_id, port)
             DO UPDATE SET
                 vault_path = EXCLUDED.vault_path,
                 updated_at = (NOW() AT TIME ZONE 'UTC')
-        """, (server_id, port, cleaned_path))
+        """,
+            (server_id, port, cleaned_path),
+        )
 
         conn.commit()
         cur.close()
@@ -146,14 +173,18 @@ def update_vault_path(server_id: int, port: int, new_path: str) -> int:
 # DELETE
 # ==========================
 
+
 def delete_port(server_id: int, port: int) -> int:
     def work(conn):
         cur = conn.cursor()
-        cur.execute("""
+        cur.execute(
+            """
             DELETE FROM ports
             WHERE server_id = %s
               AND port = %s
-        """, (server_id, port))
+        """,
+            (server_id, port),
+        )
         affected = cur.rowcount
         conn.commit()
         cur.close()
@@ -161,13 +192,17 @@ def delete_port(server_id: int, port: int) -> int:
 
     return _execute(work)
 
+
 def delete_credentials(server_id: int, port: int) -> int:
     def work(conn):
         cur = conn.cursor()
-        cur.execute("""
+        cur.execute(
+            """
             DELETE FROM credentials
             WHERE server_id = %s AND port = %s
-        """, (server_id, port))
+        """,
+            (server_id, port),
+        )
 
         affected = cur.rowcount
         conn.commit()

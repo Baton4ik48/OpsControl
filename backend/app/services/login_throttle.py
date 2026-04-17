@@ -17,8 +17,7 @@ class LoginThrottle:
         now = time.time()
 
         self.failed[key] = [
-            ts for ts in self.failed[key]
-            if now - ts < self.block_seconds
+            ts for ts in self.failed[key] if now - ts < self.block_seconds
         ]
 
         if len(self.failed[key]) >= self.max_attempts:
@@ -39,7 +38,8 @@ class LoginThrottle:
 
         remaining = self.block_seconds - (now - oldest)
         return max(0, int(remaining))
-    
+
+
 throttle = LoginThrottle(
     max_attempts=settings.LOGIN_MAX_ATTEMPTS,
     block_seconds=settings.LOGIN_BLOCK_SECONDS,

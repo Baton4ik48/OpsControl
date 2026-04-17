@@ -18,9 +18,11 @@ class InvalidMasterPassword(Exception):
 class CredentialsNotFound(Exception):
     pass
 
+
 class TooManyLoginAttempts(Exception):
     def __init__(self, retry_after_seconds: int):
         self.retry_after_seconds = retry_after_seconds
+
 
 def verify_admin_password(username: str, master_password: str, client_ip: str) -> None:
     throttle_key = f"{username.lower()}:{client_ip}"
@@ -153,11 +155,14 @@ def rotate_credentials(
 
     # 3. Пишем новый пароль и мнемонику в Vault
     try:
-        vault.write_kv_v2(vault_path, {
-            "username": current_username,
-            "password": new_password,
-            "mnemonic": mnemonic,
-        })
+        vault.write_kv_v2(
+            vault_path,
+            {
+                "username": current_username,
+                "password": new_password,
+                "mnemonic": mnemonic,
+            },
+        )
     except VaultReadError as e:
         raise RotateError(f"Не удалось записать новый пароль в Vault: {e}")
 

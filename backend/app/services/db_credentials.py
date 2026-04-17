@@ -17,6 +17,7 @@ logger = logging.getLogger("db-creds")
 # MODEL
 # ===============================
 
+
 @dataclass
 class DBCreds:
     host: str
@@ -29,6 +30,7 @@ class DBCreds:
 # ===============================
 # STATIC CREDS
 # ===============================
+
 
 def _static_creds() -> DBCreds:
     return DBCreds(
@@ -44,6 +46,7 @@ def _static_creds() -> DBCreds:
 # VAULT CREDS
 # ===============================
 
+
 def _get_dynamic_db_creds() -> DBCreds:
     vault = get_vault_client()
     try:
@@ -54,7 +57,8 @@ def _get_dynamic_db_creds() -> DBCreds:
     except VaultAuthError as e:
         logger.error(
             "Vault AppRole: неверные role_id/secret_id в .env — "
-            "обновите VAULT_ROLE_ID / VAULT_SECRET_ID и перезапустите бэкенд. Ошибка: %s", e
+            "обновите VAULT_ROLE_ID / VAULT_SECRET_ID и перезапустите бэкенд. Ошибка: %s",
+            e,
         )
         raise
     except VaultReadError as e:
@@ -79,6 +83,7 @@ def _get_dynamic_db_creds() -> DBCreds:
 # ===============================
 # PUBLIC ENTRYPOINT
 # ===============================
+
 
 def get_db_credentials() -> DBCreds:
     mode = settings.DB_CREDS_MODE
