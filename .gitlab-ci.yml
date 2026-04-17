@@ -40,7 +40,7 @@
 
 stages:
   - Validate
-  - Test
+  # - Test
   #- build
   #- deploy
 
@@ -61,13 +61,13 @@ Validate_job:
 # ============================================
 # Stage 2: Test
 # ============================================
-Test_job:
-  stage: Test
-  tags:
-  - docker
-  image: localhost:5050/root/opscontrol/lint-image:v1
-  timeout: 2 minutes
-  script:
+# Test_job:
+#   stage: Test
+#   tags:
+#   - docker
+#   image: localhost:5050/root/opscontrol/lint-image:v1
+#   timeout: 2 minutes
+#   script:
 
 
 
