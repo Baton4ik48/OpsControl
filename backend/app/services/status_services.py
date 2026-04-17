@@ -1,8 +1,5 @@
-import requests
 from app.services.db.pool import _execute, ServiceUnavailableError
 from app.services.vault_client import VaultSealedError, VaultUnavailableError
-from app.config import settings
-
 
 def get_overall_status() -> str:
     postgres_ok = check_postgres()

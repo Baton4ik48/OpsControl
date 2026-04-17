@@ -1,5 +1,3 @@
-# app/middleware/allowed_user.py
-
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware

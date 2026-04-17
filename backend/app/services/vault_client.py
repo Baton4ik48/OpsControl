@@ -82,7 +82,7 @@ class VaultClient:
         token = data["auth"]["client_token"]
         ttl = data["auth"]["lease_duration"]
 
-        print(f"\n[DEBUG] AppRole token issued:")
+        print("\n[DEBUG] AppRole token issued:")
         print(f"        token = {token}")
         print(f"        ttl   = {ttl}s\n")
 
@@ -207,7 +207,7 @@ class VaultClient:
         lease_id = body["lease_id"]
         ttl = body["lease_duration"]
 
-        print(f"\n[VAULT] NEW DB CREDS ISSUED")
+        print("\n[VAULT] NEW DB CREDS ISSUED")
         print(f"        username = {username}")
         print(f"        lease_id = {lease_id}")
         print(f"        ttl      = {ttl}s\n")
