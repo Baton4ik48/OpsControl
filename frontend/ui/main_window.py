@@ -11,18 +11,15 @@ from ui.error_handler import handle_api_error
 from core.api.base import ApiError
 from ui.managers.busy_manager import BusyManager
 
-
 from controllers.tree_controller import TreeController
-from controllers.console_controller import ConsoleController
 
 from ui.widgets.tools_menu import ToolsMenu
 from ui.widgets.sidebar import Sidebar
 from ui.widgets.device_tree import DeviceTree
-from ui.widgets.console import Console
-from ui.widgets.workspace import Workspace
 from ui.widgets.busy_overlay import BusyOverlay
 from ui.dialogs.settings_dialog import SettingsDialog
 from ui.dialogs.password_rotation_dialog import PasswordRotationDialog
+from ui.dialogs.statistics_dialog import StatisticsDialog
 
 
 class MainWindow(QWidget):
@@ -47,13 +44,10 @@ class MainWindow(QWidget):
         self.menu = ToolsMenu(self.user_settings)
         self.sidebar = Sidebar()
         self.tree = DeviceTree()
-        self.console = Console()
         main_layout.setMenuBar(self.menu)
 
-        workspace = Workspace(self.tree, self.console)
-
         body.addWidget(self.sidebar)
-        body.addWidget(workspace)
+        body.addWidget(self.tree)
         main_layout.addLayout(body)
 
         # =========================
@@ -76,9 +70,6 @@ class MainWindow(QWidget):
             self.busy
         )
 
-        self.console_controller = ConsoleController(self.console.log)
-        self.console.set_handler(self.console_controller.handle)
-
         # =========================
         # AUTO REFRESH
         # =========================
@@ -89,6 +80,8 @@ class MainWindow(QWidget):
         # =========================
         # SIGNALS
         # =========================
+        self.menu.infrastructure_closed.connect(self.reload)
+        self.menu.statistics_requested.connect(self._open_statistics)
         self.sidebar.reload_clicked.connect(self.reload)
         self.sidebar.refresh_all_clicked.connect(self.on_refresh_all)
         self.sidebar.show_all_clicked.connect(self.on_show_all)
@@ -98,6 +91,9 @@ class MainWindow(QWidget):
 
         self.controller.loaded.connect(self.on_tree_loaded)
         self.controller.error_occurred.connect(self._on_api_error)
+        self.controller.checking_started.connect(lambda: self.sidebar.set_actions_enabled(False))
+        self.controller.checking_finished.connect(lambda: self.sidebar.set_actions_enabled(True))
+        self.controller.checking_finished.connect(self._update_status_counts)
 
         self.tree.refresh_branch_requested.connect(self.controller.refresh_branch)
         self.tree.refresh_server_requested.connect(self.controller.refresh_server)
@@ -105,7 +101,6 @@ class MainWindow(QWidget):
         self.tree.open_protocol_requested.connect(self.controller.connect_protocol)
         self.tree.show_credentials_requested.connect(self.controller.show_credentials)
         self.tree.rotate_password_requested.connect(self._open_password_rotation)
-
 
     def _on_api_error(self, error: ApiError):
         handle_api_error(self, error)
@@ -119,11 +114,6 @@ class MainWindow(QWidget):
 
     def on_tree_loaded(self):
         self.sidebar.set_actions_enabled(True)
-        self.console.log("Топология сети загружена")
-
-    # def on_tree_load_failed(self):
-    #     self.sidebar.set_actions_enabled(False)
-    #     self.console.log("Ошибка загрузки данных")
 
     # =========================
     # ACTIONS
@@ -148,9 +138,44 @@ class MainWindow(QWidget):
             self.auto_refresh_timer.start(interval * 1000)
 
     # =========================
+    # STATUS COUNTS
+    # =========================
+    def _update_status_counts(self):
+        data = self.controller._data
+        if not data:
+            return
+        up = down = 0
+        for branch in data:
+            for server in branch.get("servers", []):
+                ports = server.get("ports", [])
+                if not ports:
+                    continue
+                if any(p.get("is_up") is True for p in ports):
+                    up += 1
+                else:
+                    down += 1
+        self.menu.update_server_counts(up, down)
+
+    # =========================
+    # STATISTICS
+    # =========================
+    def _open_statistics(self):
+        dlg = StatisticsDialog(self.controller._data, parent=self)
+        dlg.exec()
+
+    # =========================
     # PASSWORD ROTATION
     # =========================
     def _open_password_rotation(self, server_id: int, ip: str, device_type: str = "linux"):
+        if device_type == "windows":
+            QMessageBox.information(
+                self,
+                "Смена пароля — Windows",
+                "Автоматическая смена пароля для Windows-серверов не реализована.\n\n"
+                "Смените пароль вручную: Управление компьютером → "
+                "Локальные пользователи и группы → Пользователи."
+            )
+            return
         admin_login = self.user_settings.get("admin_login") or ""
         dlg = PasswordRotationDialog(server_id, ip, admin_login, device_type=device_type, parent=self)
         dlg.exec()
@@ -187,15 +212,13 @@ class MainWindow(QWidget):
     # EXIT
     # =========================
     def exit_app(self):
-        # Создаем стандартное окно вопроса
         reply = QMessageBox.question(
-            self, 
-            'Подтверждение', 
+            self,
+            'Подтверждение',
             'Вы уверены, что хотите выйти?',
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, 
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No
         )
 
-        # Если пользователь нажал "Да" — закрываем приложение
         if reply == QMessageBox.StandardButton.Yes:
             QApplication.quit()

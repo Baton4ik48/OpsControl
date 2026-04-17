@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS credentials (
     server_id INTEGER NOT NULL,
     port INTEGER NOT NULL,
     vault_path VARCHAR(512) NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'UTC'),
     UNIQUE (server_id, port),
     FOREIGN KEY (server_id, port) REFERENCES ports(server_id, port) ON DELETE CASCADE
 );

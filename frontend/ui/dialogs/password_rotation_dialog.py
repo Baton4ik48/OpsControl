@@ -15,11 +15,14 @@ from core.api.base import ApiError
 from core.password_generator import generate_password
 from core.config.user_settings import UserSettings
 from core.ssh_rotate_linux import rotate_linux_password, SSHRotateError, _wipe
-from core.ssh_rotate_natex import rotate_natex_password
+from core.ssh_rotate_nateks import rotate_nateks_password
+from core.ssh_rotate_cisco import rotate_cisco_password
 
 _ROTATE_FN = {
     "linux": rotate_linux_password,
-    "natex": rotate_natex_password,
+    "nateks": rotate_nateks_password,
+    "natex": rotate_nateks_password,  # backward compat для старых записей в БД
+    "cisco": rotate_cisco_password,
 }
 
 

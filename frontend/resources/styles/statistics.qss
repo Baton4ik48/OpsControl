@@ -1,0 +1,63 @@
+/* ── Кнопка-заголовок основной секции ──────────────────────────────────── */
+QPushButton#StatSectionBtn {
+    background-color: #132d37;
+    color: #81d4fa;
+    border: none;
+    border-left: 3px solid #4fc3f7;
+    border-bottom: 1px solid #1e3a42;
+    text-align: left;
+    padding: 8px 14px;
+    font-size: 10pt;
+    font-weight: bold;
+}
+QPushButton#StatSectionBtn:hover {
+    background-color: #1a3b48;
+}
+
+/* ── Кнопка-заголовок филиала ───────────────────────────────────────────── */
+QPushButton#StatBranchBtn {
+    background-color: #111f25;
+    color: #81d4fa;
+    border: none;
+    border-left: 2px solid #2a5566;
+    border-bottom: 1px solid #1e3a42;
+    text-align: left;
+    padding: 6px 14px;
+    font-size: 9pt;
+}
+QPushButton#StatBranchBtn:hover {
+    background-color: #162830;
+}
+
+/* ── Скролл ─────────────────────────────────────────────────────────────── */
+QScrollArea#StatScrollArea {
+    border: none;
+    background: #0f1b1e;
+}
+QWidget#ScrollContent {
+    background: #0f1b1e;
+}
+QScrollArea#StatScrollArea QScrollBar:vertical {
+    background: #111f25;
+    width: 8px;
+    border: none;
+}
+QScrollArea#StatScrollArea QScrollBar::handle:vertical {
+    background: #2a5566;
+    border-radius: 4px;
+    min-height: 20px;
+}
+QScrollArea#StatScrollArea QScrollBar::add-line:vertical,
+QScrollArea#StatScrollArea QScrollBar::sub-line:vertical {
+    height: 0;
+}
+
+/* ── Плашка оборудования (статус unknown) ───────────────────────────────── */
+QLabel#StatTagUnknown {
+    background-color: #1a2e36;
+    color: #90a4ae;
+    border: 1px solid #2a5566;
+    border-radius: 3px;
+    padding: 3px 8px;
+    font-size: 9pt;
+}

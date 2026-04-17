@@ -8,11 +8,11 @@ def load_styles():
         "base.qss",
         "buttons.qss",
         "sidebar.qss",
-        "workspace.qss",
         "table.qss",
         "menu.qss",
         "loader.qss",
-        "settings.qss"
+        "settings.qss",
+        "statistics.qss",
     ]
 
     style = ""

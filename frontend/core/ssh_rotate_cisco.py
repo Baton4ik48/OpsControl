@@ -21,11 +21,6 @@ def _wait_prompt(channel, expected: str, timeout: int = 15) -> str:
 
     Возвращает накопленный вывод.
     Бросает SSHRotateError по таймауту или закрытию канала.
-
-    Промпты Natex:
-      hostname>          — user mode
-      hostname#          — enable (privileged) mode
-      hostname(config)#  — global config mode
     """
     buf = ""
     deadline = time.monotonic() + timeout
@@ -51,7 +46,39 @@ def _wait_prompt(channel, expected: str, timeout: int = 15) -> str:
     )
 
 
-def rotate_natex_password(
+def _wait_prompt_either(channel, options: tuple, timeout: int) -> str:
+    """
+    Ждёт любого из перечисленных промптов, возвращает тот, что совпал.
+
+    Нужен для начального подключения к Cisco: пользователь с privilege 15
+    попадает сразу в '#', с privilege 1 — в '>'.
+    """
+    buf = ""
+    deadline = time.monotonic() + timeout
+
+    while time.monotonic() < deadline:
+        if channel.recv_ready():
+            chunk = channel.recv(4096).decode("utf-8", errors="replace")
+            buf += chunk
+            clean = _strip_ansi(buf).rstrip()
+            for opt in options:
+                if clean.endswith(opt):
+                    return opt
+        elif channel.closed or channel.exit_status_ready():
+            raise SSHRotateError(
+                f"Канал закрылся при ожидании промпта {options!r}.\n"
+                f"Последний вывод: {buf[-300:]!r}"
+            )
+        else:
+            time.sleep(0.05)
+
+    raise SSHRotateError(
+        f"Таймаут ({timeout}с) ожидания промпта {options!r}.\n"
+        f"Последний вывод: {buf[-300:]!r}"
+    )
+
+
+def rotate_cisco_password(
     host: str,
     username: str,
     current_password: str,
@@ -60,21 +87,26 @@ def rotate_natex_password(
     timeout: int = 15,
 ) -> None:
     """
-    Меняет пароль пользователя на коммутаторе Natex через интерактивный SSH.
+    Меняет пароль пользователя на коммутаторе Cisco 2960/2950 через интерактивный SSH.
 
     Последовательность команд:
-      connect → hostname> → enable → hostname# →
-      config  → hostname(config)# →
+      connect → hostname> (privilege 1) или hostname# (privilege 15) →
+      [если >]: enable → hostname# →
+      configure terminal → hostname(config)# →
       username <user> password <pass> → hostname(config)# →
-      exit    → hostname# →
-      write   → hostname# → disconnect
+      end     → hostname# →
+      write memory → hostname# → disconnect
+
+    Cisco IOS использует стандартный промпт `hostname(config)#`.
+    Команда входа в конфиг: `configure terminal` (не `config`).
+    Команда сохранения: `write memory`.
 
     ВАЖНО: пароль передаётся plaintext напрямую в CLI-команду.
     Не используется shlex.quote — CLI устройства не является shell,
     кавычки были бы приняты как часть пароля.
 
     Если канал рвётся в процессе — делается проверочное переподключение
-    с новым паролем (аналогично rotate_linux_password).
+    с новым паролем.
 
     Бросает SSHRotateError во всех случаях неуспеха.
     """
@@ -107,12 +139,15 @@ def rotate_natex_password(
 
         channel_dropped = False
         try:
-            _wait_prompt(channel, ">", timeout)
+            # Cisco с privilege 15 сразу даёт '#', с privilege 1 — '>'
+            initial = _wait_prompt_either(channel, (">", "#"), timeout)
 
-            channel.send("enable\n")
-            _wait_prompt(channel, "#", timeout)
+            if initial == ">":
+                channel.send("enable\n")
+                _wait_prompt(channel, "#", timeout)
 
-            channel.send("config\n")
+            # На Cisco: 'configure terminal', не 'config'
+            channel.send("configure terminal\n")
             _wait_prompt(channel, "(config)#", timeout)
 
             # Пароль передаётся plaintext — кавычки НЕ используются,
@@ -120,11 +155,12 @@ def rotate_natex_password(
             channel.send(f"username {username} password {new_password}\n")
             _wait_prompt(channel, "(config)#", timeout)
 
-            channel.send("exit\n")
+            # end — выходим сразу в privileged exec, минуя промежуточные уровни
+            channel.send("end\n")
             _wait_prompt(channel, "#", timeout)
 
             # Сохранение running-config → startup-config
-            channel.send("write\n")
+            channel.send("write memory\n")
             _wait_prompt(channel, "#", timeout)
 
         except (SSHException, socket.timeout, TimeoutError, EOFError, OSError):
@@ -141,7 +177,7 @@ def rotate_natex_password(
     # ── Верификация после разрыва канала ──────────────────────────────────────
     # Если канал разорвался посередине — неизвестно на каком шаге.
     # Проверяем новым паролем: если заходит — пароль точно сменён.
-    # Важно: даже если `write` не выполнился, пароль будет работать до перезагрузки.
+    # Важно: даже если `write memory` не выполнился, пароль будет работать до перезагрузки.
     # Пользователь получит предупреждение.
     verify_timeout = min(timeout, 5)
 
@@ -150,8 +186,8 @@ def rotate_natex_password(
     if new_result is True:
         raise SSHRotateError(
             "Соединение разорвано во время настройки.\n"
-            "Новый пароль работает, но команда write могла не выполниться.\n"
-            "Войдите на устройство и выполните write вручную для сохранения конфига."
+            "Новый пароль работает, но команда write memory могла не выполниться.\n"
+            "Войдите на устройство и выполните write memory вручную для сохранения конфига."
         )
 
     if new_result is None:
