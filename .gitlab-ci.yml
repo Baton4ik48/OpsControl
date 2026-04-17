@@ -55,7 +55,7 @@ lint:
   timeout: 2 minutes
   script:
     - ruff check backend/
-    - echo black --version
+    - black --version
     - black --check backend/
 
 # test-job:
