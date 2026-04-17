@@ -4,8 +4,7 @@ from app.services.db.pool import _execute
 def load_tree():
     def work(conn):
         cur = conn.cursor()
-        cur.execute(
-            """
+        cur.execute("""
         SELECT
             b.id,
             b.name,
@@ -25,8 +24,7 @@ def load_tree():
         LEFT JOIN credentials c
             ON c.server_id = s.id AND c.port = p.port
         ORDER BY b.name, s.name, p.port
-        """
-        )
+        """)
         rows = cur.fetchall()
         cur.close()
         return rows
