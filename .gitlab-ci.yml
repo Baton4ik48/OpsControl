@@ -54,7 +54,8 @@ lint:
   image: localhost:5050/root/opscontrol/lint-image:v1
   timeout: 2 minutes
   script:
-    - ruff check backend/ || true
+    - ruff check backend/
+    - black --check backend/
 
 # test-job:
 #   stage: test
