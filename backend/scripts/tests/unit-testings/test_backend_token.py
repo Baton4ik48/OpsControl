@@ -1,4 +1,3 @@
-import pytest
 from unittest.mock import patch
 from app.services.vault_client import VaultClient
 
