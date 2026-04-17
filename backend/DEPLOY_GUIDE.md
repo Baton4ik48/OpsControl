@@ -22,7 +22,7 @@ backend/
 ---
 ## Шаг 0 — Сборка image backend
 
-docker build -t name-backend:latest .
+docker build -t name-backend:v1.0 .
 
 
 ## 🚀 Шаг 1 — Запуск контейнеров
