@@ -1,10 +1,7 @@
 from fastapi import APIRouter
-from app.services.status_services import get_overall_status, check_postgres, check_vault
+from app.services.status_services import check_postgres, check_vault
 
-router = APIRouter(
-    prefix="/status",
-    tags=["status"]
-)
+router = APIRouter(prefix="/status", tags=["status"])
 
 
 @router.get("")
@@ -24,5 +21,5 @@ def get_status():
             "status": overall,
             "postgres": "ok" if postgres_ok else "offline",
             "vault": vault_status,
-        }
+        },
     }
