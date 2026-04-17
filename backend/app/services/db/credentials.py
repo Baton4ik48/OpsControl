@@ -1,6 +1,5 @@
 from app.services.db.pool import _execute
 
-
 # ==========================
 # READ
 # ==========================
