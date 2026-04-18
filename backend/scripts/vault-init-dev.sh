@@ -90,16 +90,16 @@ vault write auth/approle/role/backend-app \
   token_ttl=1h \
   token_max_ttl=4h
 
-ROLE_ID=$(vault read -field=role_id auth/approle/role/backend-app/role-id)
-SECRET_ID=$(vault write -field=secret_id -f auth/approle/role/backend-app/secret-id)
+# Устанавливаем фиксированные role_id и secret_id из переменных окружения.
+# В CI эти значения заданы в variables и переданы в backend-контейнер при старте,
+# поэтому бэкенд уже знает их — никакого рестарта не требуется.
+vault write auth/approle/role/backend-app/role-id \
+  role_id="${VAULT_ROLE_ID}"
 
-echo "✅ AppRole готов"
-echo "VAULT_ROLE_ID=${ROLE_ID}"
-echo "VAULT_SECRET_ID=${SECRET_ID}"
+vault write auth/approle/role/backend-app/custom-secret-id \
+  secret_id="${VAULT_SECRET_ID}"
 
-# Сохраняем для CI (подхватывается через export $(cat /tmp/vault_creds.env | xargs))
-echo "VAULT_ROLE_ID=${ROLE_ID}" > /tmp/vault_creds.env
-echo "VAULT_SECRET_ID=${SECRET_ID}" >> /tmp/vault_creds.env
+echo "✅ AppRole готов (role_id=${VAULT_ROLE_ID})"
 
 # =========================================================
 # 5. Userpass

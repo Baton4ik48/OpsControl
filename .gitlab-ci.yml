@@ -13,6 +13,11 @@ variables:
   VAULT_DATABASE_ROLE_NAME: postgres-dynamic
   VAULT_ADMIN_PASSWORD: admin
 
+  # Фиксированные значения — передаются в backend-service при старте
+  # vault-init-dev.sh настраивает Vault с теми же значениями
+  VAULT_ROLE_ID: "ci-backend-role-id"
+  VAULT_SECRET_ID: "ci-backend-secret-id"
+
   DB_CREDS_MODE: static
   
 stages:
@@ -117,9 +122,6 @@ integration-job:
     # Запуск скрипта Vault
     - sh backend/scripts/vault-init-dev.sh
 
-    # Устанавливаем VAULT_ROLE_ID и VAULT_SECRET_ID сгенерированные скриптом
-    - export $(cat /tmp/vault_creds.env | xargs)
-
     # Интеграционные тесты
     - export COVERAGE_FILE=.coverage.integration
     - PYTHONPATH=backend pytest backend/scripts/tests/integ-testings/ --cov=backend --cov-report=term --cov-report= --cov-config=.coveragerc
@@ -128,13 +130,12 @@ integration-job:
     - until curl -s http://backend:8000/api/status; do sleep 1; done
 
     # E2e тесты (через HTTP к бэкенду)
-    - export COVERAGE_FILE=.coverage.e2e
-    - PYTHONPATH=backend pytest backend/scripts/tests/e2e-testings/ --cov=backend --cov-report=term --cov-report= --cov-config=.coveragerc -m e2e
+    # --cov не используется: код выполняется в backend-контейнере, не в pytest
+    - pytest backend/scripts/tests/e2e-testings/ -m e2e
 
   artifacts:
     paths:
       - .coverage.integration
-      - .coverage.e2e
 
 # -------------------------
 # MERGE COVERAGE
