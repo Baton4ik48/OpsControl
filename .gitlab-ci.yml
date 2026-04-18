@@ -49,6 +49,7 @@ lint_job:
   image: localhost:5050/root/opscontrol/lint-image:latest
   timeout: 2 minutes
   script:
+    - curl http://gitlab
     - ruff check backend/
     - black --check backend/
 
@@ -59,6 +60,7 @@ unit_tests_job:
   image: localhost:5050/root/opscontrol/unit-image:latest
   timeout: 2 minutes
   script:
+    - curl http://gitlab
     - export COVERAGE_FILE=.coverage.unit
     - PYTHONPATH=backend pytest backend/scripts/tests/unit-testings/ --cov=backend --cov-report=term --cov-report= --cov-config=.coveragerc
 
