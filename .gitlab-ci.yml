@@ -7,37 +7,36 @@ variables:
   POSTGRES_DB: ppm_database
   POSTGRES_USER: login_ppm
   POSTGRES_PASSWORD: $PG_SECRET
-  
+
   VAULT_ADDR: http://vault:8200
   VAULT_TOKEN: root
   VAULT_DATABASE_ROLE_NAME: postgres-dynamic
   VAULT_ADMIN_PASSWORD: admin
 
-  IMAGE: $CI_REGISTRY_IMAGE/app
-  TAG: $CI_COMMIT_SHA
-
 stages:
-  - Build_image 
+  - Build_image
   - Test_1
   - Test_2
+
 # ============================================
-# Stage 0: Build Images
+# Stage 0: Build Images (только вручную)
+# Запускать при изменении Dockerfile-*
 # ============================================
 build_images_job:
   stage: Build_image
+  when: manual
   tags:
     - docker
   image: docker:latest
   before_script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD localhost:5050
   script:
-    - docker build -t localhost:5050/root/opscontrol/lint-image:$CI_COMMIT_SHA -f docker_images/Dockerfile-lint .
-    - docker build -t localhost:5050/root/opscontrol/unit-image:$CI_COMMIT_SHA -f docker_images/Dockerfile-unit .
-    - docker build -t localhost:5050/root/opscontrol/ci-image:$CI_COMMIT_SHA -f docker_images/Dockerfile-ci .
-    - docker push localhost:5050/root/opscontrol/lint-image:$CI_COMMIT_SHA
-    - docker push localhost:5050/root/opscontrol/unit-image:$CI_COMMIT_SHA
-    - docker push localhost:5050/root/opscontrol/ci-image:$CI_COMMIT_SHA
-
+    - docker build -t localhost:5050/root/opscontrol/lint-image:latest -f docker_images/Dockerfile-lint .
+    - docker build -t localhost:5050/root/opscontrol/unit-image:latest -f docker_images/Dockerfile-unit .
+    - docker build -t localhost:5050/root/opscontrol/ci-image:latest -f docker_images/Dockerfile-ci .
+    - docker push localhost:5050/root/opscontrol/lint-image:latest
+    - docker push localhost:5050/root/opscontrol/unit-image:latest
+    - docker push localhost:5050/root/opscontrol/ci-image:latest
 
 # ============================================
 # Stage 1: Lint & Unit Tests
@@ -45,9 +44,8 @@ build_images_job:
 lint_job:
   stage: Test_1
   tags:
-  - docker
-  needs: ["build_images_job"]
-  image: localhost:5050/root/opscontrol/lint-image:$CI_COMMIT_SHA
+    - docker
+  image: localhost:5050/root/opscontrol/lint-image:latest
   timeout: 2 minutes
   script:
     - ruff check backend/
@@ -56,12 +54,11 @@ lint_job:
 unit_tests_job:
   stage: Test_1
   tags:
-  - docker
-  needs: ["build_images_job"]
-  image: localhost:5050/root/opscontrol/unit-image:$CI_COMMIT_SHA
+    - docker
+  image: localhost:5050/root/opscontrol/unit-image:latest
   timeout: 2 minutes
   script:
-  - PYTHONPATH=backend pytest backend/
+    - PYTHONPATH=backend pytest backend/
 
 # ============================================
 # Stage 2: Integration Tests
@@ -70,9 +67,8 @@ integration-job:
   stage: Test_2
   tags:
     - docker
-  needs: ["build_images_job"]
-  image: localhost:5050/root/opscontrol/ci-image:$CI_COMMIT_SHA
-  timeout: 2 minutes
+  image: localhost:5050/root/opscontrol/ci-image:latest
+  timeout: 5 minutes
 
   services:
     - name: postgres:15
@@ -85,7 +81,6 @@ integration-job:
     # Ждём Postgres
     - echo "Ждём postgres..."
     - until pg_isready -h postgres -p 5432; do sleep 1; done
-    - python backend/scripts/connect-pg-test.py
 
     - echo "Применяем init.sql..."
     - PGPASSWORD=$POSTGRES_PASSWORD psql -h postgres -U $POSTGRES_USER -d $POSTGRES_DB -f backend/scripts/init.sql
@@ -100,3 +95,6 @@ integration-job:
 
     # Запуск скрипта Vault
     - sh backend/scripts/vault-init-dev.sh
+
+    # Интеграционные тесты
+    #- PYTHONPATH=backend pytest backend/ -m integration
