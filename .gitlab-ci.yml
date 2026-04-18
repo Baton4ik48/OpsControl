@@ -88,7 +88,7 @@ build_images_project_job:
 # ============================================
 # Stage 3: integration-e2e Tests
 # ============================================
-integration-e2e-job:
+integration_e2e_job:
   stage: Test_integration_e2e
   tags: [docker]
   image: localhost:5050/root/opscontrol/int-image:latest
