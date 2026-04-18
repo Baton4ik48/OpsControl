@@ -97,6 +97,18 @@ def test_create_port_db_unavailable(monkeypatch):
         create_port(1, 22)
 
 
+def test_create_port_reraises_cursor_exception(monkeypatch):
+    """Исключение в cur.execute → логируется и пробрасывается наружу"""
+    conn, cur = _make_conn()
+    cur.execute.side_effect = Exception("constraint violation")
+    _patch(monkeypatch, conn)
+
+    with pytest.raises(Exception, match="constraint violation"):
+        create_port(1, 22)
+
+    conn.commit.assert_not_called()
+
+
 # ============================================
 # update_port
 # ============================================

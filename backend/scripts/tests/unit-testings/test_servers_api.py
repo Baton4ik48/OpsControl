@@ -1,7 +1,21 @@
 import pytest
 from fastapi import HTTPException
+from fastapi.testclient import TestClient
+from unittest.mock import patch
 
-from app.api.servers_api import _validate_host, ensure_found
+from app.api.servers_api import _validate_host, ensure_found, ServerCreate, ServerUpdate, router
+
+_app_client = None
+
+
+def _client():
+    global _app_client
+    if _app_client is None:
+        from fastapi import FastAPI
+        app = FastAPI()
+        app.include_router(router)
+        _app_client = TestClient(app, raise_server_exceptions=False)
+    return _app_client
 
 # ==========================
 # _validate_host
@@ -74,3 +88,100 @@ def test_ensure_found_positive():
     # не должен бросать
     ensure_found(1, "Server")
     ensure_found(10, "Server")
+
+
+# ==========================
+# ServerCreate / ServerUpdate validators
+# ==========================
+
+
+@pytest.mark.parametrize("device_type", ["linux", "windows", "nateks", "natex", "cisco"])
+def test_server_create_valid_device_type(device_type):
+    m = ServerCreate(branch_id=1, name="x", ip="1.2.3.4", device_type=device_type)
+    assert m.device_type == device_type
+
+
+def test_server_create_invalid_device_type():
+    with pytest.raises(Exception):
+        ServerCreate(branch_id=1, name="x", ip="1.2.3.4", device_type="unknown")
+
+
+def test_server_create_default_device_type():
+    m = ServerCreate(branch_id=1, name="x", ip="1.2.3.4")
+    assert m.device_type == "linux"
+
+
+def test_server_update_valid_device_type():
+    m = ServerUpdate(name="x", ip="1.2.3.4", device_type="cisco")
+    assert m.device_type == "cisco"
+
+
+def test_server_update_invalid_device_type():
+    with pytest.raises(Exception):
+        ServerUpdate(name="x", ip="1.2.3.4", device_type="router")
+
+
+# ==========================
+# Router endpoints
+# ==========================
+
+
+def test_get_servers_by_branch():
+    rows = [(1, "srv1", "10.0.0.1", "linux"), (2, "srv2", "10.0.0.2", "windows")]
+    with patch("app.api.servers_api.load_servers", return_value=rows):
+        resp = _client().get("/servers/by-branch/7")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["success"] is True
+    assert len(data["data"]) == 2
+    assert data["data"][0] == {"id": 1, "name": "srv1", "ip": "10.0.0.1", "device_type": "linux"}
+
+
+def test_create_server_api():
+    with patch("app.api.servers_api.create_server", return_value=42):
+        resp = _client().post(
+            "/servers",
+            json={"branch_id": 1, "name": "db01", "ip": "192.168.1.5", "device_type": "linux"},
+        )
+    assert resp.status_code == 200
+    assert resp.json() == {"success": True, "data": {"id": 42}}
+
+
+def test_create_server_api_invalid_device_type():
+    resp = _client().post(
+        "/servers",
+        json={"branch_id": 1, "name": "db01", "ip": "192.168.1.5", "device_type": "bad"},
+    )
+    assert resp.status_code == 422
+
+
+def test_update_server_api():
+    with patch("app.api.servers_api.update_server", return_value=1):
+        resp = _client().put(
+            "/servers/5",
+            json={"name": "new", "ip": "10.10.10.1", "device_type": "cisco"},
+        )
+    assert resp.status_code == 200
+    assert resp.json() == {"success": True, "data": None}
+
+
+def test_update_server_api_not_found():
+    with patch("app.api.servers_api.update_server", return_value=0):
+        resp = _client().put(
+            "/servers/999",
+            json={"name": "x", "ip": "1.2.3.4", "device_type": "linux"},
+        )
+    assert resp.status_code == 404
+
+
+def test_delete_server_api():
+    with patch("app.api.servers_api.delete_server", return_value=1):
+        resp = _client().delete("/servers/8")
+    assert resp.status_code == 200
+    assert resp.json() == {"success": True, "data": None}
+
+
+def test_delete_server_api_not_found():
+    with patch("app.api.servers_api.delete_server", return_value=0):
+        resp = _client().delete("/servers/999")
+    assert resp.status_code == 404

@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import Mock
 
 from app.services.status_services import get_overall_status, check_postgres, check_vault
 from app.services.vault_client import VaultUnavailableError, VaultSealedError
@@ -58,6 +59,22 @@ def test_check_postgres_service_unavailable(monkeypatch):
     assert check_postgres() is False
 
 
+def test_check_postgres_calls_work_function(monkeypatch):
+    """_execute вызывает переданную work-функцию с mock-соединением"""
+    mock_conn = Mock()
+    mock_conn.cursor.return_value = Mock()
+
+    def real_execute(fn):
+        fn(mock_conn)
+
+    monkeypatch.setattr("app.services.status_services._execute", real_execute)
+
+    result = check_postgres()
+
+    assert result is True
+    mock_conn.cursor.assert_called_once()
+
+
 # ============================================
 # VAULT
 # ============================================
@@ -86,3 +103,17 @@ def test_check_vault(behavior, expected, monkeypatch):
     )
 
     assert check_vault() == expected
+
+
+def test_check_vault_generic_exception_returns_offline(monkeypatch):
+    """Любое неожиданное исключение → 'offline'"""
+
+    class BrokenClient:
+        def check_sealed(self):
+            raise RuntimeError("unexpected crash")
+
+    monkeypatch.setattr(
+        "app.services.vault_client.get_vault_client", lambda: BrokenClient()
+    )
+
+    assert check_vault() == "offline"
