@@ -1,42 +1,17 @@
 # ============================================
 # Переменные уровня pipeline (общие для всех job)
 # ============================================
-# variables:
-#   POSTGRES_HOST: postgres
-#   POSTGRES_PORT: 5432
-#   POSTGRES_DB: ppm_database
-#   POSTGRES_USER: login_ppm
-#   POSTGRES_PASSWORD: $PG_SECRET
+variables:
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: 5432
+  POSTGRES_DB: ppm_database
+  POSTGRES_USER: login_ppm
+  POSTGRES_PASSWORD: $PG_SECRET
   
-#   VAULT_ADDR: http://vault:8200
-#   VAULT_TOKEN: root
-#   VAULT_DATABASE_ROLE_NAME: postgres-dynamic
-#   VAULT_ADMIN_PASSWORD: admin
-
-# ============================================
-# Шаблон (anchor) — переиспользуемый блок
-# ============================================
-# .wait-postgres: &wait-postgres
-#   - echo "Ждём Postgres..."
-#   - |
-#     for i in $(seq 1 30); do
-#       pg_isready -h postgres -p 5432 && break
-#       echo "  попытка $i/30..."
-#       sleep 2
-#     done
-#   - pg_isready -h postgres -p 5432 || { echo "POSTGRES НЕ СТАРТОВАЛ"; exit 1; }
- 
-# .wait-vault: &wait-vault
-#   - echo "Ждём Vault..."
-#   - |
-#     for i in $(seq 1 30); do
-#       curl -sf http://vault:8200/v1/sys/health > /dev/null && break
-#       echo "  попытка $i/30..."
-#       sleep 2
-#     done
-#   - curl -sf http://vault:8200/v1/sys/health || { echo "VAULT НЕ СТАРТОВАЛ"; exit 1; }
-
-
+  VAULT_ADDR: http://vault:8200
+  VAULT_TOKEN: root
+  VAULT_DATABASE_ROLE_NAME: postgres-dynamic
+  VAULT_ADMIN_PASSWORD: admin
 
 stages:
   - Test_1
@@ -66,49 +41,38 @@ unit_tests_job:
   - PYTHONPATH=backend pytest backend/
 
 # ============================================
-# Stage 2: Test
+# Stage 2: 
 # ============================================
-# Test_job:
-#   stage: Test
-#   tags:
-#   - docker
-#   image: localhost:5050/root/opscontrol/lint-image:v1
-#   timeout: 2 minutes
-#   script:
+integration-job:
+  stage: Test_2
+  tags:
+    - docker
+  image: localhost:5050/root/opscontrol/ci-image:latest
+  timeout: 2 minutes
 
+  services:
+    - name: postgres:15
+      alias: postgres
+    - name: hashicorp/vault:1.15
+      alias: vault
+      command: ["vault", "server", "-dev", "-dev-root-token-id=root", "-dev-listen-address=0.0.0.0:8200"]
 
+   script:
+    # Ждём Postgres
+    - echo "Ждём postgres..."
+    - until pg_isready -h postgres -p 5432; do sleep 1; done
+    - python backend/scripts/connect-pg-test.py
 
-# test-job:
-#   stage: test
-#   tags:
-#     - docker
-#   image: localhost:5050/root/opscontrol/ci-image:latest
+    - echo "Применяем init.sql..."
+    - PGPASSWORD=$POSTGRES_PASSWORD psql -h postgres -U $POSTGRES_USER -d $POSTGRES_DB -f backend/scripts/init.sql
 
-#   services:
-#     - name: postgres:15
-#       alias: postgres
-#     - name: hashicorp/vault:1.15
-#       alias: vault
-#       command: ["vault", "server", "-dev", "-dev-root-token-id=root", "-dev-listen-address=0.0.0.0:8200"]
+    # Ждём Vault
+    - echo "Ждём vault..."
+    - until curl -s -o /dev/null -w "%{http_code}" http://vault:8200/v1/sys/health | grep -q "200"; do sleep 1; done
 
-   #script:
-#     # Ждём Postgres
-#     - echo "Ждём postgres..."
-#     - until pg_isready -h postgres -p 5432; do sleep 1; done
-#     - python backend/scripts/connect-pg-test.py
+    # Резолвим IP postgres для Vault
+    - export POSTGRES_IP=$(getent hosts postgres | awk '{print $1}')
+    - echo "Postgres IP = $POSTGRES_IP"
 
-#     - echo "Применяем init.sql..."
-#     - PGPASSWORD=$POSTGRES_PASSWORD psql -h postgres -U $POSTGRES_USER -d $POSTGRES_DB -f backend/scripts/init.sql
-
-#     # Ждём Vault
-#     - echo "Ждём vault..."
-#     - until curl -s -o /dev/null -w "%{http_code}" http://vault:8200/v1/sys/health | grep -q "200"; do sleep 1; done
-
-#     # Резолвим IP postgres для Vault
-#     - export POSTGRES_IP=$(getent hosts postgres | awk '{print $1}')
-#     - echo "Postgres IP = $POSTGRES_IP"
-
-#     # Запуск скрипта Vault
-#     - sh backend/scripts/vault-init-dev.sh
-#   rules:
-#     - if: '$CI_COMMIT_BRANCH == "dev"'
+    # Запуск скрипта Vault
+    - sh backend/scripts/vault-init-dev.sh
