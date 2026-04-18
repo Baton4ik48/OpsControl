@@ -104,7 +104,7 @@ integration-job:
 
     # Интеграционные тесты
     - export COVERAGE_FILE=.coverage.integration
-    - PYTHONPATH=backend DB_CREDS_MODE=static pytest backend/scripts/tests/integ-testings/ --cov=backend --cov-report= --cov-config=.coveragerc
+    - PYTHONPATH=backend DB_CREDS_MODE=static pytest backend/scripts/tests/integ-testings/ --cov=backend --cov-report=term --cov-report= --cov-config=.coveragerc
 
   artifacts:
     paths:
