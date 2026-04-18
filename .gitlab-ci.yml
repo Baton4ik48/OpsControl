@@ -34,10 +34,10 @@ build_images_job:
   script:
     - docker build -t localhost:5050/root/opscontrol/lint-image:latest -f docker_images/Dockerfile-lint .
     - docker build -t localhost:5050/root/opscontrol/unit-image:latest -f docker_images/Dockerfile-unit .
-    - docker build -t localhost:5050/root/opscontrol/ci-image:latest -f docker_images/Dockerfile-ci .
+    - docker build -t localhost:5050/root/opscontrol/int-image:latest -f docker_images/Dockerfile-int .
     - docker push localhost:5050/root/opscontrol/lint-image:latest
     - docker push localhost:5050/root/opscontrol/unit-image:latest
-    - docker push localhost:5050/root/opscontrol/ci-image:latest
+    - docker push localhost:5050/root/opscontrol/int-image:latest
 
 # ============================================
 # Stage 1: Lint & Unit Tests
@@ -68,7 +68,7 @@ integration-job:
   stage: Test_2
   tags:
     - docker
-  image: localhost:5050/root/opscontrol/ci-image:latest
+  image: localhost:5050/root/opscontrol/int-image:latest
   timeout: 5 minutes
 
   services:
