@@ -3,7 +3,13 @@ from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from unittest.mock import patch
 
-from app.api.servers_api import _validate_host, ensure_found, ServerCreate, ServerUpdate, router
+from app.api.servers_api import (
+    _validate_host,
+    ensure_found,
+    ServerCreate,
+    ServerUpdate,
+    router,
+)
 
 _app_client = None
 
@@ -12,10 +18,12 @@ def _client():
     global _app_client
     if _app_client is None:
         from fastapi import FastAPI
+
         app = FastAPI()
         app.include_router(router)
         _app_client = TestClient(app, raise_server_exceptions=False)
     return _app_client
+
 
 # ==========================
 # _validate_host
@@ -95,7 +103,9 @@ def test_ensure_found_positive():
 # ==========================
 
 
-@pytest.mark.parametrize("device_type", ["linux", "windows", "nateks", "natex", "cisco"])
+@pytest.mark.parametrize(
+    "device_type", ["linux", "windows", "nateks", "natex", "cisco"]
+)
 def test_server_create_valid_device_type(device_type):
     m = ServerCreate(branch_id=1, name="x", ip="1.2.3.4", device_type=device_type)
     assert m.device_type == device_type
@@ -134,14 +144,24 @@ def test_get_servers_by_branch():
     data = resp.json()
     assert data["success"] is True
     assert len(data["data"]) == 2
-    assert data["data"][0] == {"id": 1, "name": "srv1", "ip": "10.0.0.1", "device_type": "linux"}
+    assert data["data"][0] == {
+        "id": 1,
+        "name": "srv1",
+        "ip": "10.0.0.1",
+        "device_type": "linux",
+    }
 
 
 def test_create_server_api():
     with patch("app.api.servers_api.create_server", return_value=42):
         resp = _client().post(
             "/servers",
-            json={"branch_id": 1, "name": "db01", "ip": "192.168.1.5", "device_type": "linux"},
+            json={
+                "branch_id": 1,
+                "name": "db01",
+                "ip": "192.168.1.5",
+                "device_type": "linux",
+            },
         )
     assert resp.status_code == 200
     assert resp.json() == {"success": True, "data": {"id": 42}}
@@ -150,7 +170,12 @@ def test_create_server_api():
 def test_create_server_api_invalid_device_type():
     resp = _client().post(
         "/servers",
-        json={"branch_id": 1, "name": "db01", "ip": "192.168.1.5", "device_type": "bad"},
+        json={
+            "branch_id": 1,
+            "name": "db01",
+            "ip": "192.168.1.5",
+            "device_type": "bad",
+        },
     )
     assert resp.status_code == 422
 
