@@ -33,12 +33,12 @@ build_images_job:
   script:
     - echo $CI_REGISTRY
     - echo $CI_REGISTRY_IMAGE
-    - docker build -t $CI_REGISTRY_IMAGE/lint-image:$CI_COMMIT_SHA -f docker_images/Dockerfile-lint .
-    - docker build -t $CI_REGISTRY_IMAGE/unit-image:$CI_COMMIT_SHA -f docker_images/Dockerfile-unit .
-    - docker build -t $CI_REGISTRY_IMAGE/ci-image:$CI_COMMIT_SHA -f docker_images/Dockerfile-ci .
-    - docker push $CI_REGISTRY_IMAGE/lint-image:$CI_COMMIT_SHA
-    - docker push $CI_REGISTRY_IMAGE/unit-image:$CI_COMMIT_SHA
-    - docker push $CI_REGISTRY_IMAGE/ci-image:$CI_COMMIT_SHA
+    - docker build -t localhost:5050/root/opscontro/lint-image:$CI_COMMIT_SHA -f docker_images/Dockerfile-lint .
+    - docker build -t localhost:5050/root/opscontrol/unit-image:$CI_COMMIT_SHA -f docker_images/Dockerfile-unit .
+    - docker build -t localhost:5050/root/opscontrol/ci-image:$CI_COMMIT_SHA -f docker_images/Dockerfile-ci .
+    - docker push localhost:5050/root/opscontrol/lint-image:$CI_COMMIT_SHA
+    - docker push localhost:5050/root/opscontrol/unit-image:$CI_COMMIT_SHA
+    - docker push localhost:5050/root/opscontrol/ci-image:$CI_COMMIT_SHA
 
 
 # ============================================
@@ -49,7 +49,7 @@ lint_job:
   tags:
   - docker
   needs: ["build_images_job"]
-  image: $CI_REGISTRY_IMAGE/lint-image:$CI_COMMIT_SHA
+  image: localhost:5050/root/opscontrol/lint-image:$CI_COMMIT_SHA
   timeout: 2 minutes
   script:
     - ruff check backend/
@@ -60,7 +60,7 @@ unit_tests_job:
   tags:
   - docker
   needs: ["build_images_job"]
-  image: $CI_REGISTRY_IMAGE/unit-image:$CI_COMMIT_SHA
+  image: localhost:5050/root/opscontrol/unit-image:$CI_COMMIT_SHA
   timeout: 2 minutes
   script:
   - PYTHONPATH=backend pytest backend/
@@ -73,7 +73,7 @@ integration-job:
   tags:
     - docker
   needs: ["build_images_job"]
-  image: $CI_REGISTRY_IMAGE/ci-image:$CI_COMMIT_SHA
+  image: localhost:5050/root/opscontrol/ci-image:$CI_COMMIT_SHA
   timeout: 2 minutes
 
   services:
