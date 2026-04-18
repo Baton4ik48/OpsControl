@@ -49,7 +49,8 @@ lint_job:
   image: localhost:5050/root/opscontrol/lint-image:latest
   timeout: 2 minutes
   script:
-    - curl http://gitlab
+    - python -c "import urllib.request; print(urllib.request.urlopen('http://gitlab').read()[:100])"
+    - wget -qO- http://gitlab || true
     - ruff check backend/
     - black --check backend/
 
@@ -60,6 +61,8 @@ unit_tests_job:
   image: localhost:5050/root/opscontrol/unit-image:latest
   timeout: 2 minutes
   script:
+    - python -c "import urllib.request; print(urllib.request.urlopen('http://gitlab').read()[:100])"
+    - wget -qO- http://gitlab || true
     - curl http://gitlab
     - export COVERAGE_FILE=.coverage.unit
     - PYTHONPATH=backend pytest backend/scripts/tests/unit-testings/ --cov=backend --cov-report=term --cov-report= --cov-config=.coveragerc
