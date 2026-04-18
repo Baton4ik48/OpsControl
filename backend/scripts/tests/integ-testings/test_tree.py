@@ -5,7 +5,6 @@ from app.services.db.servers_db import create_server, delete_server
 from app.services.db.ports_db import create_port, delete_port
 from app.services.db.tree_db import load_tree
 
-
 # ============================================
 # load_tree
 # ============================================
@@ -42,9 +41,9 @@ def test_load_tree_with_server_and_port():
         None,
     )
     assert row is not None
-    assert row[1] == "integ-tree-full"   # branch name
-    assert row[3] == "tree-srv"          # server name
-    assert row[4] == "10.2.0.1"          # ip
+    assert row[1] == "integ-tree-full"  # branch name
+    assert row[3] == "tree-srv"  # server name
+    assert row[4] == "10.2.0.1"  # ip
 
     delete_port(server_id, 22)
     delete_server(server_id)
