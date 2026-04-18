@@ -13,10 +13,34 @@ variables:
   VAULT_DATABASE_ROLE_NAME: postgres-dynamic
   VAULT_ADMIN_PASSWORD: admin
 
+  IMAGE: $CI_REGISTRY_IMAGE/app
+  TAG: $CI_COMMIT_SHA
+
 stages:
+  - Build_image 
   - Test_1
   - Test_2
-  #- deploy
+ы
+# ============================================
+# Stage 0: Build Images
+# ============================================
+build_images_job:
+  stage: Build_image
+  tags:
+    - docker
+  image: docker:latest
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD localhost:5050
+  script:
+    - echo $CI_REGISTRY
+    - echo $CI_REGISTRY_IMAGE
+    - docker build -t localhost:5050/root/opscontrol/lint-image:$CI_COMMIT_SHA -f docker_images/Dockerfile-lint .
+    - docker build -t localhost:5050/root/opscontrol/unit-image:$CI_COMMIT_SHA -f docker_images/Dockerfile-unit .
+    - docker build -t localhost:5050/root/opscontrol/ci-image:$CI_COMMIT_SHA -f docker_images/Dockerfile-ci .
+    - docker push localhost:5050/root/opscontrol/lint-image:$CI_COMMIT_SHA
+    - docker push localhost:5050/root/opscontrol/unit-image:$CI_COMMIT_SHA
+    - docker push localhost:5050/root/opscontrol/ci-image:$CI_COMMIT_SHA
+
 
 # ============================================
 # Stage 1: Lint & Unit Tests
@@ -25,7 +49,8 @@ lint_job:
   stage: Test_1
   tags:
   - docker
-  image: localhost:5050/root/opscontrol/lint-image:v1
+  needs: ["build_images_job"]
+  image: localhost:5050/root/opscontrol/lint-image:$CI_COMMIT_SHA
   timeout: 2 minutes
   script:
     - ruff check backend/
@@ -35,19 +60,21 @@ unit_tests_job:
   stage: Test_1
   tags:
   - docker
-  image: localhost:5050/root/opscontrol/unit-image:v1.3
+  needs: ["build_images_job"]
+  image: localhost:5050/root/opscontrol/unit-image:$CI_COMMIT_SHA
   timeout: 2 minutes
   script:
   - PYTHONPATH=backend pytest backend/
 
 # ============================================
-# Stage 2: 
+# Stage 2: Integration Tests
 # ============================================
 integration-job:
   stage: Test_2
   tags:
     - docker
-  image: localhost:5050/root/opscontrol/ci-image:latest
+  needs: ["build_images_job"]
+  image: localhost:5050/root/opscontrol/ci-image:$CI_COMMIT_SHA
   timeout: 2 minutes
 
   services:
