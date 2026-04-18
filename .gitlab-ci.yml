@@ -18,7 +18,7 @@ variables:
 stages:
   - Build_image
   - Test_lint_unit
-  - Build backend_image
+  - Build_image_backend
   - Test_integration_e2e
 
 # ============================================
