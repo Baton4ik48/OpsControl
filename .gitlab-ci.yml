@@ -77,7 +77,7 @@ build_images_project_job:
   before_script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD localhost:5050
   script:
-    - docker build -t localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA -f backend/Dockerfile .
+    - docker build -t localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA -f backend/Dockerfile backend/
     - docker push localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA
 
 # ============================================
@@ -95,7 +95,7 @@ integration-job:
     - name: hashicorp/vault:1.15
       alias: vault
       command: ["vault","server","-dev","-dev-root-token-id=root","-dev-listen-address=0.0.0.0:8200"]
-    - name: localhost:5050/root/opscontrol/backend:$CI_COMMIT_SHA
+    - name: localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA
       alias: backend 
 
   script:
