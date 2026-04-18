@@ -97,6 +97,10 @@ echo "✅ AppRole готов"
 echo "VAULT_ROLE_ID=${ROLE_ID}"
 echo "VAULT_SECRET_ID=${SECRET_ID}"
 
+# Сохраняем для CI (подхватывается через export $(cat /tmp/vault_creds.env | xargs))
+echo "VAULT_ROLE_ID=${ROLE_ID}" > /tmp/vault_creds.env
+echo "VAULT_SECRET_ID=${SECRET_ID}" >> /tmp/vault_creds.env
+
 # =========================================================
 # 5. Userpass
 # =========================================================

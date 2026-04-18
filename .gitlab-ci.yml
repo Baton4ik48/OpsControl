@@ -97,5 +97,8 @@ integration-job:
     # Запуск скрипта Vault
     - sh backend/scripts/vault-init-dev.sh
 
+    # Устанавливаем VAULT_ROLE_ID и VAULT_SECRET_ID сгенерированные скриптом
+    - export $(cat /tmp/vault_creds.env | xargs)
+
     # Интеграционные тесты
-    #- PYTHONPATH=backend pytest backend/ -m integration
+    - PYTHONPATH=backend DB_CREDS_MODE=static pytest backend/scripts/tests/integ-testings/ -m integration
