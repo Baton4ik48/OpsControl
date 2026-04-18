@@ -44,9 +44,9 @@ stages:
   #- deploy
 
 # ============================================
-# Stage 1: Validate
+# Stage 1: Lint & Unit Tests
 # ============================================
-Validate_job:
+lint_job:
   stage: Test_1
   tags:
   - docker
@@ -56,7 +56,7 @@ Validate_job:
     - ruff check backend/
     - black --check backend/
 
-Validate_job:
+unit_tests_job:
   stage: Test_1
   tags:
   - docker
