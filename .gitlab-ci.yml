@@ -60,7 +60,7 @@ Validate_job:
   stage: Test_1
   tags:
   - docker
-  image: gitlab.starlitborn.space:5050/root/opscontrol/unit-image:v1
+  image: localhost:5050/root/opscontrol/unit-image:v1
   timeout: 2 minutes
   script:
     - pytest backend/
