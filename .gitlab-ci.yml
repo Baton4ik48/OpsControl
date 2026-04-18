@@ -115,7 +115,7 @@ integration-job:
 # -------------------------
 coverage_merge:
   stage: Test_2
-  image: python:3.11
+  image: localhost:5050/root/opscontrol/int-image:latest
   tags: [docker]
 
   needs:
