@@ -29,7 +29,9 @@ def test_init_pool_success(monkeypatch):
     mock_creds = Mock(host="localhost", port=5432, dbname="db", user="u", password="p")
     mock_pool = Mock()
 
-    monkeypatch.setattr("app.services.db.pool_db.get_db_credentials", lambda: mock_creds)
+    monkeypatch.setattr(
+        "app.services.db.pool_db.get_db_credentials", lambda: mock_creds
+    )
     monkeypatch.setattr("app.services.db.pool_db.settings.POSTGRES_CONNECT_TIMEOUT", 5)
     monkeypatch.setattr("app.services.db.pool_db.settings.POSTGRES_QUERY_TIMEOUT", 30)
     monkeypatch.setattr(
@@ -60,7 +62,9 @@ def test_init_pool_all_retries_fail(monkeypatch):
     """OperationalError на всех попытках → False, pool=None"""
     mock_creds = Mock(host="localhost", port=5432, dbname="db", user="u", password="p")
 
-    monkeypatch.setattr("app.services.db.pool_db.get_db_credentials", lambda: mock_creds)
+    monkeypatch.setattr(
+        "app.services.db.pool_db.get_db_credentials", lambda: mock_creds
+    )
     monkeypatch.setattr("app.services.db.pool_db.settings.POSTGRES_CONNECT_TIMEOUT", 5)
     monkeypatch.setattr("app.services.db.pool_db.settings.POSTGRES_QUERY_TIMEOUT", 30)
     monkeypatch.setattr(
@@ -88,7 +92,9 @@ def test_init_pool_retry_then_success(monkeypatch):
             raise OperationalError("refused")
         return mock_pool
 
-    monkeypatch.setattr("app.services.db.pool_db.get_db_credentials", lambda: mock_creds)
+    monkeypatch.setattr(
+        "app.services.db.pool_db.get_db_credentials", lambda: mock_creds
+    )
     monkeypatch.setattr("app.services.db.pool_db.settings.POSTGRES_CONNECT_TIMEOUT", 5)
     monkeypatch.setattr("app.services.db.pool_db.settings.POSTGRES_QUERY_TIMEOUT", 30)
     monkeypatch.setattr("app.services.db.pool_db.SimpleConnectionPool", fake_pool)
@@ -174,9 +180,7 @@ def test_execute_reraises_service_unavailable(monkeypatch):
     monkeypatch.setattr(pool_module, "pool", mock_pool)
 
     with pytest.raises(ServiceUnavailableError):
-        _execute(
-            lambda conn: (_ for _ in ()).throw(ServiceUnavailableError("fail"))
-        )
+        _execute(lambda conn: (_ for _ in ()).throw(ServiceUnavailableError("fail")))
 
 
 def test_execute_undefined_table_raises_service_unavailable(monkeypatch):
@@ -224,8 +228,6 @@ def test_execute_putconn_called_even_on_fn_exception(monkeypatch):
     monkeypatch.setattr(pool_module, "pool", mock_pool)
 
     with pytest.raises(ServiceUnavailableError):
-        _execute(
-            lambda conn: (_ for _ in ()).throw(ServiceUnavailableError("x"))
-        )
+        _execute(lambda conn: (_ for _ in ()).throw(ServiceUnavailableError("x")))
 
     mock_pool.putconn.assert_called_once_with(mock_conn)
