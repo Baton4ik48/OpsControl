@@ -11,6 +11,7 @@ RUN pip install \
     requests\
     pyyaml\
     dotenv\
-    paramiko
+    paramiko \ 
+    pytest-cov
 
 WORKDIR /app

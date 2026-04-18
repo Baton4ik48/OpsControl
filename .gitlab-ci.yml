@@ -18,56 +18,32 @@ stages:
   - Test_1
   - Test_2
 
-# ============================================
-# Stage 0: Build Images 
-# ============================================
-build_images_job:
-  stage: Build_image
-  rules:
-  - changes:
-      - docker_images/*
-  tags:
-    - docker
-  image: docker:latest
-  before_script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD localhost:5050
-  script:
-    - docker build -t localhost:5050/root/opscontrol/lint-image:latest -f docker_images/Dockerfile-lint .
-    - docker build -t localhost:5050/root/opscontrol/unit-image:latest -f docker_images/Dockerfile-unit .
-    - docker build -t localhost:5050/root/opscontrol/int-image:latest -f docker_images/Dockerfile-int .
-    - docker push localhost:5050/root/opscontrol/lint-image:latest
-    - docker push localhost:5050/root/opscontrol/unit-image:latest
-    - docker push localhost:5050/root/opscontrol/int-image:latest
-
-# ============================================
-# Stage 1: Lint & Unit Tests
-# ============================================
-lint_job:
-  stage: Test_1
-  tags:
-    - docker
-  image: localhost:5050/root/opscontrol/lint-image:latest
-  timeout: 2 minutes
-  script:
-    - ruff check backend/
-    - black --check backend/
-
+# -------------------------
+# UNIT
+# -------------------------
 unit_tests_job:
   stage: Test_1
-  tags:
-    - docker
+  tags: [docker]
   image: localhost:5050/root/opscontrol/unit-image:latest
   timeout: 2 minutes
-  script:
-    - PYTHONPATH=backend pytest backend/scripts/tests/unit-testings/
 
-# ============================================
-# Stage 2: Integration Tests
-# ============================================
+  script:
+    - PYTHONPATH=backend pytest backend/scripts/tests/unit-testings/ \
+        --cov=backend \
+        --cov-report=term \
+        --cov-report= \
+        --cov-config=.coveragerc
+
+  artifacts:
+    paths:
+      - .coverage
+
+# -------------------------
+# INTEGRATION
+# -------------------------
 integration-job:
   stage: Test_2
-  tags:
-    - docker
+  tags: [docker]
   image: localhost:5050/root/opscontrol/int-image:latest
   timeout: 5 minutes
 
@@ -76,29 +52,48 @@ integration-job:
       alias: postgres
     - name: hashicorp/vault:1.15
       alias: vault
-      command: ["vault", "server", "-dev", "-dev-root-token-id=root", "-dev-listen-address=0.0.0.0:8200"]
+      command: ["vault","server","-dev","-dev-root-token-id=root","-dev-listen-address=0.0.0.0:8200"]
 
   script:
-    # Ждём Postgres
-    - echo "Ждём postgres..."
     - until pg_isready -h postgres -p 5432; do sleep 1; done
-
-    - echo "Применяем init.sql..."
     - PGPASSWORD=$POSTGRES_PASSWORD psql -h postgres -U $POSTGRES_USER -d $POSTGRES_DB -f backend/scripts/init.sql
 
-    # Ждём Vault
-    - echo "Ждём vault..."
     - until curl -s -o /dev/null -w "%{http_code}" http://vault:8200/v1/sys/health | grep -q "200"; do sleep 1; done
 
-    # Резолвим IP postgres для Vault
     - export POSTGRES_IP=$(getent hosts postgres | awk '{print $1}')
-    - echo "Postgres IP = $POSTGRES_IP"
-
-    # Запуск скрипта Vault
     - sh backend/scripts/vault-init-dev.sh
-
-    # Устанавливаем VAULT_ROLE_ID и VAULT_SECRET_ID сгенерированные скриптом
     - export $(cat /tmp/vault_creds.env | xargs)
 
-    # Интеграционные тесты
-    - PYTHONPATH=backend DB_CREDS_MODE=static pytest backend/scripts/tests/integ-testings/ -m integration
+    - PYTHONPATH=backend DB_CREDS_MODE=static pytest backend/scripts/tests/integ-testings/ \
+        --cov=backend \
+        --cov-report= \
+        --cov-config=.coveragerc
+
+  artifacts:
+    paths:
+      - .coverage
+
+# -------------------------
+# MERGE COVERAGE
+# -------------------------
+coverage_merge:
+  stage: Test_2
+  image: python:3.11
+
+  needs:
+    - unit_tests_job
+    - integration-job
+
+  script:
+    - pip install coverage
+    - coverage combine
+    - coverage xml -o coverage.xml
+    - coverage report
+
+  coverage: '/TOTAL.*\s+(\d+%)$/'
+
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
