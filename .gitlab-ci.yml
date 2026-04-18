@@ -60,10 +60,11 @@ Validate_job:
   stage: Test_1
   tags:
   - docker
-  image: localhost:5050/root/opscontrol/unit-image:v1
+  image: localhoste:5050/root/opscontrol/unit-image:v1.1
   timeout: 2 minutes
   script:
-    - pytest backend/
+  - cd backend
+  - pytest
 
 # ============================================
 # Stage 2: Test
