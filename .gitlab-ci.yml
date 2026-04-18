@@ -59,15 +59,12 @@ unit_tests_job:
   image: localhost:5050/root/opscontrol/unit-image:latest
   timeout: 2 minutes
   script:
-    - PYTHONPATH=backend pytest backend/scripts/tests/unit-testings/ \
-        --cov=backend \
-        --cov-report=term \
-        --cov-report= \
-        --cov-config=.coveragerc
+    - export COVERAGE_FILE=.coverage.unit
+    - PYTHONPATH=backend pytest backend/scripts/tests/unit-testings/ --cov=backend --cov-report=term --cov-report= --cov-config=.coveragerc
 
   artifacts:
     paths:
-      - .coverage
+      - .coverage.unit
 
 # ============================================
 # Stage 2: Integration Tests
@@ -108,14 +105,12 @@ integration-job:
     - export $(cat /tmp/vault_creds.env | xargs)
 
     # Интеграционные тесты
-    - PYTHONPATH=backend DB_CREDS_MODE=static pytest backend/scripts/tests/integ-testings/ \
-        --cov=backend \
-        --cov-report= \
-        --cov-config=.coveragerc
+    - export COVERAGE_FILE=.coverage.integration
+    - PYTHONPATH=backend DB_CREDS_MODE=static pytest backend/scripts/tests/integ-testings/ --cov=backend --cov-report= --cov-config=.coveragerc
 
   artifacts:
     paths:
-      - .coverage
+      - .coverage.integration
 
 # -------------------------
 # MERGE COVERAGE
@@ -125,11 +120,12 @@ coverage_merge:
   image: python:3.11
 
   needs:
-    - unit_tests_job
-    - integration-job
+    - job: unit_tests_job
+      artifacts: true
+    - job: integration-job
+      artifacts: true
 
   script:
-    - pip install coverage
     - coverage combine
     - coverage xml -o coverage.xml
     - coverage report
