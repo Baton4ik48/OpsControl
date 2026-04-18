@@ -13,10 +13,13 @@ variables:
   VAULT_DATABASE_ROLE_NAME: postgres-dynamic
   VAULT_ADMIN_PASSWORD: admin
 
+  DB_CREDS_MODE: static
+  
 stages:
   - Build_image
-  - Test_1
-  - Test_2
+  - Test_lint_unit
+  - Build backend_image
+  - Test_integration_e2e
 
 # ============================================
 # Stage 0: Build Images 
@@ -42,7 +45,7 @@ build_images_job:
 # Stage 1: Lint & Unit Tests
 # ============================================
 lint_job:
-  stage: Test_1
+  stage: Test_lint_unit
   tags: [docker]
   image: localhost:5050/root/opscontrol/lint-image:latest
   timeout: 2 minutes
@@ -51,7 +54,7 @@ lint_job:
     - black --check backend/
 
 unit_tests_job:
-  stage: Test_1
+  stage: Test_lint_unit
   tags:
     - docker
   image: localhost:5050/root/opscontrol/unit-image:latest
@@ -65,10 +68,23 @@ unit_tests_job:
       - .coverage.unit
 
 # ============================================
-# Stage 2: Integration Tests
+# Stage 2: Build Image Backend 
+# ============================================
+build_images_project_job:
+  stage: Build_image_backend
+  tags: [docker]
+  image: docker:latest
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD localhost:5050
+  script:
+    - docker build -t localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA -f Dockerfile .
+    - docker push localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA
+
+# ============================================
+# Stage 3: integration-e2e Tests
 # ============================================
 integration-job:
-  stage: Test_2
+  stage: Test_integration_e2e
   tags: [docker]
   image: localhost:5050/root/opscontrol/int-image:latest
   timeout: 5 minutes
@@ -79,6 +95,8 @@ integration-job:
     - name: hashicorp/vault:1.15
       alias: vault
       command: ["vault","server","-dev","-dev-root-token-id=root","-dev-listen-address=0.0.0.0:8200"]
+    - name: localhost:5050/root/opscontrol/backend:$CI_COMMIT_SHA
+      alias: backend 
 
   script:
     # Ждём Postgres
@@ -104,7 +122,13 @@ integration-job:
 
     # Интеграционные тесты
     - export COVERAGE_FILE=.coverage.integration
-    - PYTHONPATH=backend DB_CREDS_MODE=static pytest backend/scripts/tests/integ-testings/ --cov=backend --cov-report=term --cov-report= --cov-config=.coveragerc
+    - PYTHONPATH=backend pytest backend/scripts/tests/integ-testings/ --cov=backend --cov-report=term --cov-report= --cov-config=.coveragerc
+
+    # Ждём бэкенд
+    - until curl -s http://backend:8000/health; do sleep 1; done
+
+    # E2e (через HTTP к бэкенду)
+    #- pytest e2e-testings/ -m e2e
 
   artifacts:
     paths:
@@ -114,7 +138,7 @@ integration-job:
 # MERGE COVERAGE
 # -------------------------
 coverage_merge:
-  stage: Test_2
+  stage: Test_integration_e2e
   image: localhost:5050/root/opscontrol/int-image:latest
   tags: [docker]
 
