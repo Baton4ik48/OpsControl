@@ -31,7 +31,7 @@ build_images_job:
   before_script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD localhost:5050
   script:
-    - docker build -t localhost:5050/root/opscontro/lint-image:$CI_COMMIT_SHA -f docker_images/Dockerfile-lint .
+    - docker build -t localhost:5050/root/opscontrol/lint-image:$CI_COMMIT_SHA -f docker_images/Dockerfile-lint .
     - docker build -t localhost:5050/root/opscontrol/unit-image:$CI_COMMIT_SHA -f docker_images/Dockerfile-unit .
     - docker build -t localhost:5050/root/opscontrol/ci-image:$CI_COMMIT_SHA -f docker_images/Dockerfile-ci .
     - docker push localhost:5050/root/opscontrol/lint-image:$CI_COMMIT_SHA
