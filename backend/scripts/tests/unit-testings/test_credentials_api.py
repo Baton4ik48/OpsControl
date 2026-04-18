@@ -72,7 +72,12 @@ def test_show_credentials_success():
     with patch("app.api.credentials_api.show_credentials", return_value=creds):
         resp = client.post(
             "/credentials/show",
-            json={"server_id": 1, "port": 22, "username": "admin", "master_password": "correct"},
+            json={
+                "server_id": 1,
+                "port": 22,
+                "username": "admin",
+                "master_password": "correct",
+            },
         )
 
     assert resp.status_code == 200
@@ -87,7 +92,12 @@ def test_show_credentials_invalid_password():
     ):
         resp = client.post(
             "/credentials/show",
-            json={"server_id": 1, "port": 22, "username": "admin", "master_password": "wrong"},
+            json={
+                "server_id": 1,
+                "port": 22,
+                "username": "admin",
+                "master_password": "wrong",
+            },
         )
 
     assert resp.status_code == 403
@@ -101,7 +111,12 @@ def test_show_credentials_throttled():
     ):
         resp = client.post(
             "/credentials/show",
-            json={"server_id": 1, "port": 22, "username": "admin", "master_password": "any"},
+            json={
+                "server_id": 1,
+                "port": 22,
+                "username": "admin",
+                "master_password": "any",
+            },
         )
 
     assert resp.status_code == 429
@@ -116,7 +131,12 @@ def test_show_credentials_not_found():
     ):
         resp = client.post(
             "/credentials/show",
-            json={"server_id": 1, "port": 22, "username": "admin", "master_password": "correct"},
+            json={
+                "server_id": 1,
+                "port": 22,
+                "username": "admin",
+                "master_password": "correct",
+            },
         )
 
     assert resp.status_code == 404
