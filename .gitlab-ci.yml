@@ -19,12 +19,13 @@ stages:
   - Test_2
 
 # ============================================
-# Stage 0: Build Images (только вручную)
-# Запускать при изменении Dockerfile-*
+# Stage 0: Build Images 
 # ============================================
 build_images_job:
   stage: Build_image
-  when: manual
+  rules:
+  - changes:
+      - docker_images/*
   tags:
     - docker
   image: docker:latest
