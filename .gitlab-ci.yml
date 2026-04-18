@@ -148,7 +148,7 @@ coverage_merge:
   needs:
     - job: unit_tests_job
       artifacts: true
-    - job: integration-job
+    - job: integration_e2e_job
       artifacts: true
   # coverage combine подхватывает все .coverage.* файлы автоматически
 
