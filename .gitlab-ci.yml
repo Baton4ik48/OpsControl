@@ -15,7 +15,7 @@ variables:
 
 stages:
   - Test_1
-  #- build
+  - Test_2
   #- deploy
 
 # ============================================
