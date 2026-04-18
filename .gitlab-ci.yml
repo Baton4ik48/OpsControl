@@ -39,8 +39,7 @@
 
 
 stages:
-  - Validate
-  # - Test
+  - Test_1
   #- build
   #- deploy
 
@@ -48,7 +47,7 @@ stages:
 # Stage 1: Validate
 # ============================================
 Validate_job:
-  stage: Validate
+  stage: Test_1
   tags:
   - docker
   image: localhost:5050/root/opscontrol/lint-image:v1
@@ -57,6 +56,14 @@ Validate_job:
     - ruff check backend/
     - black --check backend/
 
+Validate_job:
+  stage: Test_1
+  tags:
+  - docker
+  image: gitlab.starlitborn.space:5050/root/opscontrol/unit-image:v1
+  timeout: 2 minutes
+  script:
+    - pytest backend/
 
 # ============================================
 # Stage 2: Test
