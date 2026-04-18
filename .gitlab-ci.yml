@@ -63,8 +63,7 @@ Validate_job:
   image: localhost:5050/root/opscontrol/unit-image:v1.1
   timeout: 2 minutes
   script:
-  - cd backend
-  - pytest
+  - PYTHONPATH=backend pytest backend/
 
 # ============================================
 # Stage 2: Test
