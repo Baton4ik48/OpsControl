@@ -59,7 +59,7 @@ unit_tests_job:
   image: localhost:5050/root/opscontrol/unit-image:latest
   timeout: 2 minutes
   script:
-    - PYTHONPATH=backend pytest backend/
+    - PYTHONPATH=backend pytest backend/scripts/tests/unit-testings/ -m unit
 
 # ============================================
 # Stage 2: Integration Tests
