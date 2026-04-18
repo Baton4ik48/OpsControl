@@ -1,0 +1,16 @@
+FROM python:3.11-slim
+
+RUN pip install --upgrade pip
+
+RUN pip install \
+    fastapi \
+    pytest \
+    pytest-asyncio \
+    httpx \
+    psycopg2-binary\
+    requests\
+    pyyaml\
+    dotenv\
+    paramiko
+
+WORKDIR /app
