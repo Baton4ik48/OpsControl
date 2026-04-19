@@ -114,6 +114,7 @@ VAULT_ROLE_ID=...
 VAULT_SECRET_ID=...
 ```
 
+
 ---
 
 ## 🔄 Шаг 6 — Перезапуск backend
