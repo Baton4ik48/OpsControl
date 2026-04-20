@@ -25,6 +25,7 @@ stages:
   - Test_lint_unit
   - Build_image_backend
   - Test_integration_e2e
+  - Deploy_staging
 
 # ============================================
 # Stage 0: Build Images 
@@ -100,6 +101,11 @@ integration_e2e_job:
       command: ["vault","server","-dev","-dev-root-token-id=root","-dev-listen-address=0.0.0.0:8200"]
     - name: localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA
       alias: backend 
+  variables:
+    # Фиксированные значения — передаются в backend-service при старте
+    # vault-init-dev.sh настраивает Vault с теми же значениями
+    VAULT_ROLE_ID: ci-backend-role-id
+    VAULT_SECRET_ID: ci-backend-secret-id
 
   script:
     # Ждём Postgres
@@ -162,3 +168,27 @@ coverage_merge:
       coverage_report:
         coverage_format: cobertura
         path: coverage.xml
+
+
+deploy_staging:
+  stage: Deploy_staging
+  image: docker:latest
+  tags: [docker]
+  when: manual
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD localhost:5050
+  script:
+    - docker pull localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA
+    - docker rm -f opscontrol-backend-staging || true
+    - docker run -d --name opscontrol-backend-staging --restart always \
+      --network opscontrol-staging_default -p 9001:8000 \
+      -e APP_ENV=prod \
+      -e POSTGRES_HOST=postgres \
+      -e POSTGRES_PORT=5432 \
+      -e POSTGRES_DB=$STAGING_PG_DB \
+      -e DB_CREDS_MODE=vault \
+      -e VAULT_ADDR=http://vault:8200 \
+      -e VAULT_DATABASE_ROLE_NAME=postgres-dynamic \
+      -e VAULT_ROLE_ID=$STAGING_VAULT_ROLE_ID \
+      -e VAULT_SECRET_ID=$STAGING_VAULT_SECRET_ID \
+      localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA
