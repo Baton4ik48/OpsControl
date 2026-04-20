@@ -1,4 +1,9 @@
 import asyncio
+
+# Must be first: configures root logger + file handlers before any other import
+# uses logging.getLogger().
+import app.logging  # noqa: F401
+
 import logging
 from contextlib import asynccontextmanager
 
@@ -9,6 +14,7 @@ from app.services.db.pool_db import init_pool, close_pool, ServiceUnavailableErr
 from app.services.vault_renewer import vault_renew_loop
 from app.api.router import router as api_router
 from app.middleware.allowed_network import AllowedNetworkMiddleware
+from app.middleware.request_logging import RequestLoggingMiddleware
 from app.config import settings
 
 logger = logging.getLogger("startup")
@@ -43,6 +49,10 @@ async def service_unavailable_handler(request: Request, exc: ServiceUnavailableE
     )
 
 
+# Middleware stack (last added = outermost = runs first):
+#   AllowedNetworkMiddleware → resolves & validates client IP, blocks denied networks
+#   RequestLoggingMiddleware → logs all allowed requests to audit.log
+app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(
     AllowedNetworkMiddleware,
     allowed_networks=settings.ALLOWED_NETWORKS,

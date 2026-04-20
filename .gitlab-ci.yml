@@ -9,7 +9,7 @@ variables:
   POSTGRES_PASSWORD: $PG_SECRET
 
   VAULT_ADDR: http://vault:8200
-  VAULT_TOKEN: $VAULT_TOKEN_SECRET
+  VAULT_TOKEN: root
   VAULT_DATABASE_ROLE_NAME: postgres-dynamic
   VAULT_ADMIN_PASSWORD: $VAULT_ADMIN_PASSWORD_SECRET
 
@@ -97,7 +97,7 @@ integration_e2e_job:
       alias: postgres
     - name: hashicorp/vault:1.15
       alias: vault
-      command: ["vault","server","-dev","-dev-root-token-id=root","-dev-listen-address=0.0.0.0:8200"]
+      command: ["vault","server","-dev","-dev-root-token-id=$VAULT_TOKEN","-dev-listen-address=0.0.0.0:8200"]
     - name: localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA
       alias: backend 
 

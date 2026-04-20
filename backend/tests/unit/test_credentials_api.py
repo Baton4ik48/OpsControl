@@ -177,7 +177,9 @@ def test_upsert_credentials_server_error():
 
 def test_upsert_internal_details_not_leaked():
     """Raw exception text must never reach the client."""
-    internal_msg = "Vault недоступен по адресу http://vault-internal:8200 role_id=abc-secret"
+    internal_msg = (
+        "Vault недоступен по адресу http://vault-internal:8200 role_id=abc-secret"
+    )
     with patch(
         "app.api.credentials_api.upsert_credentials",
         side_effect=Exception(internal_msg),
@@ -284,7 +286,9 @@ def test_rotate_credentials_rotate_error():
 
 def test_rotate_internal_details_not_leaked():
     """Internal Vault/DB details inside RotateError must not reach the client."""
-    internal_msg = "Не удалось прочитать креды из Vault: http://vault:8201 403 Forbidden"
+    internal_msg = (
+        "Не удалось прочитать креды из Vault: http://vault:8201 403 Forbidden"
+    )
     with patch(
         "app.api.credentials_api.rotate_credentials",
         side_effect=RotateError(internal_msg),

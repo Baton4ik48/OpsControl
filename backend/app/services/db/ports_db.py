@@ -1,4 +1,8 @@
+import logging
+
 from app.services.db.pool_db import _execute
+
+_log = logging.getLogger("ports_db")
 
 # ==========================
 # READ
@@ -50,7 +54,13 @@ def create_port(server_id: int, port: int) -> int:
             )
             conn.commit()
         except Exception as e:
-            print("DB EXCEPTION:", type(e), e)
+            _log.error(
+                "DB exception in create_port server_id=%s port=%s: %s",
+                server_id,
+                port,
+                e,
+                exc_info=True,
+            )
             raise
         finally:
             cur.close()
