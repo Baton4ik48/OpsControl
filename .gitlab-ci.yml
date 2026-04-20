@@ -180,15 +180,19 @@ deploy_staging:
   script:
     - docker pull localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA
     - docker rm -f opscontrol-backend-staging || true
-    - docker run -d --name opscontrol-backend-staging --restart always \
-      --network opscontrol-staging_default -p 9001:8000 \
-      -e APP_ENV=prod \
-      -e POSTGRES_HOST=postgres \
-      -e POSTGRES_PORT=5432 \
-      -e POSTGRES_DB=$STAGING_PG_DB \
-      -e DB_CREDS_MODE=vault \
-      -e VAULT_ADDR=http://vault:8200 \
-      -e VAULT_DATABASE_ROLE_NAME=postgres-dynamic \
-      -e VAULT_ROLE_ID=$STAGING_VAULT_ROLE_ID \
-      -e VAULT_SECRET_ID=$STAGING_VAULT_SECRET_ID \
-      localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA
+    - |
+      docker run -d \
+        --name opscontrol-backend-staging \
+        --restart always \
+        --network opscontrol-staging_default \
+        -p 9001:8000 \
+        -e APP_ENV=prod \
+        -e POSTGRES_HOST=postgres \
+        -e POSTGRES_PORT=5432 \
+        -e POSTGRES_DB=$STAGING_PG_DB \
+        -e DB_CREDS_MODE=vault \
+        -e VAULT_ADDR=http://vault:8200 \
+        -e VAULT_DATABASE_ROLE_NAME=postgres-dynamic \
+        -e VAULT_ROLE_ID=$STAGING_VAULT_ROLE_ID \
+        -e VAULT_SECRET_ID=$STAGING_VAULT_SECRET_ID \
+        localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA
