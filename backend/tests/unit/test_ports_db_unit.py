@@ -145,6 +145,31 @@ def test_update_port_different_port(monkeypatch):
     conn.commit.assert_called_once()
 
 
+def test_update_port_migrates_credentials(monkeypatch):
+    """Если credentials есть, vault_path переносится на новый порт."""
+    conn, cur = _make_conn(rowcount=1)
+    cur.fetchone.return_value = ("credentials/servers/1/22",)
+    _patch(monkeypatch, conn)
+
+    result = update_port(server_id=1, old_port=22, new_port=2222)
+
+    assert result == 1
+    assert cur.execute.call_count == 3
+
+    first_sql = cur.execute.call_args_list[0][0][0]
+    second_sql = cur.execute.call_args_list[1][0][0]
+    third_sql, third_params = cur.execute.call_args_list[2][0]
+
+    assert "DELETE" in first_sql
+    assert "credentials" in first_sql
+    assert "UPDATE" in second_sql
+    assert "ports" in second_sql
+    assert "INSERT" in third_sql
+    assert "credentials" in third_sql
+    assert third_params == (1, 2222, "credentials/servers/1/22")
+    conn.commit.assert_called_once()
+
+
 def test_update_port_db_unavailable(monkeypatch):
     monkeypatch.setattr(
         "app.services.db.ports_db._execute",

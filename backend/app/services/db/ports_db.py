@@ -83,7 +83,18 @@ def update_port(server_id: int, old_port: int, new_port: int) -> int:
             return 1
 
         try:
-            # Step 1: update port in the FK-parent table first
+            # Temporarily remove child row to satisfy the FK while port changes.
+            cur.execute(
+                """
+                DELETE FROM credentials
+                WHERE server_id = %s
+                  AND port = %s
+                RETURNING vault_path
+            """,
+                (server_id, old_port),
+            )
+            credential_row = cur.fetchone()
+
             cur.execute(
                 """
                 UPDATE ports
@@ -95,16 +106,14 @@ def update_port(server_id: int, old_port: int, new_port: int) -> int:
             )
             affected = cur.rowcount
 
-            # Step 2: migrate credentials to new_port (FK-child); no-op if none exist
-            cur.execute(
-                """
-                UPDATE credentials
-                SET port = %s
-                WHERE server_id = %s
-                  AND port = %s
-            """,
-                (new_port, server_id, old_port),
-            )
+            if affected and credential_row:
+                cur.execute(
+                    """
+                    INSERT INTO credentials (server_id, port, vault_path, updated_at)
+                    VALUES (%s, %s, %s, (NOW() AT TIME ZONE 'UTC'))
+                """,
+                    (server_id, new_port, credential_row[0]),
+                )
 
             conn.commit()
         except Exception:
