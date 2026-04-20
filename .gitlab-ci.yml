@@ -4,7 +4,7 @@
 variables:
   POSTGRES_HOST: postgres
   POSTGRES_PORT: 5432
-  POSTGRES_DB: $PG_DB
+  POSTGRES_DB: ppm_database
   POSTGRES_USER: $PG_USER
   POSTGRES_PASSWORD: $PG_SECRET
 
@@ -186,8 +186,11 @@ deploy_staging:
         --restart always \
         --network opscontrol-staging_default \
         --env-file .env.staging \
+        -e POSTGRES_USER=$STAGING_POSTGRES_USER \
+        -e POSTGRES_PASSWORD=$STAGING_POSTGRES_PASSWORD \
         -e VAULT_ROLE_ID=$STAGING_VAULT_ROLE_ID \
         -e VAULT_SECRET_ID=$STAGING_VAULT_SECRET_ID \
+        -e VAULT_ADMIN_PASSWORD=$STAGING_VAULT_ADMIN_PASSWORD \
         -p 9001:8000 \
         localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA
     - |
