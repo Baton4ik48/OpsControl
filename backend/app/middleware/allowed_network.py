@@ -78,12 +78,19 @@ class AllowedNetworkMiddleware(BaseHTTPMiddleware):
             logger.warning("Unparseable client IP %r — denying", client_ip)
             return JSONResponse(
                 status_code=403,
-                content={"detail": "Access denied from this network", "client_ip": client_ip},
+                content={
+                    "detail": "Access denied from this network",
+                    "client_ip": client_ip,
+                },
             )
 
         allowed = any(ip in network for network in self.allowed_networks)
 
         if not allowed:
+            logger.warning(
+                "Access denied from %s — not in allowed_networks",
+                client_ip,
+            )
             return JSONResponse(
                 status_code=403,
                 content={
@@ -91,5 +98,9 @@ class AllowedNetworkMiddleware(BaseHTTPMiddleware):
                     "client_ip": client_ip,
                 },
             )
+
+        # Store resolved IP so downstream middleware and route handlers can read it
+        # without repeating the trusted-proxy logic.
+        request.state.client_ip = client_ip
 
         return await call_next(request)

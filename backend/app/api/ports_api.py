@@ -62,7 +62,9 @@ def update_port_api(server_id: int, old_port: int, payload: PortUpdate):
     try:
         affected = update_port(server_id, old_port, payload.new_port)
     except pg_errors.UniqueViolation:
-        raise HTTPException(status_code=409, detail="Port already exists for this server")
+        raise HTTPException(
+            status_code=409, detail="Port already exists for this server"
+        )
     ensure_found(affected, "Port")
     return {"success": True, "data": None}
 
