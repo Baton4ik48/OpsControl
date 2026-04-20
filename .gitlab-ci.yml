@@ -4,19 +4,19 @@
 variables:
   POSTGRES_HOST: postgres
   POSTGRES_PORT: 5432
-  POSTGRES_DB: ppm_database
-  POSTGRES_USER: login_ppm
+  POSTGRES_DB: $PG_DB
+  POSTGRES_USER: $PG_USER
   POSTGRES_PASSWORD: $PG_SECRET
 
   VAULT_ADDR: http://vault:8200
-  VAULT_TOKEN: root
+  VAULT_TOKEN: $VAULT_TOKEN_SECRET
   VAULT_DATABASE_ROLE_NAME: postgres-dynamic
-  VAULT_ADMIN_PASSWORD: admin
+  VAULT_ADMIN_PASSWORD: $VAULT_ADMIN_PASSWORD_SECRET
 
   # Фиксированные значения — передаются в backend-service при старте
   # vault-init-dev.sh настраивает Vault с теми же значениями
-  VAULT_ROLE_ID: "ci-backend-role-id"
-  VAULT_SECRET_ID: "ci-backend-secret-id"
+  VAULT_ROLE_ID: $VAULT_ROLE
+  VAULT_SECRET_ID: $VAULT_SECRET
 
   DB_CREDS_MODE: static
   
@@ -32,19 +32,17 @@ stages:
 build_images_job:
   stage: Build_image
   rules:
-  - changes:
-      - docker_images/*
+    - changes:
+        - backend/Dockerfile-ci
+        - backend/requirements-ci.txt
+        - backend/requirements.txt
   tags: [docker]
   image: docker:latest
   before_script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD localhost:5050
   script:
-    - docker build -t localhost:5050/root/opscontrol/lint-image:latest -f docker_images/Dockerfile-lint .
-    - docker build -t localhost:5050/root/opscontrol/unit-image:latest -f docker_images/Dockerfile-unit .
-    - docker build -t localhost:5050/root/opscontrol/int-image:latest -f docker_images/Dockerfile-int .
-    - docker push localhost:5050/root/opscontrol/lint-image:latest
-    - docker push localhost:5050/root/opscontrol/unit-image:latest
-    - docker push localhost:5050/root/opscontrol/int-image:latest
+    - docker build -t localhost:5050/root/opscontrol/ci-image:latest -f backend/Dockerfile-ci backend/
+    - docker push localhost:5050/root/opscontrol/ci-image:latest
 
 # ============================================
 # Stage 1: Lint & Unit Tests
@@ -52,7 +50,7 @@ build_images_job:
 lint_job:
   stage: Test_lint_unit
   tags: [docker]
-  image: localhost:5050/root/opscontrol/lint-image:latest
+  image: localhost:5050/root/opscontrol/ci-image:latest
   timeout: 2 minutes
   script:
     - ruff check backend/
@@ -62,11 +60,11 @@ unit_tests_job:
   stage: Test_lint_unit
   tags:
     - docker
-  image: localhost:5050/root/opscontrol/unit-image:latest
+  image: localhost:5050/root/opscontrol/ci-image:latest
   timeout: 2 minutes
   script:
     - export COVERAGE_FILE=.coverage.unit
-    - PYTHONPATH=backend pytest backend/scripts/tests/unit-testings/ --cov=backend --cov-report=term --cov-report= --cov-config=.coveragerc
+    - PYTHONPATH=backend pytest backend/tests/unit/ --cov=backend --cov-report=term --cov-report= --cov-config=.coveragerc
 
   artifacts:
     paths:
@@ -91,7 +89,7 @@ build_images_project_job:
 integration_e2e_job:
   stage: Test_integration_e2e
   tags: [docker]
-  image: localhost:5050/root/opscontrol/int-image:latest
+  image: localhost:5050/root/opscontrol/ci-image:latest
   timeout: 5 minutes
 
   services:
@@ -124,14 +122,14 @@ integration_e2e_job:
 
     # Интеграционные тесты
     - export COVERAGE_FILE=.coverage.integration
-    - PYTHONPATH=backend pytest backend/scripts/tests/integ-testings/ --cov=backend --cov-report=term --cov-report= --cov-config=.coveragerc
+    - PYTHONPATH=backend pytest backend/tests/integ/ --cov=backend --cov-report=term --cov-report= --cov-config=.coveragerc
 
     # Ждём бэкенд
     - until curl -s http://backend:8000/api/status; do sleep 1; done
 
     # E2e тесты (через HTTP к бэкенду)
     # --cov не используется: код выполняется в backend-контейнере, не в pytest
-    - pytest backend/scripts/tests/e2e-testings/ -m e2e
+    - pytest backend/tests/e2e/ -m e2e
 
   artifacts:
     paths:
@@ -142,7 +140,7 @@ integration_e2e_job:
 # -------------------------
 coverage_merge:
   stage: Test_integration_e2e
-  image: localhost:5050/root/opscontrol/int-image:latest
+  image: localhost:5050/root/opscontrol/ci-image:latest
   tags: [docker]
 
   needs:

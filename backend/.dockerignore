@@ -5,3 +5,6 @@ __pycache__/
 .gitignore
 *.tar.gz
 logs/
+venv/
+.vscode/
+.github/

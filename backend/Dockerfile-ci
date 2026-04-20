@@ -9,13 +9,10 @@ RUN wget https://releases.hashicorp.com/vault/1.15.6/vault_1.15.6_linux_amd64.zi
     mv vault /usr/local/bin/ && \
     rm vault_1.15.6_linux_amd64.zip
 
-RUN pip install \
-    psycopg2-binary \
-    requests \
-    pyyaml \
-    python-dotenv \
-    pytest \
-    pytest-cov \
-    coverage
-    
 WORKDIR /app
+
+COPY requirements.txt requirements-ci.txt ./
+
+RUN pip install --no-cache-dir -r requirements-ci.txt
+
+
