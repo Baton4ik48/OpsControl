@@ -189,7 +189,7 @@ deploy_staging:
         -e APP_ENV=prod \
         -e POSTGRES_HOST=postgres \
         -e POSTGRES_PORT=5432 \
-        -e POSTGRES_DB=$STAGING_PG_DB \
+        -e POSTGRES_DB=$POSTGRES_DB \
         -e DB_CREDS_MODE=vault \
         -e VAULT_ADDR=http://vault:8200 \
         -e VAULT_DATABASE_ROLE_NAME=postgres-dynamic \
