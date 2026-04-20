@@ -185,7 +185,7 @@ deploy_staging:
         --name opscontrol-backend-staging \
         --restart always \
         --network opscontrol-staging_default \
-        --env-file .env.staging \
+        --env-file backend/.env.staging \
         -e POSTGRES_USER=$STAGING_POSTGRES_USER \
         -e POSTGRES_PASSWORD=$STAGING_POSTGRES_PASSWORD \
         -e VAULT_ROLE_ID=$STAGING_VAULT_ROLE_ID \
