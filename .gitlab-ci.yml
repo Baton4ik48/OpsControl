@@ -185,10 +185,10 @@ deploy_staging:
         --name opscontrol-backend-staging \
         --restart always \
         --network opscontrol-staging_default \
-        -p 9001:8000 \
-        -e POSTGRES_DB=$POSTGRES_DB \
+        --env-file .env.staging \
         -e VAULT_ROLE_ID=$STAGING_VAULT_ROLE_ID \
         -e VAULT_SECRET_ID=$STAGING_VAULT_SECRET_ID \
+        -p 9001:8000 \
         localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA
     - |
       for i in $(seq 1 20); do
