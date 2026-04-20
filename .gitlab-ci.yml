@@ -176,7 +176,6 @@ deploy_staging:
   tags: [docker]
   when: manual
   before_script:
-    - apk add --no-cache curl
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD localhost:5050
   script:
     - docker pull localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA
@@ -191,12 +190,13 @@ deploy_staging:
         -e POSTGRES_PASSWORD=$STAGING_POSTGRES_PASSWORD \
         -e VAULT_ROLE_ID=$STAGING_VAULT_ROLE_ID \
         -e VAULT_SECRET_ID=$STAGING_VAULT_SECRET_ID \
-        -e VAULT_ADMIN_PASSWORD=$STAGING_VAULT_ADMIN_PASSWORD \
         -p 9001:8000 \
         localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA
     - |
+      docker image inspect curlimages/curl:8.7.1 >/dev/null 2>&1 || docker pull curlimages/curl:8.7.1
       for i in $(seq 1 20); do
-        if curl -fsS http://localhost:8000/api/status; then
+        if docker run --rm --network opscontrol-staging_default curlimages/curl:8.7.1 \
+          -fsS http://opscontrol-backend-staging:8000/api/status; then
           exit 0
         fi
         sleep 2
