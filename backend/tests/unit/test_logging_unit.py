@@ -10,9 +10,8 @@ Tests verify:
 """
 
 import logging
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
-import pytest
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
@@ -138,9 +137,10 @@ def test_verify_admin_no_password_in_audit():
     app = make_credentials_app()
     client = TestClient(app)
 
-    with patch("app.api.credentials_api.verify_admin_password"), patch.object(
-        logging.getLogger("audit"), "info"
-    ) as mock_audit:
+    with (
+        patch("app.api.credentials_api.verify_admin_password"),
+        patch.object(logging.getLogger("audit"), "info") as mock_audit,
+    ):
         client.post(
             "/credentials/verify-admin",
             json={"username": "admin", "master_password": SECRET_PASSWORD},
@@ -157,9 +157,10 @@ def test_show_credentials_no_password_in_audit():
 
     fake_creds = {"username": "root", "password": "returned_secret", "mnemonic": ""}
 
-    with patch(
-        "app.api.credentials_api.show_credentials", return_value=fake_creds
-    ), patch.object(logging.getLogger("audit"), "info") as mock_audit:
+    with (
+        patch("app.api.credentials_api.show_credentials", return_value=fake_creds),
+        patch.object(logging.getLogger("audit"), "info") as mock_audit,
+    ):
         client.post(
             "/credentials/show",
             json={
@@ -179,9 +180,13 @@ def test_upsert_credentials_no_password_in_audit():
     app = make_credentials_app()
     client = TestClient(app)
 
-    with patch(
-        "app.api.credentials_api.upsert_credentials", return_value="creds/servers/1/22"
-    ), patch.object(logging.getLogger("audit"), "info") as mock_audit:
+    with (
+        patch(
+            "app.api.credentials_api.upsert_credentials",
+            return_value="creds/servers/1/22",
+        ),
+        patch.object(logging.getLogger("audit"), "info") as mock_audit,
+    ):
         client.post(
             "/credentials/upsert",
             json={
@@ -200,9 +205,10 @@ def test_rotate_credentials_no_password_in_audit():
     app = make_credentials_app()
     client = TestClient(app)
 
-    with patch("app.api.credentials_api.rotate_credentials"), patch.object(
-        logging.getLogger("audit"), "info"
-    ) as mock_audit:
+    with (
+        patch("app.api.credentials_api.rotate_credentials"),
+        patch.object(logging.getLogger("audit"), "info") as mock_audit,
+    ):
         client.post(
             "/credentials/rotate",
             json={

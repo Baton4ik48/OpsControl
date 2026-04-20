@@ -247,8 +247,8 @@ class VaultClient:
 
         try:
             body = resp.json()
-            username = body["data"]["username"]
-            lease_id = body["lease_id"]
+            _ = body["data"]["username"]
+            _ = body["lease_id"]
             ttl = body["lease_duration"]
         except (ValueError, KeyError) as e:
             raise VaultReadError(f"Malformed Vault response: {e}") from e
