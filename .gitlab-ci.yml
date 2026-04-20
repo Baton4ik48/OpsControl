@@ -196,7 +196,7 @@ deploy_staging:
         localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA
     - |
       for i in $(seq 1 20); do
-        if curl -fsS http://localhost:9001/api/status; then
+        if curl -fsS http://localhost:8000/api/status; then
           exit 0
         fi
         sleep 2
