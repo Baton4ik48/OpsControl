@@ -72,28 +72,37 @@ def update_port(server_id: int, old_port: int, new_port: int) -> int:
             cur.close()
             return 1
 
-        cur.execute(
-            """
-            DELETE FROM credentials
-            WHERE server_id = %s AND port = %s
-        """,
-            (server_id, old_port),
-        )
+        try:
+            # Step 1: update port in the FK-parent table first
+            cur.execute(
+                """
+                UPDATE ports
+                SET port = %s
+                WHERE server_id = %s
+                  AND port = %s
+            """,
+                (new_port, server_id, old_port),
+            )
+            affected = cur.rowcount
 
-        cur.execute(
-            """
-            UPDATE ports
-            SET port = %s
-            WHERE server_id = %s
-              AND port = %s
-        """,
-            (new_port, server_id, old_port),
-        )
+            # Step 2: migrate credentials to new_port (FK-child); no-op if none exist
+            cur.execute(
+                """
+                UPDATE credentials
+                SET port = %s
+                WHERE server_id = %s
+                  AND port = %s
+            """,
+                (new_port, server_id, old_port),
+            )
 
-        affected = cur.rowcount
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            cur.close()
 
-        conn.commit()
-        cur.close()
         return affected
 
     return _execute(work)

@@ -35,6 +35,7 @@ class Settings:
             yaml_data = yaml.safe_load(f)
 
         self.ALLOWED_NETWORKS = yaml_data["security"].get("allowed_networks", [])
+        self.TRUSTED_PROXIES = yaml_data["security"].get("trusted_proxies", [])
 
         login = yaml_data["security"]["login_throttle"]
         self.LOGIN_THROTTLE_ENABLED = login["enabled"]
