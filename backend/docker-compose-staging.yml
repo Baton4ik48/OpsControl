@@ -1,0 +1,70 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: OС-postgres-staging
+    restart: always
+    environment:
+      TZ: Europe/Moscow
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    ports:
+      - "5444:5432"
+
+  vault-init:
+    image: hashicorp/vault:1.15
+    container_name: OC-vault-init
+    user: "0:0"
+    entrypoint: [ "sh", "-c", "chown -R 100:100 /vault/data" ]
+    volumes:
+      - vault_data:/vault/data
+    restart: "no"
+
+  vault:
+    image: hashicorp/vault:1.15
+    container_name: OС-vault-staging
+    restart: always
+    depends_on:
+      vault-init:
+        condition: service_completed_successfully
+    env_file:
+      - .env
+    environment:
+      TZ: Europe/Moscow
+      VAULT_ADDR: http://127.0.0.1:8200
+    privileged: "true" # Включить на астра линукс, временное решение
+    volumes:
+      - vault_data:/vault/data
+      - ./vault-config:/vault/config
+      - ./scripts/vault-init.sh:/vault-init.sh:ro
+    ports:
+      - "8222:8200"
+    cap_add:
+      - IPC_LOCK
+    command: vault server -config=/vault/config/config.hcl
+
+  backend:
+    image: opscontrol-backend
+    container_name: OС-backend-staging
+    restart: always
+    depends_on:
+      - postgres
+      - vault
+    env_file:
+      - .env
+    environment:
+      TZ: Europe/Moscow
+      POSTGRES_HOST: postgres
+      VAULT_ADDR: http://vault:8200
+    volumes:
+      - ./.env:/app/.env:ro
+      - backend_logs:/app/logs
+    ports:
+      - "9001:8000"
+
+volumes:
+  pg_data:
+  vault_data:
+  backend_logs:
