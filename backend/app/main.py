@@ -46,6 +46,7 @@ async def service_unavailable_handler(request: Request, exc: ServiceUnavailableE
 app.add_middleware(
     AllowedNetworkMiddleware,
     allowed_networks=settings.ALLOWED_NETWORKS,
+    trusted_proxies=settings.TRUSTED_PROXIES,
 )
 
 app.include_router(api_router)

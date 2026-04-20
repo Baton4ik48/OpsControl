@@ -99,6 +99,48 @@ def test_update_port_number(server_id):
     requests.delete(f"{BASE_URL}/ports/{server_id}/4445")
 
 
+@pytest.mark.e2e
+def test_update_port_migrates_vault_path(server_id):
+    """vault_path must survive a port number change."""
+    requests.post(f"{BASE_URL}/ports/{server_id}/8880")
+    requests.put(
+        f"{BASE_URL}/ports/{server_id}/8880/vault-path",
+        json={"vault_path": "credentials/servers/e2e/8880"},
+    )
+
+    resp = requests.put(
+        f"{BASE_URL}/ports/{server_id}/8880",
+        json={"new_port": 8881},
+    )
+    assert resp.status_code == 200
+
+    ports = requests.get(f"{BASE_URL}/ports/by-server/{server_id}").json()["data"]
+    assert any(p["port"] == 8881 for p in ports)
+    assert all(p["port"] != 8880 for p in ports)
+
+    requests.delete(f"{BASE_URL}/ports/{server_id}/8881")
+
+
+@pytest.mark.e2e
+def test_update_port_conflict_returns_409(server_id):
+    """Changing to an already-occupied port must return 409; original credentials survive."""
+    requests.post(f"{BASE_URL}/ports/{server_id}/9990")
+    requests.post(f"{BASE_URL}/ports/{server_id}/9991")
+    requests.put(
+        f"{BASE_URL}/ports/{server_id}/9990/vault-path",
+        json={"vault_path": "credentials/servers/e2e/9990"},
+    )
+
+    resp = requests.put(
+        f"{BASE_URL}/ports/{server_id}/9990",
+        json={"new_port": 9991},
+    )
+    assert resp.status_code == 409
+
+    requests.delete(f"{BASE_URL}/ports/{server_id}/9990")
+    requests.delete(f"{BASE_URL}/ports/{server_id}/9991")
+
+
 # ============================================
 # PUT /api/ports/{server_id}/{port}/vault-path
 # ============================================

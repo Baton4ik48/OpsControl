@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException
+from psycopg2 import errors as pg_errors
 from app.services.db.ports_db import (
     load_ports,
     create_port,
@@ -58,7 +59,10 @@ def create_port_api(server_id: int, port: int):
 
 @router.put("/{server_id}/{old_port}")
 def update_port_api(server_id: int, old_port: int, payload: PortUpdate):
-    affected = update_port(server_id, old_port, payload.new_port)
+    try:
+        affected = update_port(server_id, old_port, payload.new_port)
+    except pg_errors.UniqueViolation:
+        raise HTTPException(status_code=409, detail="Port already exists for this server")
     ensure_found(affected, "Port")
     return {"success": True, "data": None}
 

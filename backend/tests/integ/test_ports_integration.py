@@ -92,6 +92,56 @@ def test_update_port_different_port(server_id):
     delete_port(server_id, 4445)
 
 
+@pytest.mark.integration
+def test_update_port_migrates_credentials(server_id):
+    """Credentials (vault_path) must migrate to new_port, not be deleted."""
+    create_port(server_id, 6660)
+    update_vault_path(server_id, 6660, "credentials/servers/test/6660")
+
+    update_port(server_id, 6660, 6661)
+
+    path = get_vault_path_by_server_port(server_id, 6661)
+    assert path == "credentials/servers/test/6660"
+
+    old_path = get_vault_path_by_server_port(server_id, 6660)
+    assert old_path is None
+
+    delete_port(server_id, 6661)
+
+
+@pytest.mark.integration
+def test_update_port_same_port_keeps_credentials(server_id, port):
+    """No-op update must not touch credentials."""
+    update_vault_path(server_id, 2222, "credentials/servers/test/2222")
+
+    affected = update_port(server_id, 2222, 2222)
+    assert affected == 1
+
+    path = get_vault_path_by_server_port(server_id, 2222)
+    assert path == "credentials/servers/test/2222"
+
+    delete_credentials(server_id, 2222)
+
+
+@pytest.mark.integration
+def test_update_port_conflict_preserves_credentials(server_id):
+    """When new_port already exists, exception is raised and old credentials survive."""
+    import psycopg2
+
+    create_port(server_id, 7770)
+    create_port(server_id, 7771)
+    update_vault_path(server_id, 7770, "credentials/servers/test/7770")
+
+    with pytest.raises(psycopg2.Error):
+        update_port(server_id, 7770, 7771)
+
+    path = get_vault_path_by_server_port(server_id, 7770)
+    assert path == "credentials/servers/test/7770"
+
+    delete_port(server_id, 7770)
+    delete_port(server_id, 7771)
+
+
 # ============================================
 # update_vault_path
 # ============================================

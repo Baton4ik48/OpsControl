@@ -149,7 +149,8 @@ def rotate_credentials(
         token = vault._get_backend_token()
         current = vault.read_kv_v2(token, vault_path)
     except VaultReadError as e:
-        raise RotateError(f"Не удалось прочитать текущие креды из Vault: {e}")
+        logger.error("rotate: vault read failed path=%s: %s", vault_path, e)
+        raise RotateError("Vault read error")
 
     current_username = current["username"]
 
@@ -164,7 +165,8 @@ def rotate_credentials(
             },
         )
     except VaultReadError as e:
-        raise RotateError(f"Не удалось записать новый пароль в Vault: {e}")
+        logger.error("rotate: vault write failed path=%s: %s", vault_path, e)
+        raise RotateError("Vault write error")
 
     # 4. Обновляем updated_at
     touch_credentials_updated_at(server_id, ssh_port)

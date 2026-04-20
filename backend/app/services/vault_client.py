@@ -1,5 +1,8 @@
+import logging
 import requests
 from app.config import settings
+
+logger = logging.getLogger("vault_client")
 
 
 class VaultAuthError(Exception):
@@ -91,9 +94,7 @@ class VaultClient:
             # ValueError - битый JSON, KeyError - нет нужного поля
             raise VaultUnavailableError(f"Некорректный ответ Vault: {e}")
 
-        print("\n[DEBUG] AppRole token issued:")
-        print(f"        token = {token}")
-        print(f"        ttl   = {ttl}s\n")
+        logger.debug("AppRole token issued (ttl=%ss)", ttl)
 
         return token
 
@@ -105,7 +106,7 @@ class VaultClient:
         if self._renew_token():
             return self._backend_token
 
-        print("[VAULT] Token renew failed → relogin")
+        logger.debug("Backend token renew failed, re-authenticating")
         self._backend_token = self._approle_login()
         return self._backend_token
 
@@ -129,7 +130,7 @@ class VaultClient:
         except (ValueError, KeyError):
             return False
 
-        print(f"[VAULT] Backend token renewed (ttl={ttl}s)")
+        logger.debug("Backend token renewed (ttl=%ss)", ttl)
         return True
 
     # ==========================================
@@ -252,10 +253,7 @@ class VaultClient:
         except (ValueError, KeyError) as e:
             raise VaultReadError(f"Malformed Vault response: {e}") from e
 
-        print("\n[VAULT] NEW DB CREDS ISSUED")
-        print(f"        username = {username}")
-        print(f"        lease_id = {lease_id}")
-        print(f"        ttl      = {ttl}s\n")
+        logger.debug("DB creds issued (ttl=%ss)", ttl)
 
         return body["data"]
 

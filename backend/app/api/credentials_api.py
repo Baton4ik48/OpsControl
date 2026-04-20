@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -13,6 +15,7 @@ from app.services.credentials import (
     RotateError,
 )
 
+logger = logging.getLogger("credentials.api")
 router = APIRouter(prefix="/credentials", tags=["credentials"])
 
 
@@ -115,7 +118,13 @@ def upsert_credentials_api(data: UpsertCredentialsRequest):
         return {"success": True, "data": {"vault_path": vault_path}}
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(
+            "upsert_credentials failed server_id=%s port=%s: %s",
+            data.server_id,
+            data.port,
+            e,
+        )
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 class RotateCredentialsRequest(BaseModel):
@@ -158,6 +167,13 @@ def rotate_credentials_api(data: RotateCredentialsRequest, request: Request):
         )
 
     except RotateError as e:
+        logger.warning(
+            "rotate_credentials failed server_id=%s port=%s: %s",
+            data.server_id,
+            data.ssh_port,
+            e,
+        )
         return JSONResponse(
-            status_code=422, content={"error_code": "ROTATE_FAILED", "detail": str(e)}
+            status_code=422,
+            content={"error_code": "ROTATE_FAILED", "detail": "Credential rotation failed"},
         )

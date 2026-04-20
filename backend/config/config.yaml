@@ -4,10 +4,17 @@ app:
 
 security:
   allowed_networks:
+    # TODO: replace 0.0.0.0/0 with real network whitelist once nginx is in place
     #- 10.0.0.0/24
     #- 192.168.1.0/24
-    #- 255.255.255.254/31
     - 0.0.0.0/0
+
+  # IPs/CIDRs of trusted reverse proxies (nginx).
+  # Requests from these addresses may use X-Real-IP to report the real client IP.
+  # nginx must set: proxy_set_header X-Real-IP $remote_addr;
+  # Example Docker bridge subnet:
+  trusted_proxies: []
+  #  - 172.18.0.0/16
 
   login_throttle:
     enabled: true

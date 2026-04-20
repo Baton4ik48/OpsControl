@@ -172,6 +172,26 @@ def test_upsert_credentials_server_error():
         )
 
     assert resp.status_code == 500
+    assert resp.json().get("detail") == "Internal server error"
+
+
+def test_upsert_internal_details_not_leaked():
+    """Raw exception text must never reach the client."""
+    internal_msg = "Vault недоступен по адресу http://vault-internal:8200 role_id=abc-secret"
+    with patch(
+        "app.api.credentials_api.upsert_credentials",
+        side_effect=Exception(internal_msg),
+    ):
+        resp = client.post(
+            "/credentials/upsert",
+            json={"server_id": 1, "port": 22, "username": "root", "password": "pass"},
+        )
+
+    body = str(resp.json())
+    assert resp.status_code == 500
+    assert "vault-internal" not in body
+    assert "role_id" not in body
+    assert "8200" not in body
 
 
 # ============================================
@@ -259,4 +279,31 @@ def test_rotate_credentials_rotate_error():
 
     assert resp.status_code == 422
     assert resp.json()["error_code"] == "ROTATE_FAILED"
-    assert "SSH failed" in resp.json()["detail"]
+    assert resp.json()["detail"] == "Credential rotation failed"
+
+
+def test_rotate_internal_details_not_leaked():
+    """Internal Vault/DB details inside RotateError must not reach the client."""
+    internal_msg = "Не удалось прочитать креды из Vault: http://vault:8201 403 Forbidden"
+    with patch(
+        "app.api.credentials_api.rotate_credentials",
+        side_effect=RotateError(internal_msg),
+    ):
+        resp = client.post(
+            "/credentials/rotate",
+            json={
+                "server_id": 1,
+                "ssh_port": 22,
+                "new_password": "newpass",
+                "username": "admin",
+                "master_password": "correct",
+                "mnemonic": "",
+            },
+        )
+
+    body = str(resp.json())
+    assert resp.status_code == 422
+    assert "vault" not in body.lower() or "ROTATE_FAILED" in body
+    assert "8201" not in body
+    assert "Forbidden" not in body
+    assert resp.json()["detail"] == "Credential rotation failed"
