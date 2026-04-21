@@ -194,6 +194,6 @@ deploy_prod_job:
   environment:
     name: production
   rules:
-  - if: '$CI_COMMIT_BRANCH == "dev"'
+  - if: '$CI_COMMIT_BRANCH == "main"'
     when: manual
   - when: never
