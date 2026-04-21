@@ -89,11 +89,13 @@ unit_job:
   timeout: 2 minutes
   script:
     - export COVERAGE_FILE=.coverage.unit
-    - PYTHONPATH=backend pytest backend/tests/unit/ --cov=backend --cov-report=term --cov-report= --cov-config=.coveragerc
+    - PYTHONPATH=backend pytest backend/tests/unit/ --cov=backend --cov-report=term --cov-report= --cov-config=.coveragerc --junitxml=report-unit.xml
 
   artifacts:
     paths:
       - .coverage.unit
+  reports:
+    junit: report-unit.xml
 
 # ============================================
 # Stage 2: Build Image Backend 
@@ -115,15 +117,20 @@ integration_job:
   extends: .verify_base
   script:
     - export COVERAGE_FILE=.coverage.integration
-    - PYTHONPATH=backend pytest backend/tests/integ/ --cov=backend --cov-report=term --cov-report= --cov-config=.coveragerc
+    - PYTHONPATH=backend pytest backend/tests/integ/ --cov=backend --cov-report=term --cov-report= --cov-config=.coveragerc --junitxml=report-integration.xml
   artifacts:
     paths:
       - .coverage.integration
+  reports:
+    junit: report-integration.xml
 
 e2e_job:
   extends: .verify_base
   script:
-    - pytest backend/tests/e2e/ -m e2e
+    - pytest backend/tests/e2e/ -m e2e --junitxml=report-e2e.xml
+  artifacts:
+    reports:
+      junit: report-e2e.xml
 
 # -------------------------
 # MERGE COVERAGE
