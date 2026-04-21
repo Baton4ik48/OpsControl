@@ -19,4 +19,4 @@ def test_check_vault_ok():
 @pytest.mark.integration
 def test_get_overall_status():
     result = get_overall_status()
-    assert result in ("ok", "degraded")
+    assert result in ("ok", "degraded", "unavailable")

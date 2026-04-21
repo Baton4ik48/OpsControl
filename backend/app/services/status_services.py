@@ -3,14 +3,15 @@ from app.services.vault_client import VaultSealedError, VaultUnavailableError
 
 
 def get_overall_status() -> str:
+    """Возвращает: 'ok' | 'degraded' | 'unavailable'"""
     postgres_ok = check_postgres()
     vault_status = check_vault()
 
     if postgres_ok and vault_status == "ok":
         return "ok"
 
-    if vault_status == "sealed":
-        return "degraded"
+    if not postgres_ok and vault_status in ("offline", "sealed"):
+        return "unavailable"
 
     return "degraded"
 

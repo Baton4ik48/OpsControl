@@ -16,6 +16,8 @@ from app.services.vault_client import VaultUnavailableError, VaultSealedError
         (True, "sealed", "degraded"),
         (True, "offline", "degraded"),
         (False, "ok", "degraded"),
+        (False, "offline", "unavailable"),
+        (False, "sealed", "unavailable"),
     ],
 )
 def test_overall_status(pg, vault, expected, monkeypatch):

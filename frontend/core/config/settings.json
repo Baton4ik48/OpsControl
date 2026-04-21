@@ -2,9 +2,9 @@
   "admin_login": "admin",
   "auto_refresh_enabled": false,
   "auto_refresh_interval_sec": 30,
-  "backend_override_enabled": false,
+  "backend_override_enabled": true,
   "backend_scheme": "",
-  "backend_host": "127.0.0.2",
+  "backend_host": "staging.starlitborn.space",
   "backend_port": 443,
   "web_ports": [
     {
