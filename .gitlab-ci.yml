@@ -19,7 +19,34 @@ variables:
   VAULT_SECRET_ID: $VAULT_SECRET
 
   DB_CREDS_MODE: static
-  
+
+.verify_base:
+  stage: verify
+  tags: [docker]
+  image: localhost:5050/root/opscontrol/ci-image:$CI_COMMIT_SHA
+  timeout: 5 minutes
+  services:
+    - name: postgres:15
+      alias: postgres
+    - name: hashicorp/vault:1.15
+      alias: vault
+      command: ["vault","server","-dev","-dev-root-token-id=root","-dev-listen-address=0.0.0.0:8200"]
+    - name: localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA
+      alias: backend
+  variables:
+    VAULT_ROLE_ID: ci-backend-role-id
+    VAULT_SECRET_ID: ci-backend-secret-id
+  before_script:
+    - echo "Ждём postgres..."
+    - until pg_isready -h postgres -p 5432; do sleep 1; done
+    - echo "Применяем init.sql..."
+    - PGPASSWORD=$POSTGRES_PASSWORD psql -h postgres -U $POSTGRES_USER -d $POSTGRES_DB -f backend/scripts/init.sql
+    - echo "Ждём vault..."
+    - until curl -s -o /dev/null -w "%{http_code}" http://vault:8200/v1/sys/health | grep -q "200"; do sleep 1; done
+    - export POSTGRES_IP=$(getent hosts postgres | awk '{print $1}')
+    - sh backend/scripts/vault-init-dev.sh
+    - until curl -s http://backend:8000/api/status; do sleep 1; done
+
 stages:
   - prepare
   - test
@@ -83,59 +110,19 @@ build_job:
 # ============================================
 # Stage 3: integration-e2e Tests
 # ============================================
-verify_job:
-  stage: verify
-  tags: [docker]
-  image: localhost:5050/root/opscontrol/ci-image:$CI_COMMIT_SHA
-  timeout: 5 minutes
-
-  services:
-    - name: postgres:15
-      alias: postgres
-    - name: hashicorp/vault:1.15
-      alias: vault
-      command: ["vault","server","-dev","-dev-root-token-id=root","-dev-listen-address=0.0.0.0:8200"]
-    - name: localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA
-      alias: backend 
-  variables:
-    # Фиксированные значения — передаются в backend-service при старте
-    # vault-init-dev.sh настраивает Vault с теми же значениями
-    VAULT_ROLE_ID: ci-backend-role-id
-    VAULT_SECRET_ID: ci-backend-secret-id
-
+integration_job:
+  extends: .verify_base
   script:
-    # Ждём Postgres
-    - echo "Ждём postgres..."
-    - until pg_isready -h postgres -p 5432; do sleep 1; done
-
-    - echo "Применяем init.sql..."
-    - PGPASSWORD=$POSTGRES_PASSWORD psql -h postgres -U $POSTGRES_USER -d $POSTGRES_DB -f backend/scripts/init.sql
-
-    # Ждём Vault
-    - echo "Ждём vault..."
-    - until curl -s -o /dev/null -w "%{http_code}" http://vault:8200/v1/sys/health | grep -q "200"; do sleep 1; done
-
-    # Резолвим IP postgres для Vault
-    - export POSTGRES_IP=$(getent hosts postgres | awk '{print $1}')
-    - echo "Postgres IP = $POSTGRES_IP"
-
-    # Запуск скрипта Vault
-    - sh backend/scripts/vault-init-dev.sh
-
-    # Интеграционные тесты
     - export COVERAGE_FILE=.coverage.integration
     - PYTHONPATH=backend pytest backend/tests/integ/ --cov=backend --cov-report=term --cov-report= --cov-config=.coveragerc
-
-    # Ждём бэкенд
-    - until curl -s http://backend:8000/api/status; do sleep 1; done
-
-    # E2e тесты (через HTTP к бэкенду)
-    # --cov не используется: код выполняется в backend-контейнере, не в pytest
-    - pytest backend/tests/e2e/ -m e2e
-
   artifacts:
     paths:
       - .coverage.integration
+
+e2e_job:
+  extends: .verify_base
+  script:
+    - pytest backend/tests/e2e/ -m e2e
 
 # -------------------------
 # MERGE COVERAGE
@@ -157,15 +144,19 @@ report_job:
         coverage_format: cobertura
         path: coverage.xml
 
-
-deploy_job:
+# 
+deploy_staging_job:
   stage: deploy
   image: docker:latest
   tags: [docker]
+  environment:
+    name: staging
   rules:
-  - if: '$CI_COMMIT_BRANCH == "dev"'
-    when: manual
-  - when: never
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+      when: manual
+      allow_failure: true
+    - when: never
+  manual_confirmation: "Задеплоить staging?"
   before_script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD localhost:5050
   script:
@@ -195,3 +186,14 @@ deploy_job:
       echo "Backend did not become healthy"
       docker logs opscontrol-backend-staging
       exit 1
+
+deploy_prod_job:
+  stage: deploy
+  image: docker:latest
+  tags: [docker]
+  environment:
+    name: production
+  rules:
+  - if: '$CI_COMMIT_BRANCH == "dev"'
+    when: manual
+  - when: never
