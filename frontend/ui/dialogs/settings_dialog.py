@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QGroupBox,
     QTabWidget,
+    QComboBox,
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
@@ -125,6 +126,11 @@ class SettingsDialog(QDialog):
             self.settings.get("backend_override_enabled")
         )
 
+        self.backend_scheme_combo = QComboBox()
+        self.backend_scheme_combo.addItems(["https", "http"])
+        current_scheme = self.settings.get("backend_scheme") or "https"
+        self.backend_scheme_combo.setCurrentText(current_scheme)
+
         self.backend_host_input = QLineEdit()
         self.backend_host_input.setText(self.settings.get("backend_host") or "")
 
@@ -133,6 +139,8 @@ class SettingsDialog(QDialog):
         self.backend_port_spin.setValue(self.settings.get("backend_port") or 0)
 
         backend_layout.addWidget(self.backend_override_checkbox)
+        backend_layout.addWidget(QLabel("Протокол:"))
+        backend_layout.addWidget(self.backend_scheme_combo)
         backend_layout.addWidget(QLabel("Адрес сервера:"))
         backend_layout.addWidget(self.backend_host_input)
         backend_layout.addWidget(QLabel("Порт сервера:"))
@@ -364,6 +372,7 @@ class SettingsDialog(QDialog):
         self.backend_override_checkbox.toggled.connect(
             lambda: self._mark_dirty("backend")
         )
+        self.backend_scheme_combo.currentTextChanged.connect(lambda: self._mark_dirty("backend"))
         self.backend_host_input.textChanged.connect(lambda: self._mark_dirty("backend"))
         self.backend_port_spin.valueChanged.connect(lambda: self._mark_dirty("backend"))
 
@@ -419,6 +428,7 @@ class SettingsDialog(QDialog):
             self.settings.set(
                 "backend_override_enabled", self.backend_override_checkbox.isChecked()
             )
+            self.settings.set("backend_scheme", self.backend_scheme_combo.currentText())
             self.settings.set("backend_host", self.backend_host_input.text().strip())
             self.settings.set("backend_port", self.backend_port_spin.value())
 
@@ -482,6 +492,7 @@ class SettingsDialog(QDialog):
         self.interval_spin.setEnabled(enabled)
 
     def _update_backend_enabled(self, enabled: bool):
+        self.backend_scheme_combo.setEnabled(enabled)
         self.backend_host_input.setEnabled(enabled)
         self.backend_port_spin.setEnabled(enabled)
 
@@ -494,9 +505,10 @@ class SettingsDialog(QDialog):
 
     def _set_status(self, status: str):
         icons = {
-            "ok": ("status_ok_icon.png", "Сервер доступен"),
-            "degraded": ("status_warn_icon.png", "Некоторые сервисы недоступны"),
-            "offline": ("status_offline_icon.png", "Сервер недоступен"),
+            "ok": ("status_ok_icon.png", "Все сервисы доступны"),
+            "degraded": ("status_warn_icon.png", "Сервисы доступны частично"),
+            "unavailable": ("status_down_all.png", "Сервисы недоступны"),
+            "backend_offline": ("status_offline_icon.png", "Бекенд недоступен"),
             "unknown": ("status_unknown.png", "Проверка сервера..."),
         }
 

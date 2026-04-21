@@ -17,11 +17,11 @@ class SettingsController(QObject):
 
     def _on_success(self, data: dict):
         if not data.get("success"):
-            self.status_changed.emit("offline")
+            self.status_changed.emit("backend_offline")
             return
 
         status = data.get("data", {}).get("status", "unknown")
         self.status_changed.emit(status)
 
     def _on_error(self, _):
-        self.status_changed.emit("offline")
+        self.status_changed.emit("backend_offline")
