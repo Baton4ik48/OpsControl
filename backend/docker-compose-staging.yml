@@ -44,6 +44,28 @@ services:
       - IPC_LOCK
     command: vault server -config=/vault/config/config.hcl
 
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: nginx-staging
+    restart: always
+    depends_on:
+      - postgres
+      - vault
+    volumes:
+      - ../nginx/nginx-staging.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "9000:80"
+    networks:
+      default:
+        ipv4_address: 172.23.0.10
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.23.0.0/16
+          gateway: 172.23.0.1
+
 volumes:
   pg_data:
   vault_data:

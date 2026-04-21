@@ -13,8 +13,8 @@ security:
   # Requests from these addresses may use X-Real-IP to report the real client IP.
   # nginx must set: proxy_set_header X-Real-IP $remote_addr;
   # Example Docker bridge subnet:
-  trusted_proxies: []
-  #  - 172.18.0.0/16
+  trusted_proxies:
+    - 172.23.0.10  # nginx-staging (fixed IP, see docker-compose-staging.yml)
 
   login_throttle:
     enabled: true
