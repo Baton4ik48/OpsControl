@@ -94,8 +94,8 @@ unit_job:
   artifacts:
     paths:
       - .coverage.unit
-  reports:
-    junit: report-unit.xml
+    reports:
+      junit: report-unit.xml
 
 # ============================================
 # Stage 2: Build Image Backend 
@@ -121,8 +121,8 @@ integration_job:
   artifacts:
     paths:
       - .coverage.integration
-  reports:
-    junit: report-integration.xml
+    reports:
+      junit: report-integration.xml
 
 e2e_job:
   extends: .verify_base
