@@ -21,17 +21,18 @@ variables:
   DB_CREDS_MODE: static
   
 stages:
-  - Build_image
-  - Test_lint_unit
-  - Build_image_backend
-  - Test_integration_e2e
-  - Deploy_staging
+  - prepare
+  - test
+  - build
+  - verify
+  - report
+  - deploy
 
 # ============================================
 # Stage 0: Build Images 
 # ============================================
 build_images_job:
-  stage: Build_image
+  stage: prepare
   rules:
     - changes:
         - backend/Dockerfile-ci
@@ -42,26 +43,26 @@ build_images_job:
   before_script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD localhost:5050
   script:
-    - docker build -t localhost:5050/root/opscontrol/ci-image:latest -f backend/Dockerfile-ci backend/
-    - docker push localhost:5050/root/opscontrol/ci-image:latest
+    - docker build -t localhost:5050/root/opscontrol/ci-image:$CI_COMMIT_SHA -f backend/Dockerfile-ci backend/
+    - docker push localhost:5050/root/opscontrol/ci-image:$CI_COMMIT_SHA
 
 # ============================================
 # Stage 1: Lint & Unit Tests
 # ============================================
 lint_job:
-  stage: Test_lint_unit
+  stage: test
   tags: [docker]
-  image: localhost:5050/root/opscontrol/ci-image:latest
+  image: localhost:5050/root/opscontrol/ci-image:$CI_COMMIT_SHA
   timeout: 2 minutes
   script:
     - ruff check backend/
     - black --check backend/
 
 unit_tests_job:
-  stage: Test_lint_unit
+  stage: test
   tags:
     - docker
-  image: localhost:5050/root/opscontrol/ci-image:latest
+  image: localhost:5050/root/opscontrol/ci-image:$CI_COMMIT_SHA
   timeout: 2 minutes
   script:
     - export COVERAGE_FILE=.coverage.unit
@@ -75,7 +76,7 @@ unit_tests_job:
 # Stage 2: Build Image Backend 
 # ============================================
 build_images_project_job:
-  stage: Build_image_backend
+  stage: build
   tags: [docker]
   image: docker:latest
   before_script:
@@ -88,9 +89,9 @@ build_images_project_job:
 # Stage 3: integration-e2e Tests
 # ============================================
 integration_e2e_job:
-  stage: Test_integration_e2e
+  stage: verify
   tags: [docker]
-  image: localhost:5050/root/opscontrol/ci-image:latest
+  image: localhost:5050/root/opscontrol/ci-image:$CI_COMMIT_SHA
   timeout: 5 minutes
 
   services:
@@ -145,17 +146,9 @@ integration_e2e_job:
 # MERGE COVERAGE
 # -------------------------
 coverage_merge:
-  stage: Test_integration_e2e
-  image: localhost:5050/root/opscontrol/ci-image:latest
+  stage: report
+  image: localhost:5050/root/opscontrol/ci-image:$CI_COMMIT_SHA
   tags: [docker]
-
-  needs:
-    - job: unit_tests_job
-      artifacts: true
-    - job: integration_e2e_job
-      artifacts: true
-  # coverage combine подхватывает все .coverage.* файлы автоматически
-
   script:
     - coverage combine
     - coverage xml -o coverage.xml
@@ -170,11 +163,14 @@ coverage_merge:
         path: coverage.xml
 
 
-deploy_staging:
-  stage: Deploy_staging
+deploy:
+  stage: deploy
   image: docker:latest
   tags: [docker]
-  when: manual
+  rules:
+  - if: '$CI_COMMIT_BRANCH == "dev"'
+    when: manual
+  - when: never
   before_script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD localhost:5050
   script:
