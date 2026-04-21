@@ -31,13 +31,8 @@ stages:
 # ============================================
 # Stage 0: Build Images 
 # ============================================
-build_images_job:
+prepare_job:
   stage: prepare
-  rules:
-    - changes:
-        - backend/Dockerfile-ci
-        - backend/requirements-ci.txt
-        - backend/requirements.txt
   tags: [docker]
   image: docker:latest
   before_script:
@@ -58,7 +53,7 @@ lint_job:
     - ruff check backend/
     - black --check backend/
 
-unit_tests_job:
+unit_job:
   stage: test
   tags:
     - docker
@@ -75,7 +70,7 @@ unit_tests_job:
 # ============================================
 # Stage 2: Build Image Backend 
 # ============================================
-build_images_project_job:
+build_job:
   stage: build
   tags: [docker]
   image: docker:latest
@@ -88,7 +83,7 @@ build_images_project_job:
 # ============================================
 # Stage 3: integration-e2e Tests
 # ============================================
-integration_e2e_job:
+verify_job:
   stage: verify
   tags: [docker]
   image: localhost:5050/root/opscontrol/ci-image:$CI_COMMIT_SHA
@@ -145,7 +140,7 @@ integration_e2e_job:
 # -------------------------
 # MERGE COVERAGE
 # -------------------------
-coverage_merge:
+report_job:
   stage: report
   image: localhost:5050/root/opscontrol/ci-image:$CI_COMMIT_SHA
   tags: [docker]
@@ -163,7 +158,7 @@ coverage_merge:
         path: coverage.xml
 
 
-deploy:
+deploy_job:
   stage: deploy
   image: docker:latest
   tags: [docker]
