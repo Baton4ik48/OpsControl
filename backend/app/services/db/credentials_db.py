@@ -83,8 +83,7 @@ def get_all_credentials_with_server_info() -> list[dict]:
 
     def work(conn):
         cur = conn.cursor()
-        cur.execute(
-            """
+        cur.execute("""
             SELECT
                 b.name  AS branch_name,
                 s.name  AS server_name,
@@ -96,8 +95,7 @@ def get_all_credentials_with_server_info() -> list[dict]:
             JOIN servers  s ON s.id       = c.server_id
             JOIN branches b ON b.id       = s.branch_id
             ORDER BY b.name, s.name, c.port
-        """
-        )
+        """)
         rows = cur.fetchall()
         cur.close()
         return [

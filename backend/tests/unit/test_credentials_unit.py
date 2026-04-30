@@ -488,7 +488,9 @@ def test_export_all_throttled(settings, throttle):
 @patch("app.services.credentials.get_all_credentials_with_server_info")
 @patch("app.services.credentials.get_vault_client")
 @patch("app.services.credentials.settings")
-def test_export_all_skips_unreadable_vault_path(settings, get_vault_client, get_all_rows):
+def test_export_all_skips_unreadable_vault_path(
+    settings, get_vault_client, get_all_rows
+):
     """Если один секрет не читается — он пропускается, остальные возвращаются."""
     settings.LOGIN_THROTTLE_ENABLED = False
 
@@ -528,7 +530,9 @@ def test_export_all_empty_db(settings, get_vault_client, get_all_rows):
 @patch("app.services.credentials.get_vault_client")
 @patch("app.services.credentials.throttle")
 @patch("app.services.credentials.settings")
-def test_export_all_resets_throttle_on_success(settings, throttle, get_vault_client, get_all_rows):
+def test_export_all_resets_throttle_on_success(
+    settings, throttle, get_vault_client, get_all_rows
+):
     settings.LOGIN_THROTTLE_ENABLED = True
 
     vault = Mock()

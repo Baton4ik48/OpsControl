@@ -177,7 +177,9 @@ def test_get_all_credentials_with_server_info_returns_all(monkeypatch):
         ("Питер", "router-01", "10.0.1.1", 22, "credentials/servers/2/22", None),
     ]
     conn, cur = _make_conn_fetchall(rows)
-    monkeypatch.setattr("app.services.db.credentials_db._execute", lambda fn, retries=1: fn(conn))
+    monkeypatch.setattr(
+        "app.services.db.credentials_db._execute", lambda fn, retries=1: fn(conn)
+    )
 
     result = get_all_credentials_with_server_info()
 
@@ -199,7 +201,9 @@ def test_get_all_credentials_with_server_info_returns_all(monkeypatch):
 
 def test_get_all_credentials_with_server_info_empty(monkeypatch):
     conn, _ = _make_conn_fetchall([])
-    monkeypatch.setattr("app.services.db.credentials_db._execute", lambda fn, retries=1: fn(conn))
+    monkeypatch.setattr(
+        "app.services.db.credentials_db._execute", lambda fn, retries=1: fn(conn)
+    )
 
     result = get_all_credentials_with_server_info()
 
