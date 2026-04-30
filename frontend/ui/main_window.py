@@ -1,6 +1,6 @@
 import os
 
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QMessageBox, QApplication
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QMessageBox, QApplication, QTabWidget
 from PyQt6.QtGui import QIcon
 from PyQt6.QtCore import QTimer
 
@@ -44,10 +44,14 @@ class MainWindow(QWidget):
         self.menu = ToolsMenu(self.user_settings)
         self.sidebar = Sidebar()
         self.tree = DeviceTree()
+        self.tree_xclarity = DeviceTree()
+        self.tabs = QTabWidget()
+        self.tabs.addTab(self.tree, "Основные серверы")
+        self.tabs.addTab(self.tree_xclarity, "xClarity")
         main_layout.setMenuBar(self.menu)
 
         body.addWidget(self.sidebar)
-        body.addWidget(self.tree)
+        body.addWidget(self.tabs)
         main_layout.addLayout(body)
 
         # =========================
@@ -64,7 +68,7 @@ class MainWindow(QWidget):
         # =========================
         self.api = ApiClient()
         self.controller = TreeController(
-            self.api, self.tree, self.user_settings, self.busy
+            self.api, self.tree, self.tree_xclarity, self.user_settings, self.busy
         )
 
         # =========================
@@ -96,12 +100,16 @@ class MainWindow(QWidget):
         )
         self.controller.checking_finished.connect(self._update_status_counts)
 
-        self.tree.refresh_branch_requested.connect(self.controller.refresh_branch)
-        self.tree.refresh_server_requested.connect(self.controller.refresh_server)
-        self.tree.refresh_port_requested.connect(self.controller.refresh_port)
-        self.tree.open_protocol_requested.connect(self.controller.connect_protocol)
-        self.tree.show_credentials_requested.connect(self.controller.show_credentials)
-        self.tree.rotate_password_requested.connect(self._open_password_rotation)
+        for _tree in (self.tree, self.tree_xclarity):
+            _tree.refresh_branch_requested.connect(self.controller.refresh_branch)
+            _tree.refresh_server_requested.connect(self.controller.refresh_server)
+            _tree.refresh_port_requested.connect(self.controller.refresh_port)
+            _tree.open_protocol_requested.connect(self.controller.connect_protocol)
+            _tree.show_credentials_requested.connect(self.controller.show_credentials)
+            _tree.rotate_password_requested.connect(self._open_password_rotation)
+
+        self.tabs.currentChanged.connect(self.controller.set_active_tab)
+        self.tabs.currentChanged.connect(self._update_status_counts)
 
     def _on_api_error(self, error: ApiError):
         handle_api_error(self, error)
@@ -141,9 +149,10 @@ class MainWindow(QWidget):
     # =========================
     # STATUS COUNTS
     # =========================
-    def _update_status_counts(self):
-        data = self.controller._data
+    def _update_status_counts(self, _tab_index=None):
+        data = self.controller._active_data
         if not data:
+            self.menu.update_server_counts(0, 0)
             return
         up = down = 0
         for branch in data:
@@ -177,6 +186,15 @@ class MainWindow(QWidget):
                 "Автоматическая смена пароля для Windows-серверов не реализована.\n\n"
                 "Смените пароль вручную: Управление компьютером → "
                 "Локальные пользователи и группы → Пользователи.",
+            )
+            return
+
+        if device_type == "xclarity":
+            QMessageBox.information(
+                self,
+                "Смена пароля — xClarity",
+                "Смена пароля для интерфейсов управления xClarity недоступна.\n\n"
+                "Измените пароль через веб-интерфейс xClarity (порт 443).",
             )
             return
         admin_login = self.user_settings.get("admin_login") or ""

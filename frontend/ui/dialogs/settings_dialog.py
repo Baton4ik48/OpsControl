@@ -272,6 +272,13 @@ class SettingsDialog(QDialog):
         self.spin_digits.setValue(self.settings.get("password_digit_count"))
         password_layout.addWidget(self.spin_digits)
 
+        password_layout.addWidget(QLabel("Символов в конце (0–4):"))
+        self.spin_symbols = QSpinBox()
+        self.spin_symbols.setRange(0, 4)
+        self.spin_symbols.setValue(self.settings.get("password_symbol_count") or 0)
+        self.spin_symbols.setToolTip("Случайные символы из набора !@#$%^&*")
+        password_layout.addWidget(self.spin_symbols)
+
         self.length_hint = QLabel()
         self._update_length_hint()
         password_layout.addWidget(self.length_hint)
@@ -279,6 +286,7 @@ class SettingsDialog(QDialog):
         self.spin_words.valueChanged.connect(self._update_length_hint)
         self.spin_letters.valueChanged.connect(self._update_length_hint)
         self.spin_digits.valueChanged.connect(self._update_length_hint)
+        self.spin_symbols.valueChanged.connect(self._update_length_hint)
 
         password_layout_wrapper.addWidget(password_group)
         password_layout_wrapper.addStretch()
@@ -391,6 +399,7 @@ class SettingsDialog(QDialog):
         self.spin_words.valueChanged.connect(lambda: self._mark_dirty("password"))
         self.spin_letters.valueChanged.connect(lambda: self._mark_dirty("password"))
         self.spin_digits.valueChanged.connect(lambda: self._mark_dirty("password"))
+        self.spin_symbols.valueChanged.connect(lambda: self._mark_dirty("password"))
 
         self.spin_rotation_days.valueChanged.connect(lambda: self._mark_dirty("policy"))
 
@@ -469,6 +478,7 @@ class SettingsDialog(QDialog):
             self.settings.set("password_word_count", self.spin_words.value())
             self.settings.set("password_letters_per_word", self.spin_letters.value())
             self.settings.set("password_digit_count", self.spin_digits.value())
+            self.settings.set("password_symbol_count", self.spin_symbols.value())
 
         if "policy" in self._dirty_tabs:
             self.settings.set("password_rotation_days", self.spin_rotation_days.value())
@@ -500,8 +510,9 @@ class SettingsDialog(QDialog):
         total = (
             self.spin_digits.value()
             + self.spin_words.value() * self.spin_letters.value()
+            + self.spin_symbols.value()
         )
-        self.length_hint.setText(f"Итоговая длина пароля: {total} символов")
+        self.length_hint.setText(f"Итоговая длина пароля: ~{total} символов")
 
     def _set_status(self, status: str):
         icons = {

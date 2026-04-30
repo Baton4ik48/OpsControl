@@ -24,6 +24,7 @@ DEVICE_TYPES = [
     ("Windows-сервер", "windows"),
     ("Коммутатор Nateks", "nateks"),
     ("Коммутатор Cisco", "cisco"),
+    ("xClarity (интерфейс управления)", "xclarity"),
 ]
 
 

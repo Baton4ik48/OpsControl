@@ -2,6 +2,8 @@ import random
 import string
 import os
 
+_SYMBOLS = "!@#$%*"
+
 # ЙЦУКЕН → QWERTY транслитерация
 _RU_TO_EN = {
     "й": "q",
@@ -83,12 +85,12 @@ _VERBS = [
     "прятал",
     "кидает",
     "ловит",
-    "несёт",
+    "несет",
     "рисует",
     "варит",
     "ценит",
     "гасит",
-    "ведёт",
+    "везет",
     "дарит",
 ]
 
@@ -124,7 +126,7 @@ _PLACES = [
     "на крыше",
     "у канала",
     "на скале",
-    "в каюте",
+    "в тоннеле",
     "у стены",
     "на палубе",
     "в кратере",
@@ -187,6 +189,7 @@ def generate_password(
     word_count: int = 4,
     letters_per_word: int = 4,
     digit_count: int = 2,
+    symbol_count: int = 0,
 ) -> tuple[str, str]:
     """
     Генерирует пароль и осмысленную мнемоническую фразу.
@@ -197,11 +200,12 @@ def generate_password(
         4 слова: «Пилот красит ракету на крыше»
         5 слов:  «Пилот красит ракету на крыше мастер»
 
-    Пароль: число + первые N букв каждого слова в QWERTY.
+    Пароль: число + первые N букв каждого слова в QWERTY + символы.
     """
     word_count = max(2, min(5, word_count))
     letters_per_word = max(3, min(4, letters_per_word))
     digit_count = max(0, min(4, digit_count))
+    symbol_count = max(0, min(4, symbol_count))
 
     # Число
     number = (
@@ -226,19 +230,28 @@ def generate_password(
         transliterated = _transliterate(prefix)
         password_parts.append(transliterated)
 
-        # Мнемоника с предлогом
+        # Мнемоника: для места включаем предлог, подсвечиваем только значимую часть
         if role == "place" and raw_word != word:
             preposition = raw_word[: raw_word.rfind(word)].strip()
             if len(word) > letters_per_word:
-                hint = f'<span style="color:#FFB800">{word[:letters_per_word].capitalize()}</span>{word[letters_per_word:]}'
+                highlighted = f'<span style="color:#FFB800">{word[:letters_per_word].capitalize()}</span>{word[letters_per_word:]}'
             else:
-                hint = f'<span style="color:#FFB800">{word.capitalize()}</span>'
+                highlighted = f'<span style="color:#FFB800">{word.capitalize()}</span>'
+            hint = f"{preposition} {highlighted}"
         else:
             if len(word) > letters_per_word:
                 hint = f'<span style="color:#FFB800">{word[:letters_per_word].capitalize()}</span>{word[letters_per_word:]}'
             else:
                 hint = f'<span style="color:#FFB800">{word.capitalize()}</span>'
         mnemonic_parts.append(hint)
+
+    # Символы в конце
+    if symbol_count:
+        symbols = "".join(random.choice(_SYMBOLS) for _ in range(symbol_count))
+        password_parts.append(symbols)
+        mnemonic_parts.append(
+            f'<span style="color:#4FC3F7">{symbols}</span>'
+        )
 
     password = "".join(password_parts)
     mnemonic = " ".join(mnemonic_parts)
