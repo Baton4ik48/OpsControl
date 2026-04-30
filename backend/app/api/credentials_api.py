@@ -9,6 +9,7 @@ from app.services.credentials import (
     verify_admin_password,
     upsert_credentials,
     rotate_credentials,
+    export_all_credentials,
     InvalidMasterPassword,
     CredentialsNotFound,
     TooManyLoginAttempts,
@@ -295,3 +296,67 @@ def rotate_credentials_api(data: RotateCredentialsRequest, request: Request):
                 "detail": "Credential rotation failed",
             },
         )
+
+
+class ExportAllCredentialsRequest(BaseModel):
+    username: str
+    master_password: str
+
+
+@router.post("/export-all")
+def export_all_credentials_api(
+    data: ExportAllCredentialsRequest,
+    request: Request,
+):
+    client_ip, request_id = _ctx(request)
+
+    try:
+        entries = export_all_credentials(
+            username=data.username,
+            master_password=data.master_password,
+            client_ip=client_ip,
+        )
+
+        request.state.actor = data.username
+
+        _audit.info(
+            "action=export_all_credentials username=%s count=%d result=ok"
+            " ip=%s request_id=%s",
+            data.username,
+            len(entries),
+            client_ip,
+            request_id,
+        )
+        return {"success": True, "data": entries}
+
+    except TooManyLoginAttempts as e:
+        _audit.info(
+            "action=export_all_credentials username=%s result=throttled"
+            " ip=%s request_id=%s",
+            data.username,
+            client_ip,
+            request_id,
+        )
+        return JSONResponse(
+            status_code=429,
+            content={
+                "error_code": "LOGIN_THROTTLED",
+                "retry_after": e.retry_after_seconds,
+            },
+        )
+
+    except InvalidMasterPassword:
+        _audit.info(
+            "action=export_all_credentials username=%s result=invalid_password"
+            " ip=%s request_id=%s",
+            data.username,
+            client_ip,
+            request_id,
+        )
+        return JSONResponse(
+            status_code=403, content={"error_code": "INVALID_MASTER_PASSWORD"}
+        )
+
+    except Exception as e:
+        logger.error("export_all_credentials failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")

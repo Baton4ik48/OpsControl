@@ -3,6 +3,7 @@ from PyQt6.QtCore import pyqtSignal, Qt
 from core.api.credentials import CredentialsApi
 from core.api.base import ApiError
 from ui.dialogs.credentials_dialog import CredentialsDialog
+from ui.dialogs.envelope_print_dialog import EnvelopePrintDialog
 from ui.dialogs.firewall_dialog import FirewallDialog
 from ui.dialogs.infrastructure_dialog import InfrastructureManagerDialog
 
@@ -75,6 +76,11 @@ class ToolsMenu(QMenuBar):
         infra_action = bd_menu.addAction("Управление инфраструктурой")
         infra_action.triggered.connect(self.open_infrastructure_manager)
 
+        tools_menu.addSeparator()
+
+        envelope_action = tools_menu.addAction("Печать конверта с паролями…")
+        envelope_action.triggered.connect(self.open_envelope_print)
+
     def update_server_counts(self, up: int, down: int):
         self._status.update_counts(up, down)
 
@@ -86,6 +92,16 @@ class ToolsMenu(QMenuBar):
         dlg.exec()
 
     # -------------------------------------
+
+    def open_envelope_print(self):
+        username = self._settings.get("admin_login") or ""
+        dlg = CredentialsDialog(mode="envelope")
+        dlg.submitted.connect(lambda pwd: self._open_envelope(username, pwd))
+        dlg.exec()
+
+    def _open_envelope(self, username: str, master_password: str):
+        dlg = EnvelopePrintDialog(username, master_password, self)
+        dlg.exec()
 
     def open_infrastructure_manager(self):
         dlg = CredentialsDialog(mode="infra")

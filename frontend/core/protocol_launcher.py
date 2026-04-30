@@ -67,25 +67,60 @@ class ProtocolLauncher:
     @staticmethod
     def _open_rdp(user, password, host):
 
-        if not sys.platform.startswith("win"):
-            raise RuntimeError("RDP_ONLY_WINDOWS")
-        subprocess.run(
-            [
-                "cmdkey",
-                f"/generic:TERMSRV/{host}",
-                f"/user:{user}",
-                f"/pass:{password}",
-            ],
-            check=False,
-        )
+        if sys.platform.startswith("win"):
+            subprocess.run(
+                [
+                    "cmdkey",
+                    f"/generic:TERMSRV/{host}",
+                    f"/user:{user}",
+                    f"/pass:{password}",
+                ],
+                check=False,
+            )
+            try:
+                proc = subprocess.Popen(["mstsc", f"/v:{host}"])
+                proc.wait()
+            finally:
+                subprocess.run(["cmdkey", f"/delete:TERMSRV/{host}"], check=False)
 
-        try:
-            proc = subprocess.Popen(["mstsc", f"/v:{host}"])
+        elif sys.platform.startswith("linux"):
+            # remmina  — GUI-клиент, поддерживает rdp:// URI
+            # xfreerdp — консольный (пакет freerdp2-x11 / freerdp3-x11)
+            # rdesktop — запасной вариант (пакет rdesktop)
+            if shutil.which("remmina"):
+                subprocess.Popen(
+                    [
+                        "remmina",
+                        "-c",
+                        f"rdp://{user}:{password}@{host}",
+                    ]
+                )
+            elif shutil.which("xfreerdp"):
+                subprocess.Popen(
+                    [
+                        "xfreerdp",
+                        f"/v:{host}",
+                        f"/u:{user}",
+                        f"/p:{password}",
+                        "/dynamic-resolution",
+                        "+clipboard",
+                        "/cert:ignore",
+                    ]
+                )
+            elif shutil.which("rdesktop"):
+                subprocess.Popen(
+                    [
+                        "rdesktop",
+                        "-u", user,
+                        "-p", password,
+                        host,
+                    ]
+                )
+            else:
+                raise RuntimeError("RDP_CLIENT_NOT_FOUND")
 
-            proc.wait()
-
-        finally:
-            subprocess.run(["cmdkey", f"/delete:TERMSRV/{host}"], check=False)
+        else:
+            raise RuntimeError("RDP_UNSUPPORTED_OS")
 
     # =========================
     # WEB

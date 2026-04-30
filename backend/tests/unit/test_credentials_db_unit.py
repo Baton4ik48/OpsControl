@@ -6,6 +6,7 @@ from app.services.db.credentials_db import (
     get_credentials_username,
     touch_credentials_updated_at,
     upsert_vault_path,
+    get_all_credentials_with_server_info,
 )
 from app.services.db.pool_db import ServiceUnavailableError
 
@@ -151,3 +152,64 @@ def test_upsert_vault_path_db_unavailable(monkeypatch):
     )
     with pytest.raises(ServiceUnavailableError):
         upsert_vault_path(1, 22, "path")
+
+
+# ============================================
+# get_all_credentials_with_server_info
+# ============================================
+
+from datetime import datetime
+
+
+def _make_conn_fetchall(rows):
+    cur = Mock()
+    cur.fetchall.return_value = rows
+    conn = Mock()
+    conn.cursor.return_value = cur
+    return conn, cur
+
+
+def test_get_all_credentials_with_server_info_returns_all(monkeypatch):
+    ts = datetime(2024, 1, 15, 10, 0, 0)
+    rows = [
+        ("Москва", "server-01", "10.0.0.1", 22, "credentials/servers/1/22", ts),
+        ("Москва", "server-01", "10.0.0.1", 443, "credentials/servers/1/443", ts),
+        ("Питер", "router-01", "10.0.1.1", 22, "credentials/servers/2/22", None),
+    ]
+    conn, cur = _make_conn_fetchall(rows)
+    monkeypatch.setattr("app.services.db.credentials_db._execute", lambda fn, retries=1: fn(conn))
+
+    result = get_all_credentials_with_server_info()
+
+    assert len(result) == 3
+    assert result[0] == {
+        "branch": "Москва",
+        "server_name": "server-01",
+        "ip": "10.0.0.1",
+        "port": 22,
+        "vault_path": "credentials/servers/1/22",
+        "updated_at": ts.isoformat(),
+    }
+    assert result[2]["updated_at"] is None
+    sql = cur.execute.call_args[0][0]
+    assert "JOIN servers" in sql
+    assert "JOIN branches" in sql
+    assert "ORDER BY" in sql
+
+
+def test_get_all_credentials_with_server_info_empty(monkeypatch):
+    conn, _ = _make_conn_fetchall([])
+    monkeypatch.setattr("app.services.db.credentials_db._execute", lambda fn, retries=1: fn(conn))
+
+    result = get_all_credentials_with_server_info()
+
+    assert result == []
+
+
+def test_get_all_credentials_with_server_info_db_unavailable(monkeypatch):
+    monkeypatch.setattr(
+        "app.services.db.credentials_db._execute",
+        lambda fn, retries=1: (_ for _ in ()).throw(ServiceUnavailableError()),
+    )
+    with pytest.raises(ServiceUnavailableError):
+        get_all_credentials_with_server_info()

@@ -26,6 +26,8 @@ class CredentialsDialog(QDialog):
             self.setWindowTitle(f"SSH подключение {ip}:{port}")
         elif mode == "infra":
             self.setWindowTitle("Доступ к управлению инфраструктурой")
+        elif mode == "envelope":
+            self.setWindowTitle("Формирование конверта с паролями")
         else:
             self.setWindowTitle(f"Учётные данные {ip}:{port}")
         self.setModal(True)
@@ -42,6 +44,10 @@ class CredentialsDialog(QDialog):
                     "Введите мастер-пароль для доступа к управлению инфраструктурой:"
                 )
             )
+        elif mode == "envelope":
+            layout.addWidget(
+                QLabel("Введите мастер-пароль для выгрузки учётных данных:")
+            )
         else:
             layout.addWidget(QLabel("Введите пароль администратора:"))
 
@@ -50,7 +56,7 @@ class CredentialsDialog(QDialog):
         self.admin_input.returnPressed.connect(self._on_submit)
         layout.addWidget(self.admin_input)
 
-        btn_label = "Войти" if mode == "infra" else "Показать"
+        btn_label = "Войти" if mode == "infra" else ("Сформировать" if mode == "envelope" else "Показать")
         self.show_btn = QPushButton(btn_label)
         self.show_btn.clicked.connect(self._on_submit)
         layout.addWidget(self.show_btn)
@@ -65,6 +71,6 @@ class CredentialsDialog(QDialog):
             QMessageBox.warning(self, "Ошибка", "Введите пароль администратора")
             return
 
-        self.submitted.emit(password)
         self.admin_input.clear()
-        self.accept()
+        self.accept()          # закрываем диалог ДО того как сигнал откроет следующий
+        self.submitted.emit(password)

@@ -42,7 +42,7 @@ main.spec
 
 frontend/build
 frontend/dist
-venv
+.venv
 .vscode
 .pytest_cache
 .mypy_cache

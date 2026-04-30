@@ -10,6 +10,19 @@ from app.services.credentials import (
     RotateError,
 )
 
+_EXPORT_ENTRIES = [
+    {
+        "branch": "Москва",
+        "server_name": "server-01",
+        "ip": "10.0.0.1",
+        "port": 22,
+        "username": "root",
+        "password": "secret",
+        "mnemonic": "",
+        "updated_at": "2024-01-15T10:00:00",
+    }
+]
+
 app = FastAPI()
 app.include_router(router)
 client = TestClient(app, raise_server_exceptions=False)
@@ -311,3 +324,87 @@ def test_rotate_internal_details_not_leaked():
     assert "8201" not in body
     assert "Forbidden" not in body
     assert resp.json()["detail"] == "Credential rotation failed"
+
+
+# ============================================
+# POST /credentials/export-all
+# ============================================
+
+
+def test_export_all_success():
+    with patch(
+        "app.api.credentials_api.export_all_credentials",
+        return_value=_EXPORT_ENTRIES,
+    ):
+        resp = client.post(
+            "/credentials/export-all",
+            json={"username": "admin", "master_password": "correct"},
+        )
+
+    assert resp.status_code == 200
+    assert resp.json()["success"] is True
+    data = resp.json()["data"]
+    assert len(data) == 1
+    assert data[0]["server_name"] == "server-01"
+    assert data[0]["password"] == "secret"
+
+
+def test_export_all_invalid_password():
+    with patch(
+        "app.api.credentials_api.export_all_credentials",
+        side_effect=InvalidMasterPassword(),
+    ):
+        resp = client.post(
+            "/credentials/export-all",
+            json={"username": "admin", "master_password": "wrong"},
+        )
+
+    assert resp.status_code == 403
+    assert resp.json()["error_code"] == "INVALID_MASTER_PASSWORD"
+
+
+def test_export_all_throttled():
+    with patch(
+        "app.api.credentials_api.export_all_credentials",
+        side_effect=TooManyLoginAttempts(retry_after_seconds=45),
+    ):
+        resp = client.post(
+            "/credentials/export-all",
+            json={"username": "admin", "master_password": "any"},
+        )
+
+    assert resp.status_code == 429
+    assert resp.json()["error_code"] == "LOGIN_THROTTLED"
+    assert resp.json()["retry_after"] == 45
+
+
+def test_export_all_server_error():
+    with patch(
+        "app.api.credentials_api.export_all_credentials",
+        side_effect=Exception("unexpected"),
+    ):
+        resp = client.post(
+            "/credentials/export-all",
+            json={"username": "admin", "master_password": "any"},
+        )
+
+    assert resp.status_code == 500
+    assert resp.json().get("detail") == "Internal server error"
+
+
+def test_export_all_internal_details_not_leaked():
+    """Vault internals must not leak to the HTTP client."""
+    with patch(
+        "app.api.credentials_api.export_all_credentials",
+        side_effect=Exception("vault://internal-host:8200 role=abc"),
+    ):
+        resp = client.post(
+            "/credentials/export-all",
+            json={"username": "admin", "master_password": "any"},
+        )
+
+    body = str(resp.json())
+    assert resp.status_code == 500
+    assert "internal-host" not in body
+    assert "8200" not in body
+    assert "role" not in body
