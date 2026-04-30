@@ -56,6 +56,7 @@ class DeviceTreeContextMenu:
         # SERVER
         # =========================
         if item_type == "server":
+            device_type = item.data(0, self.tree.ROLE_DEVICE_TYPE) or "linux"
 
             for i in range(item.childCount()):
                 child = item.child(i)
@@ -64,7 +65,7 @@ class DeviceTreeContextMenu:
                 if not port:
                     continue
 
-                self._add_connect_action(menu, server_id, ip, port)
+                self._add_connect_action(menu, server_id, ip, port, device_type)
 
             menu.addSeparator()
 
@@ -77,10 +78,11 @@ class DeviceTreeContextMenu:
         # PORT
         # =========================
         elif item_type == "port":
-
             port = item.data(0, self.tree.ROLE_PORT)
+            # device_type хранится на родительском узле сервера, не на порту
+            device_type = item.parent().data(0, self.tree.ROLE_DEVICE_TYPE) or "linux"
 
-            self._add_connect_action(menu, server_id, ip, port)
+            self._add_connect_action(menu, server_id, ip, port, device_type)
 
             show_action = menu.addAction(self.tree.icon_show, "Показать учётные данные")
             show_action.triggered.connect(
@@ -89,11 +91,7 @@ class DeviceTreeContextMenu:
                 )
             )
 
-            if port == 22:
-                # device_type хранится на родительском узле сервера, не на порту
-                device_type = (
-                    item.parent().data(0, self.tree.ROLE_DEVICE_TYPE) or "linux"
-                )
+            if port == 22 and device_type not in ("windows", "xclarity"):
                 rotate_action = menu.addAction(self.tree.icon_key, "Сменить пароль")
                 rotate_action.triggered.connect(
                     lambda checked=False, dt=device_type: self.tree.rotate_password_requested.emit(
@@ -124,13 +122,13 @@ class DeviceTreeContextMenu:
     # CONNECT ACTIONS
     # ==================================================
 
-    def _add_connect_action(self, menu, server_id, ip, port):
+    def _add_connect_action(self, menu, server_id, ip, port, device_type="linux"):
 
         icon = None
         text = None
 
-        # SSH
-        if port == 22:
+        # SSH (не показываем для xClarity — у них 22 не используется)
+        if port == 22 and device_type != "xclarity":
             icon = self.tree.icon_ssh
             text = "Подключиться по SSH"
 

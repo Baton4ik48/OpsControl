@@ -16,6 +16,28 @@ from ui.error_handler import handle_system_error
 
 log = get_logger(__name__)
 
+def _split_data(data: list[dict]) -> tuple[list[dict], list[dict]]:
+    """Делит список филиалов на основные серверы и xClarity по device_type."""
+    main_branches: list[dict] = []
+    xclarity_branches: list[dict] = []
+
+    for branch in data:
+        main_servers = []
+        xclarity_servers = []
+
+        for server in branch.get("servers", []):
+            if server.get("device_type") == "xclarity":
+                xclarity_servers.append(server)
+            else:
+                main_servers.append(server)
+
+        if main_servers:
+            main_branches.append({**branch, "servers": main_servers})
+        if xclarity_servers:
+            xclarity_branches.append({**branch, "servers": xclarity_servers})
+
+    return main_branches, xclarity_branches
+
 
 class TreeController(QObject):
     loaded = pyqtSignal()
@@ -23,19 +45,35 @@ class TreeController(QObject):
     checking_started = pyqtSignal()
     checking_finished = pyqtSignal()
 
-    def __init__(self, api, tree, user_settings, busy):
+    def __init__(self, api, tree_main, tree_xclarity, user_settings, busy):
         super().__init__()
         self.api = api
-        self.tree = tree
+        self.tree_main = tree_main
+        self.tree_xclarity = tree_xclarity
         self.user_settings = user_settings
         self.busy = busy
-        self.tree.set_user_settings(self.user_settings)
+        self.tree_main.set_user_settings(self.user_settings)
+        self.tree_xclarity.set_user_settings(self.user_settings)
 
-        self._data = None
+        self._data: list[dict] = []
+        self._data_main: list[dict] = []
+        self._data_xclarity: list[dict] = []
+        self._active_tab: int = 0
         self._runtime_status = {}
         self.checker = PortCheckManager(max_threads=10)
         self._worker = None
         self._check_count = 0
+
+    @property
+    def _active_tree(self):
+        return self.tree_main if self._active_tab == 0 else self.tree_xclarity
+
+    @property
+    def _active_data(self) -> list[dict]:
+        return self._data_main if self._active_tab == 0 else self._data_xclarity
+
+    def set_active_tab(self, index: int):
+        self._active_tab = index
 
     # =========================
     # ЗАГРУЗКА ДЕРЕВА
@@ -48,8 +86,10 @@ class TreeController(QObject):
 
     def _on_loaded(self, data):
         self._data = data
+        self._data_main, self._data_xclarity = _split_data(data)
         self._runtime_status.clear()
-        self.tree.render(self._data)
+        self.tree_main.render(self._data_main)
+        self.tree_xclarity.render(self._data_xclarity)
         self.loaded.emit()
 
     def _on_error(self, message):
@@ -72,10 +112,11 @@ class TreeController(QObject):
             self.checking_finished.emit()
 
     def refresh_all(self):
-        if not self._data:
+        active = self._active_data
+        if not active:
             return
 
-        servers = [s for b in self._data for s in b["servers"]]
+        servers = [s for b in active for s in b["servers"]]
         n = sum(len(s["ports"]) for s in servers)
         self._begin_check(n)
         self.checker.check_ports(servers, self._on_port_checked, self.api)
@@ -87,7 +128,8 @@ class TreeController(QObject):
 
         port_data = self._get_port_data(server_id, port)
         if port_data is not None:
-            self.tree.update_port_item(server_id, port, port_data)
+            self.tree_main.update_port_item(server_id, port, port_data)
+            self.tree_xclarity.update_port_item(server_id, port, port_data)
 
         self._end_one()
 
@@ -127,16 +169,16 @@ class TreeController(QObject):
     # ФИЛЬТРЫ
     # =========================
     def show_all(self):
-        if self._data:
-            self.tree.render(self._data)
+        if not self._data:
+            return
+        self._active_tree.render(self._active_data)
 
     def show_problem(self):
         if not self._data:
             return
 
         result = []
-
-        for b in self._data:
+        for b in self._active_data:
             bad = [
                 s
                 for s in b["servers"]
@@ -145,7 +187,7 @@ class TreeController(QObject):
             if bad:
                 result.append({"name": b["name"], "servers": bad})
 
-        self.tree.render(result)
+        self._active_tree.render(result)
 
     # =========================
     # Контекст меню
@@ -220,13 +262,14 @@ class TreeController(QObject):
         )
 
         def on_success(data):
-            self.tree.show_credentials(
-                server_id,
-                port,
-                data["username"],
-                data["password"],
-                data.get("mnemonic", ""),
-            )
+            for tree in (self.tree_main, self.tree_xclarity):
+                tree.show_credentials(
+                    server_id,
+                    port,
+                    data["username"],
+                    data["password"],
+                    data.get("mnemonic", ""),
+                )
             del data
 
         def on_error(e: ApiError):

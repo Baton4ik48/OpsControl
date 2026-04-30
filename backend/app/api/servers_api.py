@@ -33,7 +33,7 @@ def _validate_host(value: str) -> str:
 # Pydantic models
 # ==========================
 
-ALLOWED_DEVICE_TYPES = {"linux", "windows", "nateks", "natex", "cisco"}
+ALLOWED_DEVICE_TYPES = {"linux", "windows", "nateks", "natex", "cisco", "xclarity"}
 
 
 class ServerCreate(BaseModel):
