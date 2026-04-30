@@ -6,6 +6,7 @@ from app.services.credentials import (
     upsert_credentials,
     show_credentials,
     rotate_credentials,
+    export_all_credentials,
     InvalidMasterPassword,
     CredentialsNotFound,
     TooManyLoginAttempts,
@@ -390,3 +391,152 @@ def test_rotate_touch_not_called_on_write_error(
         rotate_credentials(1, 22, "new", "admin", "mpass", "ip")
 
     touch_updated.assert_not_called()
+
+
+# ============================================================
+# export_all_credentials
+# ============================================================
+
+_ALL_ROWS = [
+    {
+        "branch": "Москва",
+        "server_name": "server-01",
+        "ip": "10.0.0.1",
+        "port": 22,
+        "vault_path": "credentials/servers/1/22",
+        "updated_at": "2024-01-15T10:00:00",
+    },
+    {
+        "branch": "Питер",
+        "server_name": "router-01",
+        "ip": "10.0.1.1",
+        "port": 22,
+        "vault_path": "credentials/servers/2/22",
+        "updated_at": None,
+    },
+]
+
+
+@patch("app.services.credentials.get_all_credentials_with_server_info")
+@patch("app.services.credentials.get_vault_client")
+@patch("app.services.credentials.settings")
+def test_export_all_success(settings, get_vault_client, get_all_rows):
+    settings.LOGIN_THROTTLE_ENABLED = False
+
+    vault = Mock()
+    vault.login_userpass.return_value = "user-token"
+    vault.read_kv_v2.side_effect = [
+        {"username": "root", "password": "pass1", "mnemonic": "hint"},
+        {"username": "admin", "password": "pass2"},
+    ]
+    get_vault_client.return_value = vault
+    get_all_rows.return_value = _ALL_ROWS
+
+    result = export_all_credentials("admin", "masterpass", "1.2.3.4")
+
+    assert len(result) == 2
+    assert result[0]["password"] == "pass1"
+    assert result[0]["mnemonic"] == "hint"
+    assert result[1]["mnemonic"] == ""
+    vault.login_userpass.assert_called_once_with("admin", "masterpass")
+    assert vault.read_kv_v2.call_count == 2
+
+
+@patch("app.services.credentials.get_all_credentials_with_server_info")
+@patch("app.services.credentials.get_vault_client")
+@patch("app.services.credentials.settings")
+def test_export_all_username_lowercased(settings, get_vault_client, get_all_rows):
+    settings.LOGIN_THROTTLE_ENABLED = False
+
+    vault = Mock()
+    vault.login_userpass.return_value = "token"
+    vault.read_kv_v2.return_value = {"username": "u", "password": "p"}
+    get_vault_client.return_value = vault
+    get_all_rows.return_value = _ALL_ROWS[:1]
+
+    export_all_credentials("ADMIN", "pass", "ip")
+
+    vault.login_userpass.assert_called_once_with("admin", "pass")
+
+
+@patch("app.services.credentials.get_vault_client")
+@patch("app.services.credentials.settings")
+def test_export_all_invalid_password(settings, get_vault_client):
+    settings.LOGIN_THROTTLE_ENABLED = False
+
+    vault = Mock()
+    vault.login_userpass.side_effect = VaultAuthError()
+    get_vault_client.return_value = vault
+
+    with pytest.raises(InvalidMasterPassword):
+        export_all_credentials("admin", "wrong", "ip")
+
+
+@patch("app.services.credentials.throttle")
+@patch("app.services.credentials.settings")
+def test_export_all_throttled(settings, throttle):
+    settings.LOGIN_THROTTLE_ENABLED = True
+    throttle.check.side_effect = TooManyAttempts()
+    throttle.time_until_unblock.return_value = 77
+
+    with pytest.raises(TooManyLoginAttempts) as exc:
+        export_all_credentials("admin", "pass", "ip")
+
+    assert exc.value.retry_after_seconds == 77
+
+
+@patch("app.services.credentials.get_all_credentials_with_server_info")
+@patch("app.services.credentials.get_vault_client")
+@patch("app.services.credentials.settings")
+def test_export_all_skips_unreadable_vault_path(settings, get_vault_client, get_all_rows):
+    """Если один секрет не читается — он пропускается, остальные возвращаются."""
+    settings.LOGIN_THROTTLE_ENABLED = False
+
+    vault = Mock()
+    vault.login_userpass.return_value = "token"
+    vault.read_kv_v2.side_effect = [
+        VaultReadError("forbidden"),
+        {"username": "admin", "password": "ok"},
+    ]
+    get_vault_client.return_value = vault
+    get_all_rows.return_value = _ALL_ROWS
+
+    result = export_all_credentials("admin", "pass", "ip")
+
+    assert len(result) == 1
+    assert result[0]["server_name"] == "router-01"
+
+
+@patch("app.services.credentials.get_all_credentials_with_server_info")
+@patch("app.services.credentials.get_vault_client")
+@patch("app.services.credentials.settings")
+def test_export_all_empty_db(settings, get_vault_client, get_all_rows):
+    settings.LOGIN_THROTTLE_ENABLED = False
+
+    vault = Mock()
+    vault.login_userpass.return_value = "token"
+    get_vault_client.return_value = vault
+    get_all_rows.return_value = []
+
+    result = export_all_credentials("admin", "pass", "ip")
+
+    assert result == []
+    vault.read_kv_v2.assert_not_called()
+
+
+@patch("app.services.credentials.get_all_credentials_with_server_info")
+@patch("app.services.credentials.get_vault_client")
+@patch("app.services.credentials.throttle")
+@patch("app.services.credentials.settings")
+def test_export_all_resets_throttle_on_success(settings, throttle, get_vault_client, get_all_rows):
+    settings.LOGIN_THROTTLE_ENABLED = True
+
+    vault = Mock()
+    vault.login_userpass.return_value = "token"
+    vault.read_kv_v2.return_value = {"username": "u", "password": "p"}
+    get_vault_client.return_value = vault
+    get_all_rows.return_value = _ALL_ROWS[:1]
+
+    export_all_credentials("admin", "pass", "1.1.1.1")
+
+    throttle.reset.assert_called_once()

@@ -74,6 +74,48 @@ def touch_credentials_updated_at(server_id: int, port: int) -> None:
 
 
 # ==========================
+# READ ALL (envelope export)
+# ==========================
+
+
+def get_all_credentials_with_server_info() -> list[dict]:
+    """Returns all credentials joined with server and branch info, ordered by branch → server → port."""
+
+    def work(conn):
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT
+                b.name  AS branch_name,
+                s.name  AS server_name,
+                s.ip,
+                c.port,
+                c.vault_path,
+                c.updated_at
+            FROM credentials c
+            JOIN servers  s ON s.id       = c.server_id
+            JOIN branches b ON b.id       = s.branch_id
+            ORDER BY b.name, s.name, c.port
+        """
+        )
+        rows = cur.fetchall()
+        cur.close()
+        return [
+            {
+                "branch": row[0],
+                "server_name": row[1],
+                "ip": row[2],
+                "port": row[3],
+                "vault_path": row[4],
+                "updated_at": row[5].isoformat() if row[5] else None,
+            }
+            for row in rows
+        ]
+
+    return _execute(work)
+
+
+# ==========================
 # UPSERT
 # ==========================
 

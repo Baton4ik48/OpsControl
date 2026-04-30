@@ -54,3 +54,9 @@ class CredentialsApi(BaseApi):
                 "mnemonic": mnemonic,
             },
         )
+
+    def export_all(self, username: str, master_password: str):
+        return self.post(
+            "/api/credentials/export-all",
+            json={"username": username, "master_password": master_password},
+        )

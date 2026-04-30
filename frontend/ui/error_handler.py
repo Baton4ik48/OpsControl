@@ -76,7 +76,13 @@ def handle_system_error(parent, error: Exception):
         message_map = {
             "PUTTY_NOT_FOUND": "Не найден PuTTY или KiTTY.\nУстановите PuTTY (или KiTTY) и добавьте в PATH.",
             "SSHPASS_NOT_FOUND": "Не найден sshpass.\nУстановите пакет sshpass.",
-            "RDP_ONLY_WINDOWS": "RDP доступен только на Windows.",
+            "RDP_CLIENT_NOT_FOUND": (
+                "Не найден RDP-клиент.\n\n"
+                "Установите один из пакетов:\n"
+                "  freerdp2-x11  (рекомендуется)\n"
+                "  rdesktop"
+            ),
+            "RDP_UNSUPPORTED_OS": "RDP не поддерживается на этой ОС.",
             "UNSUPPORTED_PROTOCOL": "Данный протокол не поддерживается.",
         }
 

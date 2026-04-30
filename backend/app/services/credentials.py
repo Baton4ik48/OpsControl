@@ -3,6 +3,7 @@ from app.services.db.credentials_db import (
     get_vault_path_by_server_port,
     upsert_vault_path,
     touch_credentials_updated_at,
+    get_all_credentials_with_server_info,
 )
 from app.services.login_throttle import throttle, TooManyAttempts
 from app.config import settings
@@ -113,6 +114,69 @@ def show_credentials(
         "password": secret["password"],
         "mnemonic": secret.get("mnemonic", ""),
     }
+
+
+def export_all_credentials(
+    username: str,
+    master_password: str,
+    client_ip: str,
+) -> list[dict]:
+    """
+    Authenticates user against Vault, then reads every stored secret.
+    Returns a list of dicts with branch/server/ip/port/username/password/mnemonic.
+    Entries whose vault_path cannot be read are skipped with a warning.
+    """
+    throttle_key = f"{username.lower()}:{client_ip}"
+
+    if settings.LOGIN_THROTTLE_ENABLED:
+        try:
+            throttle.check(throttle_key)
+        except TooManyAttempts:
+            retry_after = throttle.time_until_unblock(throttle_key)
+            raise TooManyLoginAttempts(retry_after)
+
+    vault = get_vault_client()
+
+    try:
+        token = vault.login_userpass(username.lower(), master_password)
+        logger.info("Vault login OK for export_all")
+
+        if settings.LOGIN_THROTTLE_ENABLED:
+            throttle.reset(throttle_key)
+
+    except VaultAuthError:
+        if settings.LOGIN_THROTTLE_ENABLED:
+            throttle.register_fail(throttle_key)
+
+        logger.warning("Vault login FAILED for export_all")
+        raise InvalidMasterPassword()
+
+    rows = get_all_credentials_with_server_info()
+    result = []
+    for row in rows:
+        try:
+            secret = vault.read_kv_v2(token, row["vault_path"])
+            result.append(
+                {
+                    "branch": row["branch"],
+                    "server_name": row["server_name"],
+                    "ip": row["ip"],
+                    "port": row["port"],
+                    "username": secret.get("username", ""),
+                    "password": secret.get("password", ""),
+                    "mnemonic": secret.get("mnemonic", ""),
+                    "updated_at": row["updated_at"],
+                }
+            )
+        except VaultReadError:
+            logger.warning(
+                "export_all: vault read skipped path=%s server=%s",
+                row["vault_path"],
+                row["server_name"],
+            )
+
+    logger.info("export_all done: %d entries returned", len(result))
+    return result
 
 
 class RotateError(Exception):
