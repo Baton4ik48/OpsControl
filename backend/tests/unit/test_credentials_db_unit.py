@@ -9,6 +9,7 @@ from app.services.db.credentials_db import (
     get_all_credentials_with_server_info,
 )
 from app.services.db.pool_db import ServiceUnavailableError
+from datetime import datetime
 
 
 def _make_conn(fetchone=None, fetchall=None, rowcount=1):
@@ -158,7 +159,7 @@ def test_upsert_vault_path_db_unavailable(monkeypatch):
 # get_all_credentials_with_server_info
 # ============================================
 
-from datetime import datetime
+
 
 
 def _make_conn_fetchall(rows):
