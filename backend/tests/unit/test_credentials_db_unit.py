@@ -160,8 +160,6 @@ def test_upsert_vault_path_db_unavailable(monkeypatch):
 # ============================================
 
 
-
-
 def _make_conn_fetchall(rows):
     cur = Mock()
     cur.fetchall.return_value = rows
