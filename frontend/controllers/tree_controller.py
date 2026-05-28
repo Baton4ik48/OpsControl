@@ -1,3 +1,4 @@
+import threading
 from datetime import datetime, timezone
 
 from PyQt6.QtCore import QObject, pyqtSignal
@@ -393,3 +394,41 @@ class TreeController(QObject):
             for s in b["servers"]:
                 if s["id"] == server_id:
                     return s["ip"]
+
+    # =========================
+    # КОММЕНТАРИИ
+    # =========================
+
+    def save_comment(self, item_type: str, server_id: int, port: int, comment: str):
+        """Сохраняет комментарий в БД в фоновом потоке, обновляет in-memory и UI."""
+        def _do():
+            try:
+                if item_type == "server":
+                    self.api.servers.update_comment(server_id, comment)
+                else:
+                    self.api.ports.update_comment(server_id, port, comment)
+
+                now = datetime.now(timezone.utc).isoformat()
+                self._update_comment_in_data(item_type, server_id, port, comment, now)
+
+                for tree in (self.tree_main, self.tree_xclarity):
+                    tree.update_comment_item(item_type, server_id, port, comment, now)
+
+            except Exception as e:
+                log.error("Ошибка сохранения комментария: %s", e)
+
+        threading.Thread(target=_do, daemon=True).start()
+
+    def _update_comment_in_data(self, item_type, server_id, port, comment, now):
+        for b in self._data:
+            for s in b["servers"]:
+                if item_type == "server" and s["id"] == server_id:
+                    s["comment"] = comment or None
+                    s["comment_updated_at"] = now
+                    return
+                if item_type == "port" and s["id"] == server_id:
+                    for p in s["ports"]:
+                        if p["port"] == port:
+                            p["comment"] = comment or None
+                            p["comment_updated_at"] = now
+                            return

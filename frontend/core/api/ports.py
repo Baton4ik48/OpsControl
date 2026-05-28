@@ -25,5 +25,11 @@ class PortApi(BaseApi):
     def delete_port(self, server_id: int, port: int):
         return self.delete(f"/api/ports/{server_id}/{port}")
 
+    def update_comment(self, server_id: int, port: int, comment: str):
+        return self.put(
+            f"/api/ports/{server_id}/{port}/comment",
+            json={"comment": comment},
+        )
+
     def delete_credentials(self, server_id: int, port: int):
         return self.delete(f"/api/ports/{server_id}/{port}/credentials")

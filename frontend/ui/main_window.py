@@ -108,6 +108,7 @@ class MainWindow(QWidget):
             _tree.open_protocol_requested.connect(self.controller.connect_protocol)
             _tree.show_credentials_requested.connect(self.controller.show_credentials)
             _tree.rotate_password_requested.connect(self._open_password_rotation)
+            _tree.comment_changed.connect(self.controller.save_comment)
 
         self.tabs.currentChanged.connect(self.controller.set_active_tab)
         self.tabs.currentChanged.connect(self._update_status_counts)

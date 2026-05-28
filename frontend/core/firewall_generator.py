@@ -25,7 +25,7 @@ def generate_firewall_rules(file_path: str) -> list[str]:
 
         port_parts = []
         for p in ports:
-            p = p.strip()
+            p = p.strip().lower()
             if ":" not in p:
                 continue
             proto, port = p.split(":")

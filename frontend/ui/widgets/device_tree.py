@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (
     QTreeWidget,
     QTreeWidgetItem,
     QHeaderView,
+    QAbstractItemView,
 )
 from PyQt6.QtGui import QIcon, QFont, QColor, QBrush
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QSize, QModelIndex
@@ -131,6 +132,7 @@ class DeviceTree(QTreeWidget):
     open_protocol_requested = pyqtSignal(int, int, str, str)
     show_credentials_requested = pyqtSignal(int, int, str)
     rotate_password_requested = pyqtSignal(int, str, str)  # server_id, ip, device_type
+    comment_changed = pyqtSignal(str, int, int, str)        # type, server_id, port, text
 
     def __init__(self):
         super().__init__()
@@ -140,7 +142,7 @@ class DeviceTree(QTreeWidget):
         self.user_settings = None
 
         self.setHeaderLabels(
-            ["Устройство", "IP", "Статус", "Учётные данные", "Дата обновления пароля"]
+            ["Устройство", "IP", "Статус", "Учётные данные", "Дата обновления пароля", "Комментарий"]
         )
 
         # ===== Icons =====
@@ -161,12 +163,20 @@ class DeviceTree(QTreeWidget):
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed)
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(5, QHeaderView.ResizeMode.Interactive)
 
         self.setColumnWidth(3, 160)
+        self.setColumnWidth(5, 220)
         header.setMinimumSectionSize(60)
+
+        # Инлайн-редактирование: только столбец 5 по двойному клику
+        self.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.itemDoubleClicked.connect(self._on_comment_double_click)
+        self.itemChanged.connect(self._on_comment_changed)
 
         self.headerItem().setTextAlignment(2, Qt.AlignmentFlag.AlignCenter)
         self.headerItem().setTextAlignment(3, Qt.AlignmentFlag.AlignCenter)
+        self.headerItem().setToolTip(5, "Двойной клик по ячейке — редактировать комментарий")
 
         self.setRootIsDecorated(True)
         self.setIndentation(18)
@@ -269,10 +279,10 @@ class DeviceTree(QTreeWidget):
         self.clear()
 
         for branch in branches:
-            branch_item = QTreeWidgetItem([branch["name"], "", "", "", ""])
+            branch_item = QTreeWidgetItem([branch["name"], "", "", "", "", ""])
             branch_item.setFont(0, self._font_branch)
             branch_item.setSizeHint(0, QSize(0, 20))
-            for col in range(5):
+            for col in range(6):
                 branch_item.setBackground(col, self._brush_branch_bg)
                 branch_item.setForeground(col, self._brush_text_branch)
             self.addTopLevelItem(branch_item)
@@ -282,10 +292,11 @@ class DeviceTree(QTreeWidget):
             )
 
             for srv in branch.get("servers", []):
-                server_item = QTreeWidgetItem([srv["name"], srv["ip"], "", "", ""])
+                srv_comment = srv.get("comment") or ""
+                server_item = QTreeWidgetItem([srv["name"], srv["ip"], "", "", "", srv_comment])
                 server_item.setFont(0, self._font_server)
                 server_item.setSizeHint(0, QSize(0, 15))
-                for col in range(5):
+                for col in range(6):
                     server_item.setForeground(col, self._brush_text_branch)
 
                 server_item.setData(0, ROLE_TYPE, "server")
@@ -294,6 +305,9 @@ class DeviceTree(QTreeWidget):
                 server_item.setData(
                     0, ROLE_DEVICE_TYPE, srv.get("device_type", "linux")
                 )
+
+                if srv_comment and srv.get("comment_updated_at"):
+                    server_item.setToolTip(5, f"Изменён: {format_dt(srv['comment_updated_at'])}")
 
                 branch_item.addChild(server_item)
 
@@ -313,6 +327,7 @@ class DeviceTree(QTreeWidget):
 
                     port = p["port"]
 
+                    port_comment = p.get("comment") or ""
                     port_item = QTreeWidgetItem(
                         [
                             f"port {port}",
@@ -320,6 +335,7 @@ class DeviceTree(QTreeWidget):
                             status_text,
                             "********",
                             format_dt(p.get("credentials_updated_at")),
+                            port_comment,
                         ]
                     )
 
@@ -361,6 +377,9 @@ class DeviceTree(QTreeWidget):
                     port_item.setData(0, ROLE_SERVER_ID, srv["id"])
                     port_item.setData(0, ROLE_PORT, port)
                     port_item.setData(0, ROLE_IP, srv["ip"])
+
+                    if port_comment and p.get("comment_updated_at"):
+                        port_item.setToolTip(5, f"Изменён: {format_dt(p['comment_updated_at'])}")
 
                     tooltip = _build_port_tooltip(
                         state,
@@ -505,3 +524,46 @@ class DeviceTree(QTreeWidget):
         self._credential_timers.clear()
         self.header().setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed)
         self.setColumnWidth(3, 160)
+
+    # ==================================================
+    # INLINE COMMENT EDITING
+    # ==================================================
+
+    def _on_comment_double_click(self, item, column):
+        if column != 5:
+            return
+        if item.data(0, ROLE_TYPE) not in ("server", "port"):
+            return
+        item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEditable)
+        self.editItem(item, 5)
+
+    def _on_comment_changed(self, item, column):
+        if column != 5:
+            return
+        item_type = item.data(0, ROLE_TYPE)
+        if item_type not in ("server", "port"):
+            return
+        server_id = item.data(0, ROLE_SERVER_ID)
+        port = item.data(0, ROLE_PORT) or 0
+        self.comment_changed.emit(item_type, server_id, port, item.text(5).strip())
+
+    def update_comment_item(self, item_type: str, server_id: int, port: int,
+                            comment: str, updated_at: str):
+        """Обновляет ячейку комментария и тултип после сохранения в БД."""
+        for i in range(self.topLevelItemCount()):
+            branch = self.topLevelItem(i)
+            for j in range(branch.childCount()):
+                server = branch.child(j)
+                if item_type == "server" and server.data(0, ROLE_SERVER_ID) == server_id:
+                    server.setText(5, comment)
+                    server.setToolTip(5, f"Изменён: {format_dt(updated_at)}" if updated_at else "")
+                    return
+                if item_type == "port":
+                    if server.data(0, ROLE_SERVER_ID) != server_id:
+                        continue
+                    for k in range(server.childCount()):
+                        p_item = server.child(k)
+                        if p_item.data(0, ROLE_PORT) == port:
+                            p_item.setText(5, comment)
+                            p_item.setToolTip(5, f"Изменён: {format_dt(updated_at)}" if updated_at else "")
+                            return

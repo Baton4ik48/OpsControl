@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QMessageBox,
 )
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import pyqtSignal, QTimer
 from PyQt6.QtGui import QIcon
 
 from core.paths import ICONS_DIR
@@ -72,5 +72,7 @@ class CredentialsDialog(QDialog):
             return
 
         self.admin_input.clear()
-        self.accept()          # закрываем диалог ДО того как сигнал откроет следующий
-        self.submitted.emit(password)
+        self.accept()
+        # Defer signal until next event loop iteration so this dialog's exec()
+        # fully exits before the next dialog opens (avoids nested event loops).
+        QTimer.singleShot(0, lambda: self.submitted.emit(password))
