@@ -1,6 +1,7 @@
 import subprocess
 import sys
 import shutil
+import threading
 import webbrowser
 import os
 
@@ -77,11 +78,15 @@ class ProtocolLauncher:
                 ],
                 check=False,
             )
-            try:
-                proc = subprocess.Popen(["mstsc", f"/v:{host}"])
+            proc = subprocess.Popen(["mstsc", f"/v:{host}"])
+
+            # Ждём завершения mstsc и чистим credential в фоне,
+            # чтобы не блокировать главный поток и UI.
+            def _cleanup():
                 proc.wait()
-            finally:
                 subprocess.run(["cmdkey", f"/delete:TERMSRV/{host}"], check=False)
+
+            threading.Thread(target=_cleanup, daemon=True).start()
 
         elif sys.platform.startswith("linux"):
             # remmina  — GUI-клиент, поддерживает rdp:// URI

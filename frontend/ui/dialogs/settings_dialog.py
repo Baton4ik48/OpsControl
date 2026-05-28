@@ -243,8 +243,8 @@ class SettingsDialog(QDialog):
         password_layout_wrapper = QVBoxLayout(password_tab)
 
         desc_password = QLabel(
-            "Настройки генерации паролей.\n"
-            "Пароль = число + первые N букв от каждого слова в QWERTY-раскладке."
+            "Количество слов и цифр в генерируемом пароле.\n"
+            "Спецсимволы встроены в слова автоматически — отдельно не настраиваются."
         )
         desc_password.setWordWrap(True)
         desc_password.setObjectName("settingsDescription")
@@ -257,41 +257,26 @@ class SettingsDialog(QDialog):
         password_layout.addWidget(QLabel("Количество слов (2–5):"))
         self.spin_words = QSpinBox()
         self.spin_words.setRange(2, 5)
-        self.spin_words.setValue(self.settings.get("password_word_count"))
+        self.spin_words.setValue(self.settings.get("password_word_count") or 3)
         password_layout.addWidget(self.spin_words)
 
-        password_layout.addWidget(QLabel("Букв от каждого слова (3–4):"))
-        self.spin_letters = QSpinBox()
-        self.spin_letters.setRange(3, 4)
-        self.spin_letters.setValue(self.settings.get("password_letters_per_word"))
-        password_layout.addWidget(self.spin_letters)
-
-        password_layout.addWidget(QLabel("Цифр в числе (0–4):"))
+        password_layout.addWidget(QLabel("Цифр в начале пароля (0–6):"))
         self.spin_digits = QSpinBox()
-        self.spin_digits.setRange(0, 4)
-        self.spin_digits.setValue(self.settings.get("password_digit_count"))
+        self.spin_digits.setRange(0, 6)
+        self.spin_digits.setValue(self.settings.get("password_digit_count") or 2)
         password_layout.addWidget(self.spin_digits)
-
-        password_layout.addWidget(QLabel("Символов в конце (0–4):"))
-        self.spin_symbols = QSpinBox()
-        self.spin_symbols.setRange(0, 4)
-        self.spin_symbols.setValue(self.settings.get("password_symbol_count") or 0)
-        self.spin_symbols.setToolTip("Случайные символы из набора !@#$%^&*")
-        password_layout.addWidget(self.spin_symbols)
 
         self.length_hint = QLabel()
         self._update_length_hint()
         password_layout.addWidget(self.length_hint)
 
         self.spin_words.valueChanged.connect(self._update_length_hint)
-        self.spin_letters.valueChanged.connect(self._update_length_hint)
         self.spin_digits.valueChanged.connect(self._update_length_hint)
-        self.spin_symbols.valueChanged.connect(self._update_length_hint)
 
         password_layout_wrapper.addWidget(password_group)
         password_layout_wrapper.addStretch()
 
-        tabs.addTab(password_tab, "Правила генерации паролей")
+        tabs.addTab(password_tab, "Генерация паролей")
 
         # =====================================================
         # TAB 6 — Парольная политика
@@ -397,9 +382,7 @@ class SettingsDialog(QDialog):
         )
 
         self.spin_words.valueChanged.connect(lambda: self._mark_dirty("password"))
-        self.spin_letters.valueChanged.connect(lambda: self._mark_dirty("password"))
         self.spin_digits.valueChanged.connect(lambda: self._mark_dirty("password"))
-        self.spin_symbols.valueChanged.connect(lambda: self._mark_dirty("password"))
 
         self.spin_rotation_days.valueChanged.connect(lambda: self._mark_dirty("policy"))
 
@@ -476,9 +459,7 @@ class SettingsDialog(QDialog):
 
         if "password" in self._dirty_tabs:
             self.settings.set("password_word_count", self.spin_words.value())
-            self.settings.set("password_letters_per_word", self.spin_letters.value())
             self.settings.set("password_digit_count", self.spin_digits.value())
-            self.settings.set("password_symbol_count", self.spin_symbols.value())
 
         if "policy" in self._dirty_tabs:
             self.settings.set("password_rotation_days", self.spin_rotation_days.value())
@@ -507,11 +488,7 @@ class SettingsDialog(QDialog):
         self.backend_port_spin.setEnabled(enabled)
 
     def _update_length_hint(self):
-        total = (
-            self.spin_digits.value()
-            + self.spin_words.value() * self.spin_letters.value()
-            + self.spin_symbols.value()
-        )
+        total = self.spin_digits.value() + self.spin_words.value() * 4
         self.length_hint.setText(f"Итоговая длина пароля: ~{total} символов")
 
     def _set_status(self, status: str):

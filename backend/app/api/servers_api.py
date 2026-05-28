@@ -9,6 +9,7 @@ from app.services.db.servers_db import (
     create_server,
     delete_server,
     update_server,
+    update_server_comment,
 )
 
 router = APIRouter(prefix="/servers", tags=["servers"])
@@ -53,6 +54,10 @@ class ServerCreate(BaseModel):
         if v not in ALLOWED_DEVICE_TYPES:
             raise ValueError(f"device_type must be one of: {ALLOWED_DEVICE_TYPES}")
         return v
+
+
+class CommentUpdate(BaseModel):
+    comment: str
 
 
 class ServerUpdate(BaseModel):
@@ -123,6 +128,18 @@ def update_server_api(server_id: int, payload: ServerUpdate):
         payload.ip,
         payload.device_type,
     )
+    ensure_found(affected, "Server")
+    return {"success": True, "data": None}
+
+
+# ==========================
+# UPDATE COMMENT
+# ==========================
+
+
+@router.put("/{server_id}/comment")
+def update_server_comment_api(server_id: int, payload: CommentUpdate):
+    affected = update_server_comment(server_id, payload.comment)
     ensure_found(affected, "Server")
     return {"success": True, "data": None}
 

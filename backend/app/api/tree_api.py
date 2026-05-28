@@ -30,6 +30,8 @@ def get_tree():
                     "name": sname,
                     "ip": sip,
                     "device_type": r[11] or "linux",
+                    "comment": r[12],
+                    "comment_updated_at": r[13],
                     "ports": [],
                 }
 
@@ -43,6 +45,8 @@ def get_tree():
                         "has_credentials": r[8] is not None,
                         "credentials_updated_at": r[9],
                         "vault_path": r[10],
+                        "comment": r[14],
+                        "comment_updated_at": r[15],
                     }
                 )
 

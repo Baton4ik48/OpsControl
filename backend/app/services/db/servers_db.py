@@ -80,6 +80,31 @@ def update_server(
 
 
 # ==========================
+# UPDATE COMMENT
+# ==========================
+
+
+def update_server_comment(server_id: int, comment: str) -> int:
+    def work(conn):
+        cur = conn.cursor()
+        cur.execute(
+            """
+            UPDATE servers
+            SET comment            = %s,
+                comment_updated_at = (NOW() AT TIME ZONE 'UTC')
+            WHERE id = %s
+            """,
+            (comment or None, server_id),
+        )
+        affected = cur.rowcount
+        conn.commit()
+        cur.close()
+        return affected
+
+    return _execute(work)
+
+
+# ==========================
 # DELETE
 # ==========================
 

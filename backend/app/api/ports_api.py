@@ -8,6 +8,7 @@ from app.services.db.ports_db import (
     update_vault_path,
     report_port_result,
     delete_credentials,
+    update_port_comment,
 )
 from pydantic import BaseModel
 
@@ -29,6 +30,10 @@ class VaultPathUpdate(BaseModel):
 
 class PortResult(BaseModel):
     ok: bool
+
+
+class CommentUpdate(BaseModel):
+    comment: str
 
 
 # ==========================
@@ -96,6 +101,18 @@ def delete_port_api(server_id: int, port: int):
 @router.delete("/{server_id}/{port}/credentials")
 def delete_credentials_api(server_id: int, port: int):
     delete_credentials(server_id, port)
+    return {"success": True, "data": None}
+
+
+# ==========================
+# UPDATE COMMENT
+# ==========================
+
+
+@router.put("/{server_id}/{port}/comment")
+def update_port_comment_api(server_id: int, port: int, payload: CommentUpdate):
+    affected = update_port_comment(server_id, port, payload.comment)
+    ensure_found(affected, "Port")
     return {"success": True, "data": None}
 
 

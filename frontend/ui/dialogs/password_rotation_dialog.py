@@ -141,10 +141,8 @@ class PasswordRotationDialog(QDialog):
     def _generate(self):
         s = UserSettings()
         password, mnemonic = generate_password(
-            word_count=s.get("password_word_count"),
-            letters_per_word=s.get("password_letters_per_word"),
-            digit_count=s.get("password_digit_count"),
-            symbol_count=s.get("password_symbol_count") or 0,
+            word_count=s.get("password_word_count") or 3,
+            digit_count=s.get("password_digit_count") or 2,
         )
         self.new_password_input.setText(password)
         self.mnemonic_label.setText(mnemonic)

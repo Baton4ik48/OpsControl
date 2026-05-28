@@ -27,5 +27,11 @@ class ServerApi(BaseApi):
             },
         )
 
+    def update_comment(self, server_id: int, comment: str):
+        return self.put(
+            f"/api/servers/{server_id}/comment",
+            json={"comment": comment},
+        )
+
     def delete_server(self, server_id: int):
         return self.delete(f"/api/servers/{server_id}")

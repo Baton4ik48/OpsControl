@@ -197,6 +197,31 @@ def update_vault_path(server_id: int, port: int, new_path: str) -> int:
 
 
 # ==========================
+# UPDATE COMMENT
+# ==========================
+
+
+def update_port_comment(server_id: int, port: int, comment: str) -> int:
+    def work(conn):
+        cur = conn.cursor()
+        cur.execute(
+            """
+            UPDATE ports
+            SET comment            = %s,
+                comment_updated_at = (NOW() AT TIME ZONE 'UTC')
+            WHERE server_id = %s AND port = %s
+            """,
+            (comment or None, server_id, port),
+        )
+        affected = cur.rowcount
+        conn.commit()
+        cur.close()
+        return affected
+
+    return _execute(work)
+
+
+# ==========================
 # DELETE
 # ==========================
 

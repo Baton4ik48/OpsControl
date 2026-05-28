@@ -17,7 +17,11 @@ def load_tree():
             c.id AS cred_id,
             c.updated_at,
             c.vault_path,
-            s.device_type
+            s.device_type,
+            s.comment,
+            s.comment_updated_at,
+            p.comment,
+            p.comment_updated_at
         FROM branches b
         LEFT JOIN servers s ON s.branch_id = b.id
         LEFT JOIN ports p ON p.server_id = s.id
