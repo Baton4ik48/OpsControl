@@ -91,6 +91,7 @@ class MainWindow(QWidget):
         self.sidebar.exit_clicked.connect(self.exit_app)
 
         self.controller.loaded.connect(self.on_tree_loaded)
+        self.controller.loaded.connect(self._update_status_counts)
         self.controller.error_occurred.connect(self._on_api_error)
         self.controller.checking_started.connect(
             lambda: self.sidebar.set_actions_enabled(False)
@@ -152,19 +153,26 @@ class MainWindow(QWidget):
     def _update_status_counts(self, _tab_index=None):
         data = self.controller._active_data
         if not data:
-            self.menu.update_server_counts(0, 0)
+            self.menu.update_server_counts(0, 0, 0)
             return
-        up = down = 0
+        up = partial = down = 0
         for branch in data:
             for server in branch.get("servers", []):
                 ports = server.get("ports", [])
                 if not ports:
                     continue
-                if any(p.get("is_up") is True for p in ports):
+                checked = [p for p in ports if p.get("is_up") is not None]
+                if not checked:
+                    continue
+                has_up = any(p["is_up"] is True for p in checked)
+                has_down = any(p["is_up"] is False for p in checked)
+                if has_up and has_down:
+                    partial += 1
+                elif has_up:
                     up += 1
                 else:
                     down += 1
-        self.menu.update_server_counts(up, down)
+        self.menu.update_server_counts(up, partial, down)
 
     # =========================
     # STATISTICS

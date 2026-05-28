@@ -16,23 +16,31 @@ class _StatusIndicator(QWidget):
         layout.setSpacing(14)
 
         self._up = QLabel("● —")
+        self._partial = QLabel("● —")
         self._down = QLabel("● —")
         self._up.setStyleSheet(
             "color:#81c995; font-size:9pt; font-weight:bold; background:transparent;"
+        )
+        self._partial.setStyleSheet(
+            "color:#ffd54f; font-size:9pt; font-weight:bold; background:transparent;"
         )
         self._down.setStyleSheet(
             "color:#ef9a9a; font-size:9pt; font-weight:bold; background:transparent;"
         )
         self._up.setMinimumWidth(60)
+        self._partial.setMinimumWidth(60)
         self._down.setMinimumWidth(60)
-        self._up.setToolTip("Серверов доступно")
-        self._down.setToolTip("Серверов недоступно")
+        self._up.setToolTip("Серверов полностью доступно")
+        self._partial.setToolTip("Серверов частично доступно")
+        self._down.setToolTip("Серверов полностью недоступно")
 
         layout.addWidget(self._up)
+        layout.addWidget(self._partial)
         layout.addWidget(self._down)
 
-    def update_counts(self, up: int, down: int):
+    def update_counts(self, up: int, partial: int, down: int):
         self._up.setText(f"● {up}")
+        self._partial.setText(f"● {partial}")
         self._down.setText(f"● {down}")
 
 
@@ -81,8 +89,8 @@ class ToolsMenu(QMenuBar):
         envelope_action = tools_menu.addAction("Печать конверта с паролями…")
         envelope_action.triggered.connect(self.open_envelope_print)
 
-    def update_server_counts(self, up: int, down: int):
-        self._status.update_counts(up, down)
+    def update_server_counts(self, up: int, partial: int, down: int):
+        self._status.update_counts(up, partial, down)
 
     # -------------------------------------
 
