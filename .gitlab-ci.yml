@@ -175,10 +175,6 @@ deploy_staging_job:
         --restart always \
         --network opscontrol-staging_default \
         --env-file backend/.env.staging \
-        -e POSTGRES_USER=$STAGING_POSTGRES_USER \
-        -e POSTGRES_PASSWORD=$STAGING_POSTGRES_PASSWORD \
-        -e VAULT_ROLE_ID=$STAGING_VAULT_ROLE_ID \
-        -e VAULT_SECRET_ID=$STAGING_VAULT_SECRET_ID \
         -p 9001:8000 \
         localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA
     - |
