@@ -49,14 +49,16 @@ docker compose ps
 ## 🐘 Шаг 2 — Инициализация PostgreSQL
 
 ```bash
-cat init.sql | docker compose exec -T postgres psql -U login_ppm -d ppm_database
+cat init.sql | docker compose exec -T postgres-staging psql -U login_opscontrol -d opscontrol_database
+docker exec -i postgres-staging psql -U login_opscontrol -d opscontrol_database < init.sql
+
 ```
 
 Проверка:
 
 ```bash
-docker compose exec postgres psql -U login_ppm -d ppm_database -c "\dt"
-docker compose exec postgres psql -U login_ppm -d ppm_database -c "\du app_role"
+docker exec -it postgres-staging psql -U login_opscontrol -d opscontrol_database -c "\dt"
+docker exec -it postgres-staging psql -U login_opscontrol -d opscontrol_database -c "\du app_role"
 ```
 
 ---
@@ -126,7 +128,7 @@ docker compose up -d --no-deps backend
 Проверка:
 
 ```bash
-docker logs ppm-backend
+docker logs opscontrol-backend
 ```
 
 Успех:
