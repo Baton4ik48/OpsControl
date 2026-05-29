@@ -20,6 +20,7 @@ from ui.widgets.busy_overlay import BusyOverlay
 from ui.dialogs.settings_dialog import SettingsDialog
 from ui.dialogs.password_rotation_dialog import PasswordRotationDialog
 from ui.dialogs.statistics_dialog import StatisticsDialog
+from ui.dialogs.batch_rotation_dialog import BatchRotationDialog
 
 
 class MainWindow(QWidget):
@@ -83,6 +84,7 @@ class MainWindow(QWidget):
         # =========================
         self.menu.infrastructure_closed.connect(self.reload)
         self.menu.statistics_requested.connect(self._open_statistics)
+        self.menu.batch_rotation_requested.connect(self._open_batch_rotation)
         self.sidebar.reload_clicked.connect(self.reload)
         self.sidebar.refresh_all_clicked.connect(self.on_refresh_all)
         self.sidebar.show_all_clicked.connect(self.on_show_all)
@@ -174,6 +176,22 @@ class MainWindow(QWidget):
                 else:
                     down += 1
         self.menu.update_server_counts(up, partial, down)
+
+    # =========================
+    # BATCH ROTATION
+    # =========================
+    def _open_batch_rotation(self):
+        data = self.controller._data
+        if not data:
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.information(
+                self,
+                "Нет данных",
+                "Сначала загрузите топологию сети.",
+            )
+            return
+        dlg = BatchRotationDialog(data, parent=self)
+        dlg.exec()
 
     # =========================
     # STATISTICS
