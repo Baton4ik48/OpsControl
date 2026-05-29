@@ -26,13 +26,7 @@ until vault status 2>/dev/null | grep -q "Initialized.*true"; do
   sleep 2
 done
 
-echo "⏳ Ожидание Vault (unseal)..."
 
-until vault status 2>/dev/null | grep -q "Sealed.*false"; do
-  sleep 2
-done
-
-echo "✅ Vault готов"
 
 # =========================================================
 # 1. Database Secrets Engine
