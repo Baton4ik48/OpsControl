@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS credentials (
 -- РОЛЬ ДЛЯ ПРИЛОЖЕНИЯ
 -- =========================================================
 CREATE ROLE app_role;
-GRANT app_role TO login_ppm;
+GRANT app_role TO login_opscontrol;
 
 -- =========================================================
 -- ПРАВА ДЛЯ app_role
