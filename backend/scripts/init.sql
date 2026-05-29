@@ -13,7 +13,9 @@ CREATE TABLE IF NOT EXISTS servers (
     branch_id INTEGER NOT NULL REFERENCES branches(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     ip VARCHAR(45) NOT NULL UNIQUE,
-    device_type VARCHAR(32) NOT NULL DEFAULT 'linux'
+    device_type VARCHAR(32) NOT NULL DEFAULT 'linux',
+    comment TEXT,
+    comment_updated_at TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS ports (
@@ -21,6 +23,8 @@ CREATE TABLE IF NOT EXISTS ports (
     port INTEGER NOT NULL,
     last_success TIMESTAMP,
     last_failure TIMESTAMP,
+    comment TEXT,
+    comment_updated_at TIMESTAMP,
     PRIMARY KEY (server_id, port)
 );
 
