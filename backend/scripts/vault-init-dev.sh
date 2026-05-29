@@ -13,13 +13,6 @@ if [ -z "$POSTGRES_USER" ] || [ -z "$POSTGRES_PASSWORD" ] || [ -z "$VAULT_DATABA
   exit 1
 fi
 
-echo "⏳ Проверка Vault API..."
-
-until curl -s http://vault:8200/v1/sys/health | grep -q '"sealed":false'; do
-  sleep 1
-done
-
-echo "✅ Vault доступен"
 
 # =========================================================
 # 1. Database Secrets Engine
