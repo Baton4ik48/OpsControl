@@ -47,6 +47,7 @@ class _StatusIndicator(QWidget):
 class ToolsMenu(QMenuBar):
     infrastructure_closed = pyqtSignal()
     statistics_requested = pyqtSignal()
+    batch_rotation_requested = pyqtSignal()
 
     def __init__(self, user_settings, parent=None):
         super().__init__(parent)
@@ -85,6 +86,9 @@ class ToolsMenu(QMenuBar):
         infra_action.triggered.connect(self.open_infrastructure_manager)
 
         tools_menu.addSeparator()
+
+        batch_action = tools_menu.addAction("Пакетная смена паролей")
+        batch_action.triggered.connect(self.batch_rotation_requested.emit)
 
         envelope_action = tools_menu.addAction("Печать конверта с паролями…")
         envelope_action.triggered.connect(self.open_envelope_print)
