@@ -70,7 +70,7 @@ echo "✅ KV engine готов"
 # =========================================================
 echo "📜 Создание политик..."
 
-vault policy write -db-policy - <<EOF
+vault policy write opscontrol-db-policy - <<EOF
 path "database/creds/${VAULT_DATABASE_ROLE_NAME}" {
   capabilities = ["read"]
 }
