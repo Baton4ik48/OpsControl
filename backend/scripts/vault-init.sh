@@ -37,7 +37,7 @@ vault secrets enable database 2>/dev/null || true
 
 vault write database/config/opscontrol-db \
   plugin_name=postgresql-database-plugin \
-  connection_url="postgresql://{{username}}:{{password}}@postgres:5432/${POSTGRES_DB}?sslmode=disable" \
+  connection_url="postgresql://{{username}}:{{password}}@${POSTGRES_HOST}:5432/${POSTGRES_DB}?sslmode=disable"\
   allowed_roles="${VAULT_DATABASE_ROLE_NAME}" \
   username="${POSTGRES_USER}" \
   password="${POSTGRES_PASSWORD}"
