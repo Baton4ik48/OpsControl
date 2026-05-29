@@ -11,6 +11,7 @@ from core.logger import get_logger
 from core.api.base import ApiError
 from core.workers.credentials_worker import CredentialsWorker
 from ui.dialogs.credentials_dialog import CredentialsDialog
+from ui.dialogs.credential_popup import CredentialPopup
 
 from ui.error_handler import handle_system_error
 
@@ -307,10 +308,13 @@ class TreeController(QObject):
             # =========================
             for app in external_apps:
                 if app.get("port") == port:
+                    # Запускаем приложение + предлагаем скопировать учётные данные
                     try:
                         ProtocolLauncher.open_external(app.get("path"))
                     except Exception as e:
                         handle_system_error(None, e)
+                        return
+                    self._ask_and_show_popup(server_id, ip, port)
                     return
 
             # =========================
@@ -329,7 +333,7 @@ class TreeController(QObject):
             return
 
         # =========================
-        # WEB — без мастер-пароля
+        # WEB — открываем браузер + показываем popup с учётными данными
         # =========================
         if protocol in ("http", "https"):
             try:
@@ -337,6 +341,8 @@ class TreeController(QObject):
             except Exception as e:
                 log.exception("Ошибка запуска WEB протокола")
                 handle_system_error(None, e)
+                return
+            self._ask_and_show_popup(server_id, ip, port)
             return
 
         # =========================
@@ -382,7 +388,24 @@ class TreeController(QObject):
                 handle_system_error(None, e)
 
         def on_error(e: ApiError):
-            self.error_occurred.emit(e)
+            host = self._get_ip_by_server_id(server_id)
+            # Если учётных данных нет в базе — для SSH всё равно открываем терминал
+            # без авторизации, пользователь введёт логин/пароль вручную
+            if e.status_code in (404, 422) and protocol == "ssh" and host:
+                from PyQt6.QtWidgets import QMessageBox
+                QMessageBox.information(
+                    None,
+                    "Учётные данные не найдены",
+                    f"В базе нет учётных данных для {host}:{port}.\n\n"
+                    "SSH-терминал откроется без авторизации — "
+                    "введите логин и пароль вручную.",
+                )
+                try:
+                    ProtocolLauncher.open(protocol, None, None, host, port)
+                except Exception as ex:
+                    handle_system_error(None, ex)
+            else:
+                self.error_occurred.emit(e)
 
         self._credentials_worker.finished.connect(self.busy.stop)
         self._credentials_worker.success.connect(on_success)
@@ -394,6 +417,49 @@ class TreeController(QObject):
             for s in b["servers"]:
                 if s["id"] == server_id:
                     return s["ip"]
+
+    # =========================
+    # POPUP ДЛЯ ВЕБ / ПРИЛОЖЕНИЙ
+    # =========================
+
+    def _ask_and_show_popup(self, server_id: int, ip: str, port: int):
+        """Запрашивает мастер-пароль и показывает popup с учётными данными."""
+        dlg = CredentialsDialog(ip, port, mode="show")
+        dlg.submitted.connect(
+            lambda master_password: self._start_popup_worker(
+                server_id, ip, port, master_password
+            )
+        )
+        dlg.exec()
+
+    def _start_popup_worker(self, server_id: int, ip: str, port: int, master_password: str):
+        admin_login = self.user_settings.get("admin_login")
+        self.busy.start("Получение учётных данных…")
+
+        self._popup_worker = CredentialsWorker(
+            api=self.api,
+            server_id=server_id,
+            port=port,
+            username=admin_login,
+            master_password=master_password,
+        )
+
+        def on_success(data):
+            popup = CredentialPopup(ip, port, data["username"], data["password"])
+            # Держим ссылку чтобы popup не был уничтожен сборщиком мусора
+            self._active_popup = popup
+            popup.show()
+            del data
+
+        def on_error(e: ApiError):
+            # Если учётных данных нет — молча игнорируем, браузер/приложение уже открыты
+            if e.status_code not in (404, None):
+                self.error_occurred.emit(e)
+
+        self._popup_worker.finished.connect(self.busy.stop)
+        self._popup_worker.success.connect(on_success)
+        self._popup_worker.error.connect(on_error)
+        self._popup_worker.start()
 
     # =========================
     # КОММЕНТАРИИ

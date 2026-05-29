@@ -30,37 +30,41 @@ class ProtocolLauncher:
     def _open_ssh(user, password, host, port):
 
         if sys.platform.startswith("win"):
-            # KiTTY — форк PuTTY с улучшениями, тот же API
-            # PuTTY — классика, широко распространена
-            # Оба принимают -pw без shell, спецсимволы не ломаются
             client = shutil.which("kitty") or shutil.which("putty")
             if not client:
                 raise RuntimeError("PUTTY_NOT_FOUND")
 
-            subprocess.Popen(
-                [
-                    client,
-                    "-ssh",
-                    f"{user}@{host}",
-                    "-P",
-                    str(port),
-                    "-pw",
-                    password,
-                ]
-            )
+            if user and password:
+                # Автологин с паролем
+                subprocess.Popen(
+                    [client, "-ssh", f"{user}@{host}", "-P", str(port), "-pw", password]
+                )
+            else:
+                # Без учётных данных — открываем терминал, пользователь введёт сам
+                cmd = [client, "-ssh", host, "-P", str(port)]
+                if user:
+                    cmd = [client, "-ssh", f"{user}@{host}", "-P", str(port)]
+                subprocess.Popen(cmd)
 
         elif sys.platform.startswith("linux"):
-            if not shutil.which("sshpass"):
-                raise RuntimeError("SSHPASS_NOT_FOUND")
-            subprocess.Popen(
-                [
-                    "x-terminal-emulator",
-                    "-e",
-                    "bash",
-                    "-c",
-                    f"sshpass -p '{password}' ssh -o StrictHostKeyChecking=no -p {port} {user}@{host}; exec bash",
-                ]
-            )
+            if user and password:
+                if not shutil.which("sshpass"):
+                    raise RuntimeError("SSHPASS_NOT_FOUND")
+                subprocess.Popen(
+                    [
+                        "x-terminal-emulator", "-e", "bash", "-c",
+                        f"sshpass -p '{password}' ssh -o StrictHostKeyChecking=no -p {port} {user}@{host}; exec bash",
+                    ]
+                )
+            else:
+                # Без учётных данных — обычный SSH, пользователь введёт сам
+                target = f"{user}@{host}" if user else host
+                subprocess.Popen(
+                    [
+                        "x-terminal-emulator", "-e", "bash", "-c",
+                        f"ssh -o StrictHostKeyChecking=no -p {port} {target}; exec bash",
+                    ]
+                )
 
     # =========================
     # RDP
