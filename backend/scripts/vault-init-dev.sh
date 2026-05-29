@@ -29,7 +29,7 @@ echo "📦 Настройка Database engine..."
 
 vault secrets enable database 2>/dev/null || true
 
-vault write database/config/ppm-db \
+vault write database/config/opscontrol-db \
   plugin_name=postgresql-database-plugin \
   connection_url="postgresql://{{username}}:{{password}}@${POSTGRES_IP}:5432/${POSTGRES_DB}?sslmode=disable"\
   allowed_roles="${VAULT_DATABASE_ROLE_NAME}" \
@@ -37,7 +37,7 @@ vault write database/config/ppm-db \
   password="${POSTGRES_PASSWORD}"
 
 vault write database/roles/${VAULT_DATABASE_ROLE_NAME} \
-  db_name=ppm-db \
+  db_name=opscontrol-db \
   creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; GRANT app_role TO \"{{name}}\";" \
   default_ttl="1h" \
   max_ttl="24h"
@@ -60,13 +60,13 @@ echo "✅ KV engine готов"
 
 echo "📜 Создание политик..."
 
-vault policy write ppm-db-policy - <<EOF
+vault policy write opscontrol-db-policy - <<EOF
 path "database/creds/${VAULT_DATABASE_ROLE_NAME}" {
   capabilities = ["read"]
 }
 EOF
 
-vault policy write ppm-admin-policy - <<EOF
+vault policy write opscontrol-admin-policy - <<EOF
 path "credentials/data/*" {
   capabilities = ["create", "read", "update", "delete", "list"]
 }
@@ -86,7 +86,7 @@ echo "🔑 Настройка AppRole..."
 vault auth enable approle 2>/dev/null || true
 
 vault write auth/approle/role/backend-app \
-  token_policies="ppm-db-policy,ppm-admin-policy" \
+  token_policies="opscontrol-db-policy,opscontrol-admin-policy" \
   token_ttl=1h \
   token_max_ttl=4h
 
@@ -111,7 +111,7 @@ vault auth enable userpass 2>/dev/null || true
 
 vault write auth/userpass/users/admin \
   password="${VAULT_ADMIN_PASSWORD}" \
-  policies="ppm-admin-policy"
+  policies="opscontrol-admin-policy"
 
 echo "✅ Userpass готов"
 
