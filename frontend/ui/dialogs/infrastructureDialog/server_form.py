@@ -25,6 +25,7 @@ DEVICE_TYPES = [
     ("Коммутатор Nateks", "nateks"),
     ("Коммутатор Cisco", "cisco"),
     ("xClarity (интерфейс управления)", "xclarity"),
+    ("VipNet Coordinator", "coordinator"),
 ]
 
 

@@ -176,6 +176,7 @@ class DeviceTree(QTreeWidget):
 
         self.headerItem().setTextAlignment(2, Qt.AlignmentFlag.AlignCenter)
         self.headerItem().setTextAlignment(3, Qt.AlignmentFlag.AlignCenter)
+        self.headerItem().setTextAlignment(5, Qt.AlignmentFlag.AlignCenter)
         self.headerItem().setToolTip(5, "Двойной клик по ячейке — редактировать комментарий")
 
         self.setRootIsDecorated(True)
@@ -504,11 +505,19 @@ class DeviceTree(QTreeWidget):
         timer = QTimer(self)
         timer.setSingleShot(True)
 
+        # Запоминаем что положили в буфер — чтобы очистить его при сбросе
+        _shown_value = f"{username}:{password}"
+
         def clear():
             item.setText(3, "********")
             item.setToolTip(3, "")
             self.header().setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed)
             self.setColumnWidth(3, 160)
+            # Очищаем буфер если там ещё наш пароль
+            from PyQt6.QtGui import QGuiApplication
+            cb = QGuiApplication.clipboard()
+            if cb.text() in (_shown_value, username, password):
+                cb.clear()
             timer.deleteLater()
             self._credential_timers.pop(key, None)
 
