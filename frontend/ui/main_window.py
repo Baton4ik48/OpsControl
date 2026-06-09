@@ -47,8 +47,8 @@ class MainWindow(QWidget):
         self.tree = DeviceTree()
         self.tree_xclarity = DeviceTree()
         self.tabs = QTabWidget()
-        self.tabs.addTab(self.tree, "Основные серверы")
-        self.tabs.addTab(self.tree_xclarity, "xClarity")
+        self.tabs.addTab(self.tree, "Сетевое оборудование")
+        self.tabs.addTab(self.tree_xclarity, "BMC серверов")
         main_layout.setMenuBar(self.menu)
 
         body.addWidget(self.sidebar)

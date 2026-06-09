@@ -282,85 +282,108 @@ class TreeController(QObject):
         self._credentials_worker.error.connect(on_error)
         self._credentials_worker.start()
 
+    def _has_credentials(self, server_id: int, port: int) -> bool:
+        """True если для порта в дереве есть credentials_updated_at — значит пароль сохранён."""
+        for b in self._data:
+            for s in b["servers"]:
+                if s["id"] != server_id:
+                    continue
+                for p in s.get("ports", []):
+                    if p.get("port") == port:
+                        return bool(p.get("credentials_updated_at"))
+        return False
+
     def connect_protocol(
         self, server_id: int, port: int, ip: str, _unused_protocol: str
     ):
         settings = self.user_settings
         external_apps = settings.get("external_apps") or []
         web_ports = settings.get("web_ports") or []
+        has_creds = self._has_credentials(server_id, port)
+
         # =========================
         # SSH
         # =========================
         if port == 22:
-            protocol = "ssh"
+            if has_creds:
+                # Есть пароль → запрашиваем мастер-пароль → подключаемся с кредами
+                dlg = CredentialsDialog(ip, port, mode="ssh")
+                dlg.submitted.connect(
+                    lambda mp: self._start_protocol_worker(server_id, port, mp, "ssh")
+                )
+                dlg.exec()
+            else:
+                # Нет пароля → сразу открываем SSH без кредов
+                try:
+                    ProtocolLauncher.open("ssh", None, None, ip, port)
+                except Exception as e:
+                    handle_system_error(None, e)
+            return
 
         # =========================
         # RDP
         # =========================
-        elif port == 3389:
-            protocol = "rdp"
+        if port == 3389:
+            if has_creds:
+                dlg = CredentialsDialog(ip, port, mode="rdp")
+                dlg.submitted.connect(
+                    lambda mp: self._start_protocol_worker(server_id, port, mp, "rdp")
+                )
+                dlg.exec()
+            else:
+                try:
+                    ProtocolLauncher.open("rdp", None, None, ip, port)
+                except Exception as e:
+                    handle_system_error(None, e)
+            return
 
-        else:
-            protocol = None
-
-            # =========================
-            # EXTERNAL APP (приоритет)
-            # =========================
-            for app in external_apps:
-                if app.get("port") == port:
-                    # Запускаем приложение + предлагаем скопировать учётные данные
+        # =========================
+        # EXTERNAL APP (приоритет над web_ports)
+        # =========================
+        for app in external_apps:
+            if app.get("port") == port:
+                if has_creds:
+                    # Сначала мастер-пароль → потом открываем приложение + popup
+                    self._ask_then_open(
+                        server_id, ip, port,
+                        open_fn=lambda: ProtocolLauncher.open_external(app.get("path")),
+                    )
+                else:
                     try:
                         ProtocolLauncher.open_external(app.get("path"))
                     except Exception as e:
                         handle_system_error(None, e)
-                        return
-                    self._ask_and_show_popup(server_id, ip, port)
-                    return
-
-            # =========================
-            # WEB
-            # =========================
-            for entry in web_ports:
-                if entry.get("port") == port:
-                    protocol = entry.get("scheme")
-                    break
+                return
 
         # =========================
-        # Если ничего не найдено
+        # WEB
         # =========================
-        if not protocol:
+        scheme = None
+        for entry in web_ports:
+            if entry.get("port") == port:
+                scheme = entry.get("scheme")
+                break
+
+        if not scheme:
             handle_system_error(None, RuntimeError("UNSUPPORTED_PROTOCOL"))
             return
 
-        # =========================
-        # WEB — открываем браузер + показываем popup с учётными данными
-        # =========================
-        if protocol in ("http", "https"):
+        if has_creds:
+            # Сначала мастер-пароль → потом открываем браузер + popup
+            self._ask_then_open(
+                server_id, ip, port,
+                open_fn=lambda: ProtocolLauncher.open(scheme, None, None, ip, port),
+            )
+        else:
+            # Нет пароля → просто открываем браузер
             try:
-                ProtocolLauncher.open(protocol, None, None, ip, port)
+                ProtocolLauncher.open(scheme, None, None, ip, port)
             except Exception as e:
                 log.exception("Ошибка запуска WEB протокола")
                 handle_system_error(None, e)
-                return
-            self._ask_and_show_popup(server_id, ip, port)
-            return
-
-        # =========================
-        # SSH / RDP — с мастер-паролем
-        # =========================
-        dlg = CredentialsDialog(ip, port, mode=protocol)
-
-        dlg.submitted.connect(
-            lambda master_password: self._start_protocol_worker(
-                server_id, port, master_password, protocol
-            )
-        )
-
-        dlg.exec()
 
     def _start_protocol_worker(self, server_id, port, master_password, protocol):
         admin_login = self.user_settings.get("admin_login")
-
         self.busy.start(f"Получение учётных данных для {protocol.upper()}…")
 
         self._credentials_worker = CredentialsWorker(
@@ -375,64 +398,36 @@ class TreeController(QObject):
             username = data["username"]
             password = data["password"]
             del data
-
             host = self._get_ip_by_server_id(server_id)
-
             if not host:
-                self.busy.stop()
                 return
-
             try:
                 ProtocolLauncher.open(protocol, username, password, host, port)
             except Exception as e:
                 handle_system_error(None, e)
 
         def on_error(e: ApiError):
-            host = self._get_ip_by_server_id(server_id)
-            # Если учётных данных нет в базе — для SSH всё равно открываем терминал
-            # без авторизации, пользователь введёт логин/пароль вручную
-            if e.status_code in (404, 422) and protocol == "ssh" and host:
-                from PyQt6.QtWidgets import QMessageBox
-                QMessageBox.information(
-                    None,
-                    "Учётные данные не найдены",
-                    f"В базе нет учётных данных для {host}:{port}.\n\n"
-                    "SSH-терминал откроется без авторизации — "
-                    "введите логин и пароль вручную.",
-                )
-                try:
-                    ProtocolLauncher.open(protocol, None, None, host, port)
-                except Exception as ex:
-                    handle_system_error(None, ex)
-            else:
-                self.error_occurred.emit(e)
+            self.error_occurred.emit(e)
 
         self._credentials_worker.finished.connect(self.busy.stop)
         self._credentials_worker.success.connect(on_success)
         self._credentials_worker.error.connect(on_error)
         self._credentials_worker.start()
 
-    def _get_ip_by_server_id(self, server_id):
-        for b in self._data:
-            for s in b["servers"]:
-                if s["id"] == server_id:
-                    return s["ip"]
-
-    # =========================
-    # POPUP ДЛЯ ВЕБ / ПРИЛОЖЕНИЙ
-    # =========================
-
-    def _ask_and_show_popup(self, server_id: int, ip: str, port: int):
-        """Запрашивает мастер-пароль и показывает popup с учётными данными."""
+    def _ask_then_open(self, server_id: int, ip: str, port: int, open_fn):
+        """
+        Запрашивает мастер-пароль → получает учётные данные →
+        вызывает open_fn() (открывает браузер/приложение) → показывает popup.
+        """
         dlg = CredentialsDialog(ip, port, mode="show")
         dlg.submitted.connect(
-            lambda master_password: self._start_popup_worker(
-                server_id, ip, port, master_password
-            )
+            lambda mp: self._start_popup_worker(server_id, ip, port, mp, open_fn)
         )
         dlg.exec()
 
-    def _start_popup_worker(self, server_id: int, ip: str, port: int, master_password: str):
+    def _start_popup_worker(
+        self, server_id: int, ip: str, port: int, master_password: str, open_fn
+    ):
         admin_login = self.user_settings.get("admin_login")
         self.busy.start("Получение учётных данных…")
 
@@ -445,21 +440,29 @@ class TreeController(QObject):
         )
 
         def on_success(data):
+            # Сначала открываем браузер/приложение, потом показываем popup
+            try:
+                open_fn()
+            except Exception as e:
+                handle_system_error(None, e)
             popup = CredentialPopup(ip, port, data["username"], data["password"])
-            # Держим ссылку чтобы popup не был уничтожен сборщиком мусора
             self._active_popup = popup
             popup.show()
             del data
 
         def on_error(e: ApiError):
-            # Если учётных данных нет — молча игнорируем, браузер/приложение уже открыты
-            if e.status_code not in (404, None):
-                self.error_occurred.emit(e)
+            self.error_occurred.emit(e)
 
         self._popup_worker.finished.connect(self.busy.stop)
         self._popup_worker.success.connect(on_success)
         self._popup_worker.error.connect(on_error)
         self._popup_worker.start()
+
+    def _get_ip_by_server_id(self, server_id):
+        for b in self._data:
+            for s in b["servers"]:
+                if s["id"] == server_id:
+                    return s["ip"]
 
     # =========================
     # КОММЕНТАРИИ

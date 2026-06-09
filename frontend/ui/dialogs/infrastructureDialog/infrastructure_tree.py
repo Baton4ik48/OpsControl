@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QTreeWidget, QTreeWidgetItem
+from PyQt6.QtWidgets import QTreeWidget, QTreeWidgetItem, QAbstractItemView
 from PyQt6.QtCore import Qt
 
 
@@ -7,6 +7,17 @@ class InfrastructureTree(QTreeWidget):
         super().__init__()
 
         self.setHeaderLabels(["Infrastructure"])
+        self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+
+    def get_selected_ports(self) -> list[tuple[int, int]]:
+        """Возвращает список (server_id, port) для всех выделенных портов."""
+        result = []
+        for item in self.selectedItems():
+            data = item.data(0, Qt.ItemDataRole.UserRole)
+            if data and data[0] == "port":
+                _, server_id, port_data = data
+                result.append((server_id, port_data["port"]))
+        return result
 
     # =========================================================
     # STATE SAVE / RESTORE

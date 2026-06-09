@@ -7,6 +7,12 @@ from PyQt6.QtWidgets import (
     QTreeWidgetItem,
     QHeaderView,
     QAbstractItemView,
+    QDialog,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QTextEdit,
+    QPushButton,
 )
 from PyQt6.QtGui import QIcon, QFont, QColor, QBrush
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QSize, QModelIndex
@@ -117,6 +123,88 @@ def _password_age_color(credentials_updated_at, rotation_days):
         return None
 
 
+class _CommentDialog(QDialog):
+    """Диалог редактирования комментария с многострочным полем."""
+
+    def __init__(self, title: str, subtitle: str, current_text: str, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Комментарий")
+        self.setModal(True)
+        self.setMinimumWidth(560)
+        self.setMinimumHeight(280)
+
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(0)
+
+        # ── Заголовок ────────────────────────────────────────────
+        title_lbl = QLabel(title)
+        title_lbl.setObjectName("dialogTitle")
+        title_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title_lbl.setWordWrap(True)
+        lay.addWidget(title_lbl)
+
+        if subtitle:
+            sub_lbl = QLabel(subtitle)
+            sub_lbl.setObjectName("dialogSubtitle")
+            sub_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            sub_lbl.setWordWrap(True)
+            lay.addWidget(sub_lbl)
+
+        # ── Поле ввода ──────────────────────────────────────────
+        body = QVBoxLayout()
+        body.setContentsMargins(14, 12, 14, 6)
+        body.setSpacing(4)
+
+        self._edit = QTextEdit()
+        self._edit.setPlainText(current_text)
+        self._edit.setPlaceholderText("Введите комментарий…")
+        self._edit.installEventFilter(self)
+        body.addWidget(self._edit)
+
+        hint = QLabel("Ctrl+Enter — сохранить")
+        hint.setStyleSheet("color:#546e7a; font-size:8pt;")
+        hint.setAlignment(Qt.AlignmentFlag.AlignRight)
+        body.addWidget(hint)
+
+        lay.addLayout(body)
+
+        # ── Кнопки по центру ───────────────────────────────────
+        btn_row = QHBoxLayout()
+        btn_row.setContentsMargins(14, 4, 14, 14)
+        btn_row.addStretch()
+        btn_save = QPushButton("Сохранить")
+        btn_save.setFixedWidth(130)
+        btn_save.setDefault(True)
+        btn_save.clicked.connect(self.accept)
+        btn_cancel = QPushButton("Отмена")
+        btn_cancel.setFixedWidth(100)
+        btn_cancel.clicked.connect(self.reject)
+        btn_row.addWidget(btn_save)
+        btn_row.addSpacing(8)
+        btn_row.addWidget(btn_cancel)
+        btn_row.addStretch()
+        lay.addLayout(btn_row)
+
+        # Курсор в конец
+        cursor = self._edit.textCursor()
+        cursor.movePosition(cursor.MoveOperation.End)
+        self._edit.setTextCursor(cursor)
+        self._edit.setFocus()
+
+    def get_text(self) -> str:
+        return self._edit.toPlainText().strip()
+
+    def eventFilter(self, obj, event):
+        from PyQt6.QtCore import QEvent
+        if obj is self._edit and event.type() == QEvent.Type.KeyPress:
+            if (event.key() == Qt.Key.Key_Return and
+                    event.modifiers() & Qt.KeyboardModifier.ControlModifier):
+                self.accept()
+                return True
+        return super().eventFilter(obj, event)
+
+
 class DeviceTree(QTreeWidget):
 
     # делаем роли доступными для context menu
@@ -169,10 +257,8 @@ class DeviceTree(QTreeWidget):
         self.setColumnWidth(5, 220)
         header.setMinimumSectionSize(60)
 
-        # Инлайн-редактирование: только столбец 5 по двойному клику
         self.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.itemDoubleClicked.connect(self._on_comment_double_click)
-        self.itemChanged.connect(self._on_comment_changed)
 
         self.headerItem().setTextAlignment(2, Qt.AlignmentFlag.AlignCenter)
         self.headerItem().setTextAlignment(3, Qt.AlignmentFlag.AlignCenter)
@@ -541,20 +627,27 @@ class DeviceTree(QTreeWidget):
     def _on_comment_double_click(self, item, column):
         if column != 5:
             return
-        if item.data(0, ROLE_TYPE) not in ("server", "port"):
-            return
-        item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEditable)
-        self.editItem(item, 5)
-
-    def _on_comment_changed(self, item, column):
-        if column != 5:
-            return
         item_type = item.data(0, ROLE_TYPE)
         if item_type not in ("server", "port"):
             return
+
         server_id = item.data(0, ROLE_SERVER_ID)
         port = item.data(0, ROLE_PORT) or 0
-        self.comment_changed.emit(item_type, server_id, port, item.text(5).strip())
+        current_comment = item.text(5)
+
+        if item_type == "server":
+            title = item.text(0)
+            subtitle = item.text(1)          # IP
+        else:
+            parent_item = item.parent()
+            title = parent_item.text(0) if parent_item else ""
+            subtitle = f"{parent_item.text(1)}  ·  порт {port}" if parent_item else f"порт {port}"
+
+        dlg = _CommentDialog(title, subtitle, current_comment, self.window())
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            new_comment = dlg.get_text()
+            item.setText(5, new_comment)
+            self.comment_changed.emit(item_type, server_id, port, new_comment)
 
     def update_comment_item(self, item_type: str, server_id: int, port: int,
                             comment: str, updated_at: str):

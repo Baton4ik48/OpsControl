@@ -4,7 +4,8 @@ import re
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QPushButton, QTreeWidget, QTreeWidgetItem, QProgressBar,
-    QListWidget, QListWidgetItem, QMessageBox, QStackedWidget, QWidget,
+    QListWidget, QListWidgetItem, QMessageBox, QStackedWidget,
+    QWidget, QTabWidget, QFormLayout,
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon, QColor
@@ -57,10 +58,11 @@ class BatchRotationDialog(QDialog):
                 if _eligible(srv):
                     self._eligible.append({**srv, "_branch": branch["name"]})
 
-        self.setWindowTitle("Пакетная смена паролей")
+        self.setWindowTitle("Групповая ротация паролей")
         self.setWindowIcon(QIcon(os.path.join(ICONS_DIR, "key_icon.png")))
         self.setModal(True)
-        self.resize(640, 560)
+        self.setMinimumWidth(680)
+        self.setMinimumHeight(560)
 
         self._stack = QStackedWidget()
         self._stack.addWidget(self._make_selection_page())
@@ -88,25 +90,63 @@ class BatchRotationDialog(QDialog):
         self._master_input.setPlaceholderText("Введите мастер-пароль администратора")
         lay.addWidget(self._master_input)
 
-        # ── Новый пароль ───────────────────────────────────────
-        lay.addWidget(QLabel("Новый пароль для всех выбранных серверов:"))
-        pass_row = QHBoxLayout()
+        # ── Вкладки: Генерация / Свой пароль ───────────────────
+        self._pass_tabs = QTabWidget()
+        lay.addWidget(self._pass_tabs)
+
+        # Вкладка 1 — Генерация
+        gen_page = QWidget()
+        gen_lay = QVBoxLayout(gen_page)
+        gen_lay.setContentsMargins(8, 8, 8, 8)
+        gen_lay.setSpacing(6)
+        gen_pass_row = QHBoxLayout()
         self._pass_input = QLineEdit()
         self._pass_input.setPlaceholderText("Новый пароль")
         btn_gen = QPushButton("Сгенерировать")
         btn_gen.setFixedWidth(130)
         btn_gen.clicked.connect(self._do_generate)
-        pass_row.addWidget(self._pass_input)
-        pass_row.addWidget(btn_gen)
-        lay.addLayout(pass_row)
-
+        gen_pass_row.addWidget(self._pass_input)
+        gen_pass_row.addWidget(btn_gen)
+        gen_lay.addLayout(gen_pass_row)
         self._mnemonic_lbl = QLabel("—")
         self._mnemonic_lbl.setObjectName("settingsDescription")
         self._mnemonic_lbl.setTextFormat(Qt.TextFormat.RichText)
         self._mnemonic_lbl.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse
         )
-        lay.addWidget(self._mnemonic_lbl)
+        gen_lay.addWidget(self._mnemonic_lbl)
+        self._pass_tabs.addTab(gen_page, "Генерация")
+
+        # Вкладка 2 — Свой пароль
+        custom_page = QWidget()
+        custom_vlay = QVBoxLayout(custom_page)
+        custom_vlay.setContentsMargins(8, 8, 8, 8)
+        custom_vlay.setSpacing(6)
+        custom_form = QFormLayout()
+        custom_pass_row = QHBoxLayout()
+        self._custom_pass_input = QLineEdit()
+        self._custom_pass_input.setPlaceholderText("Введите свой пароль")
+        self._custom_pass_input.setEchoMode(QLineEdit.EchoMode.Password)
+        self._batch_btn_eye = QPushButton("Показать")
+        self._batch_btn_eye.setFixedWidth(90)
+        self._batch_btn_eye.setCheckable(True)
+        self._batch_btn_eye.toggled.connect(self._toggle_batch_pass)
+        custom_pass_row.addWidget(self._custom_pass_input)
+        custom_pass_row.addWidget(self._batch_btn_eye)
+        custom_form.addRow("Новый пароль:", custom_pass_row)
+        self._custom_hint_input = QLineEdit()
+        self._custom_hint_input.setPlaceholderText("Необязательно — подсказка")
+        custom_form.addRow("Подсказка:", self._custom_hint_input)
+        custom_vlay.addLayout(custom_form)
+        self._batch_stats_lbl = QLabel("")
+        self._batch_stats_lbl.setObjectName("settingsDescription")
+        self._batch_stats_lbl.setWordWrap(False)
+        self._batch_stats_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._batch_stats_lbl.setTextFormat(Qt.TextFormat.RichText)
+        custom_vlay.addWidget(self._batch_stats_lbl)
+        custom_vlay.addStretch()
+        self._custom_pass_input.textChanged.connect(self._update_batch_stats)
+        self._pass_tabs.addTab(custom_page, "Свой пароль")
 
         # ── Кнопки выбора ──────────────────────────────────────
         sel_hdr = QHBoxLayout()
@@ -227,9 +267,47 @@ class BatchRotationDialog(QDialog):
         self._pass_input.setText(pwd)
         self._mnemonic_lbl.setText(mnemonic)
 
+    def _toggle_batch_pass(self, checked: bool):
+        self._custom_pass_input.setEchoMode(
+            QLineEdit.EchoMode.Normal if checked else QLineEdit.EchoMode.Password
+        )
+        self._batch_btn_eye.setText("Скрыть" if checked else "Показать")
+
+    def _update_batch_stats(self, text: str):
+        if not text:
+            self._batch_stats_lbl.setText("")
+            return
+        length = len(text)
+        upper = sum(1 for c in text if c.isupper())
+        lower = sum(1 for c in text if c.islower())
+        digits = sum(1 for c in text if c.isdigit())
+        special = length - upper - lower - digits
+        parts = [f"Длина: <b>{length}</b>"]
+        if upper:   parts.append(f"заглавных: <b>{upper}</b>")
+        if lower:   parts.append(f"строчных: <b>{lower}</b>")
+        if digits:  parts.append(f"цифр: <b>{digits}</b>")
+        if special: parts.append(f"спецсимволов: <b>{special}</b>")
+        if length < 8:
+            color, strength = "#ef9a9a", "слабый"
+        elif length < 12 or not upper or not digits:
+            color, strength = "#ffd54f", "средний"
+        else:
+            color, strength = "#81c995", "надёжный"
+        parts.append(f'<span style="color:{color}">● {strength}</span>')
+        self._batch_stats_lbl.setText("  ·  ".join(parts))
+
+    def _get_password_and_hint(self) -> tuple[str, str]:
+        if self._pass_tabs.currentIndex() == 0:
+            password = self._pass_input.text().strip()
+            hint = re.sub(r"<[^>]+>", "", self._mnemonic_lbl.text()).strip()
+        else:
+            password = self._custom_pass_input.text().strip()
+            hint = self._custom_hint_input.text().strip()
+        return password, hint
+
     def _on_start(self):
         master = self._master_input.text().strip()
-        new_pass = self._pass_input.text().strip()
+        new_pass, hint = self._get_password_and_hint()
         selected = self._selected_servers()
 
         if not master:
@@ -255,8 +333,7 @@ class BatchRotationDialog(QDialog):
         if reply != QMessageBox.StandardButton.Yes:
             return
 
-        mnemonic_plain = re.sub(r"<[^>]+>", "", self._mnemonic_lbl.text()).strip()
-        self._launch_progress(selected, master, new_pass, mnemonic_plain)
+        self._launch_progress(selected, master, new_pass, hint)
 
     # ══════════════════════════════════════════════════════════════
     # ФАЗА 2 — прогресс

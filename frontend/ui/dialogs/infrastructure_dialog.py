@@ -17,6 +17,7 @@ from ui.context_menus.infrastructure_context_menu import InfrastructureContextMe
 from ui.dialogs.infrastructureDialog.server_form import ServerForm
 from ui.dialogs.infrastructureDialog.port_form import PortForm
 from ui.dialogs.infrastructureDialog.branch_form import BranchForm
+from ui.dialogs.bulk_credentials_dialog import BulkCredentialsDialog
 
 
 class InfrastructureManagerDialog(QDialog):
@@ -238,3 +239,10 @@ class InfrastructureManagerDialog(QDialog):
             == QMessageBox.StandardButton.Yes
         ):
             self.controller.delete_port(server_id, port)
+
+    def bulk_update_credentials(self, ports: list[tuple[int, int]]):
+        """Открывает диалог пакетного обновления учётных данных для выбранных портов."""
+        dlg = BulkCredentialsDialog(ports, parent=self)
+        if dlg.exec():
+            # Обновляем дерево чтобы показать обновлённые ✔/✖ иконки
+            self.controller.load_tree_async()

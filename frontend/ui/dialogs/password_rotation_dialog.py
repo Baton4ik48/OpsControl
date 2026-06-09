@@ -12,6 +12,8 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QSpacerItem,
     QSizePolicy,
+    QTabWidget,
+    QWidget,
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
@@ -56,68 +58,108 @@ class PasswordRotationDialog(QDialog):
 
         layout = QVBoxLayout(self)
 
-        # Подсказка
-        hint = QLabel(f"Сервер: <b>{host}</b>  ·  Порт: <b>22</b>")
-        hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        hint.setObjectName("settingsDescription")
-        layout.addWidget(hint)
+        # ── Шапка ──────────────────────────────────────────────
+        header = QLabel(f"Сервер: <b>{host}</b>  ·  Порт: <b>22</b>")
+        header.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        header.setObjectName("settingsDescription")
+        layout.addWidget(header)
 
-        form = QFormLayout()
-        form.setContentsMargins(0, 8, 0, 4)
-
-        # Мастер-пароль
+        # ── Мастер-пароль (общий для обеих вкладок) ────────────
+        master_form = QFormLayout()
+        master_form.setContentsMargins(0, 6, 0, 4)
         self.master_input = QLineEdit()
         self.master_input.setEchoMode(QLineEdit.EchoMode.Password)
         self.master_input.setPlaceholderText("Мастер-пароль администратора")
-        form.addRow("Мастер-пароль:", self.master_input)
+        master_form.addRow("Мастер-пароль:", self.master_input)
+        layout.addLayout(master_form)
 
-        # Новый пароль
+        # ── Вкладки: Генерация / Свой пароль ───────────────────
+        self._tabs = QTabWidget()
+        layout.addWidget(self._tabs)
+
+        # ── Вкладка 1: Генерация ────────────────────────────────
+        gen_page = QWidget()
+        gen_layout = QFormLayout(gen_page)
+        gen_layout.setContentsMargins(8, 10, 8, 10)
+
         new_pass_row = QHBoxLayout()
         self.new_password_input = QLineEdit()
         self.new_password_input.setPlaceholderText("Новый пароль")
-
         btn_generate = QPushButton("Сгенерировать")
         btn_generate.setFixedWidth(130)
         btn_generate.clicked.connect(self._generate)
-
         new_pass_row.addWidget(self.new_password_input)
         new_pass_row.addWidget(btn_generate)
-        form.addRow("Новый пароль:", new_pass_row)
+        gen_layout.addRow("Новый пароль:", new_pass_row)
 
-        # Мнемоника
         self.mnemonic_label = QLabel("—")
         self.mnemonic_label.setObjectName("settingsDescription")
+        self.mnemonic_label.setTextFormat(Qt.TextFormat.RichText)
         self.mnemonic_label.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse
         )
-        form.addRow("Подсказка:", self.mnemonic_label)
+        gen_layout.addRow("Мнемоника:", self.mnemonic_label)
 
-        self.mnemonic_label.setTextFormat(Qt.TextFormat.RichText)
+        self._tabs.addTab(gen_page, "Генерация")
 
-        layout.addLayout(form)
+        # ── Вкладка 2: Свой пароль ──────────────────────────────
+        custom_page = QWidget()
+        custom_vlay = QVBoxLayout(custom_page)
+        custom_vlay.setContentsMargins(8, 10, 8, 10)
+        custom_vlay.setSpacing(8)
 
-        # Кнопки
+        custom_form = QFormLayout()
+        custom_form.setContentsMargins(0, 0, 0, 0)
+
+        custom_pass_row = QHBoxLayout()
+        self.custom_pass_input = QLineEdit()
+        self.custom_pass_input.setPlaceholderText("Введите свой пароль")
+        self.custom_pass_input.setEchoMode(QLineEdit.EchoMode.Password)
+        self._btn_eye = QPushButton("Показать")
+        self._btn_eye.setFixedWidth(90)
+        self._btn_eye.setCheckable(True)
+        self._btn_eye.toggled.connect(self._toggle_custom_pass)
+        custom_pass_row.addWidget(self.custom_pass_input)
+        custom_pass_row.addWidget(self._btn_eye)
+        custom_form.addRow("Новый пароль:", custom_pass_row)
+
+        self.custom_hint_input = QLineEdit()
+        self.custom_hint_input.setPlaceholderText("Необязательно — подсказка для пароля")
+        custom_form.addRow("Подсказка:", self.custom_hint_input)
+
+        custom_vlay.addLayout(custom_form)
+
+        # Строка статистики — на всю ширину, по центру, без переноса
+        self._pass_stats_label = QLabel("")
+        self._pass_stats_label.setObjectName("settingsDescription")
+        self._pass_stats_label.setWordWrap(False)
+        self._pass_stats_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._pass_stats_label.setTextFormat(Qt.TextFormat.RichText)
+        custom_vlay.addWidget(self._pass_stats_label)
+        custom_vlay.addStretch()
+
+        self.custom_pass_input.textChanged.connect(self._update_pass_stats)
+
+        self._tabs.addTab(custom_page, "Свой пароль")
+
+        # ── Кнопки ─────────────────────────────────────────────
         buttons = QHBoxLayout()
         self.apply_btn = QPushButton("Применить")
         btn_cancel = QPushButton("Отмена")
-
         self.apply_btn.clicked.connect(self._on_apply)
         btn_cancel.clicked.connect(self.reject)
-
         buttons.addStretch()
         buttons.addWidget(self.apply_btn)
         buttons.addWidget(btn_cancel)
         layout.addLayout(buttons)
 
-        # Ширина окна — title bar использует системный шрифт, считаем по символам
-        min_w = max(460, len(self.windowTitle()) * 11 + 160)
-        self.setMinimumWidth(min_w)
+        self.setMinimumWidth(680)
+        self.setMinimumHeight(380)
 
-        # Флаг: SSH уже выполнен, но Vault не обновился — при повторном нажатии
-        # пропускаем SSH и идём сразу к записи в Vault
+        # Флаг: SSH уже выполнен, но Vault не обновился
         self._vault_retry_mode = False
+        self._saved_hint = ""   # запоминаем hint для retry-режима
 
-        # Сразу генерируем пароль
         self._generate()
 
     def _msgbox(self, icon, title: str, text: str):
@@ -147,11 +189,58 @@ class PasswordRotationDialog(QDialog):
         self.new_password_input.setText(password)
         self.mnemonic_label.setText(mnemonic)
 
+    def _toggle_custom_pass(self, checked: bool):
+        self.custom_pass_input.setEchoMode(
+            QLineEdit.EchoMode.Normal if checked else QLineEdit.EchoMode.Password
+        )
+        self._btn_eye.setText("Скрыть" if checked else "Показать")
+
+    def _update_pass_stats(self, text: str):
+        if not text:
+            self._pass_stats_label.setText("")
+            return
+        length = len(text)
+        upper = sum(1 for c in text if c.isupper())
+        lower = sum(1 for c in text if c.islower())
+        digits = sum(1 for c in text if c.isdigit())
+        special = length - upper - lower - digits
+
+        parts = [f"Длина: <b>{length}</b>"]
+        if upper:
+            parts.append(f"заглавных: <b>{upper}</b>")
+        if lower:
+            parts.append(f"строчных: <b>{lower}</b>")
+        if digits:
+            parts.append(f"цифр: <b>{digits}</b>")
+        if special:
+            parts.append(f"спецсимволов: <b>{special}</b>")
+
+        if length < 8:
+            color = "#ef9a9a"
+            strength = "слабый"
+        elif length < 12 or (upper == 0 or digits == 0):
+            color = "#ffd54f"
+            strength = "средний"
+        else:
+            color = "#81c995"
+            strength = "надёжный"
+
+        parts.append(f'<span style="color:{color}">● {strength}</span>')
+        self._pass_stats_label.setText("  ·  ".join(parts))
+
+    def _get_password_and_hint(self) -> tuple[str, str]:
+        """Возвращает (пароль, подсказка_plain) из активной вкладки."""
+        if self._tabs.currentIndex() == 0:
+            password = self.new_password_input.text().strip()
+            hint = re.sub(r"<[^>]+>", "", self.mnemonic_label.text()).strip()
+        else:
+            password = self.custom_pass_input.text().strip()
+            hint = self.custom_hint_input.text().strip()
+        return password, hint
+
     def _on_apply(self):
         master = self.master_input.text().strip()
-        # Читаем из виджета: даже если предыдущий Python-объект был затёрт _wipe,
-        # Qt хранит свою копию в QLineEdit и возвращает правильное значение
-        new_pass = self.new_password_input.text().strip()
+        new_pass, hint = self._get_password_and_hint()
 
         if not master:
             self._msgbox(QMessageBox.Icon.Warning, "Ошибка", "Введите мастер-пароль")
@@ -167,7 +256,7 @@ class PasswordRotationDialog(QDialog):
 
         # ── Режим повтора: SSH уже выполнен, пробуем снова записать в Vault ──
         if self._vault_retry_mode:
-            self._save_to_vault(master, new_pass)
+            self._save_to_vault(master, new_pass, self._saved_hint)
             return
 
         # ── Полный цикл ───────────────────────────────────────────────────────
@@ -221,9 +310,10 @@ class PasswordRotationDialog(QDialog):
             # SSH прошёл — устанавливаем флаг до попытки записи в Vault.
             # Если Vault упадёт ниже, повторное нажатие пропустит SSH.
             self._vault_retry_mode = True
+            self._saved_hint = hint
 
             # Шаг 3: сохраняем новый пароль в Vault
-            self._save_to_vault(master, new_pass)
+            self._save_to_vault(master, new_pass, hint)
 
         finally:
             _wipe(master)
@@ -232,7 +322,7 @@ class PasswordRotationDialog(QDialog):
                 _wipe(current_password)
             self.master_input.clear()
 
-    def _save_to_vault(self, master: str, new_pass: str):
+    def _save_to_vault(self, master: str, new_pass: str, hint: str = ""):
         """
         Шаг 3: записывает новый пароль в Vault.
         Вызывается как из полного цикла, так и при повторной попытке
@@ -241,7 +331,6 @@ class PasswordRotationDialog(QDialog):
         current_password = None
         try:
             self.apply_btn.setText("Сохраняю в хранилище...")
-            mnemonic_plain = re.sub(r"<[^>]+>", "", self.mnemonic_label.text()).strip()
             try:
                 self._api.rotate(
                     server_id=self.server_id,
@@ -249,7 +338,7 @@ class PasswordRotationDialog(QDialog):
                     new_password=new_pass,
                     username=self.admin_login,
                     master_password=master,
-                    mnemonic=mnemonic_plain,
+                    mnemonic=hint,
                 )
             except ApiError as e:
                 # Пароль уже сменён на сервере, но не записан в Vault.
@@ -275,9 +364,10 @@ class PasswordRotationDialog(QDialog):
             msg = QMessageBox(self)
             msg.setWindowTitle("Готово")
             msg.setTextFormat(Qt.TextFormat.RichText)
+            hint_display = hint if hint else "—"
             msg.setText(
                 f"Пароль успешно изменён на сервере <b>{self.host}</b><br><br>"
-                f"Подсказка:<br>{self.mnemonic_label.text()}"
+                f"Подсказка:&nbsp; {hint_display}"
             )
             msg.exec()
             self.accept()
