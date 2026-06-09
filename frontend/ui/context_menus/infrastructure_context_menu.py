@@ -19,6 +19,23 @@ class InfrastructureContextMenu:
         item = self.tree.itemAt(position)
         menu = QMenu(self.dialog)
 
+        # ===== МУЛЬТИВЫБОР ПОРТОВ =====
+        # Показываем bulk-меню только если выбрано 2+ портов И
+        # правый клик на порту или пустом месте (не на ветке/сервере)
+        selected_ports = self.tree.get_selected_ports()
+        right_click_type = None
+        if item is not None:
+            _d = item.data(0, Qt.ItemDataRole.UserRole)
+            right_click_type = _d[0] if _d else None
+
+        if len(selected_ports) > 1 and right_click_type in (None, "port"):
+            bulk_action = menu.addAction(
+                f"Обновить учётные данные ({len(selected_ports)} портов)"
+            )
+            if menu.exec(self.tree.viewport().mapToGlobal(position)) == bulk_action:
+                self.dialog.bulk_update_credentials(selected_ports)
+            return
+
         # ===== ПУСТОЕ МЕСТО =====
         if item is None:
             action = menu.addAction("Добавить филиал")

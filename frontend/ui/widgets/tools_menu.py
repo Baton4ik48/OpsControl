@@ -87,7 +87,7 @@ class ToolsMenu(QMenuBar):
 
         tools_menu.addSeparator()
 
-        batch_action = tools_menu.addAction("Пакетная смена паролей")
+        batch_action = tools_menu.addAction("Групповая ротация паролей")
         batch_action.triggered.connect(self.batch_rotation_requested.emit)
 
         envelope_action = tools_menu.addAction("Печать конверта с паролями…")
