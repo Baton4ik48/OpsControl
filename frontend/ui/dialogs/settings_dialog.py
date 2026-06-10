@@ -365,6 +365,21 @@ class SettingsDialog(QDialog):
         self.setMinimumHeight(300)
 
     def _save_and_close(self):
+        if "backend" in self._dirty_tabs:
+            if self.backend_override_checkbox.isChecked():
+                scheme = self.backend_scheme_combo.currentText()
+            else:
+                scheme = os.getenv("BACKEND_SCHEME", "http")
+
+            if scheme == "http":
+                QMessageBox.warning(
+                    self,
+                    "Незащищённое соединение",
+                    "Выбран протокол HTTP.\n\n"
+                    "Данные будут передаваться в открытом виде без шифрования.\n"
+                    "Рекомендуется использовать HTTPS для защиты трафика.",
+                )
+
         self.apply()
         self.accept()
 
