@@ -4,10 +4,6 @@ from app.services.db.pool_db import _execute
 
 _log = logging.getLogger("ports_db")
 
-# ==========================
-# READ
-# ==========================
-
 
 def load_ports(server_id: int):
     def work(conn):
@@ -34,11 +30,6 @@ def load_ports(server_id: int):
         ]
 
     return _execute(work)
-
-
-# ==========================
-# CREATE
-# ==========================
 
 
 def create_port(server_id: int, port: int) -> int:
@@ -69,11 +60,6 @@ def create_port(server_id: int, port: int) -> int:
     return _execute(work)
 
 
-# ==========================
-# UPDATE
-# ==========================
-
-
 def update_port(server_id: int, old_port: int, new_port: int) -> int:
     def work(conn):
         cur = conn.cursor()
@@ -83,7 +69,7 @@ def update_port(server_id: int, old_port: int, new_port: int) -> int:
             return 1
 
         try:
-            # Temporarily remove child row to satisfy the FK while port changes.
+            # Временно удаляем дочернюю строку чтобы не нарушить FK при смене порта.
             cur.execute(
                 """
                 DELETE FROM credentials
@@ -196,11 +182,6 @@ def update_vault_path(server_id: int, port: int, new_path: str) -> int:
     return _execute(work)
 
 
-# ==========================
-# UPDATE COMMENT
-# ==========================
-
-
 def update_port_comment(server_id: int, port: int, comment: str) -> int:
     def work(conn):
         cur = conn.cursor()
@@ -219,11 +200,6 @@ def update_port_comment(server_id: int, port: int, comment: str) -> int:
         return affected
 
     return _execute(work)
-
-
-# ==========================
-# DELETE
-# ==========================
 
 
 def delete_port(server_id: int, port: int) -> int:

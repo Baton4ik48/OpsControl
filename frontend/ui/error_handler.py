@@ -4,7 +4,6 @@ from core.logger import get_logger
 
 log = get_logger(__name__)
 
-
 def handle_api_error(parent, error: ApiError):
     code = error.status_code
 
@@ -56,7 +55,6 @@ def handle_api_error(parent, error: ApiError):
 
     else:
         QMessageBox.critical(parent, "Ошибка", error.message or "Неизвестная ошибка")
-
 
 def handle_system_error(parent, error: Exception):
     log.exception("System error occurred", exc_info=error)

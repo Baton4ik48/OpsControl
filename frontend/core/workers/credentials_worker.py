@@ -1,7 +1,6 @@
 from PyQt6.QtCore import QThread, pyqtSignal
 from core.ssh_rotate_linux import _wipe
 
-
 class CredentialsWorker(QThread):
     success = pyqtSignal(dict)
     error = pyqtSignal(Exception)

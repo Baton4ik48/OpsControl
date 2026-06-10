@@ -13,7 +13,6 @@ from PyQt6.QtGui import QIcon
 
 from core.paths import ICONS_DIR
 
-
 class CredentialsDialog(QDialog):
     submitted = pyqtSignal(str)
 
@@ -73,6 +72,6 @@ class CredentialsDialog(QDialog):
 
         self.admin_input.clear()
         self.accept()
-        # Defer signal until next event loop iteration so this dialog's exec()
-        # fully exits before the next dialog opens (avoids nested event loops).
+        # Откладываем сигнал на следующую итерацию event loop, чтобы exec() этого диалога
+        # полностью завершился до открытия следующего (избегаем вложенных event loop).
         QTimer.singleShot(0, lambda: self.submitted.emit(password))

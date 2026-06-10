@@ -12,7 +12,6 @@ from core.paths import ICONS_DIR
 from core.api.credentials import CredentialsApi
 from core.api.base import ApiError
 
-
 class _UpsertWorker(QThread):
     """Последовательно записывает учётные данные для каждого порта в Vault."""
     port_done = pyqtSignal(int, int, str, str)  # server_id, port, status("ok"/"error"), message
@@ -41,7 +40,6 @@ class _UpsertWorker(QThread):
                 self.port_done.emit(server_id, port, "error", str(e))
         self.finished_all.emit()
 
-
 class BulkCredentialsDialog(QDialog):
     """
     Пакетное обновление учётных данных в Vault для нескольких портов.
@@ -69,7 +67,6 @@ class BulkCredentialsDialog(QDialog):
         root = QVBoxLayout(self)
         root.setSpacing(10)
 
-        # ── Описание ───────────────────────────────────────────
         info = QLabel(
             f"Введите учётные данные, которые будут сохранены "
             f"в Vault для <b>{len(ports)}</b> выбранных портов."
@@ -79,7 +76,6 @@ class BulkCredentialsDialog(QDialog):
         info.setAlignment(Qt.AlignmentFlag.AlignCenter)
         root.addWidget(info)
 
-        # ── Форма ввода ────────────────────────────────────────
         form = QFormLayout()
         form.setContentsMargins(0, 4, 0, 4)
 
@@ -100,14 +96,12 @@ class BulkCredentialsDialog(QDialog):
         form.addRow("Пароль:", pass_row)
         root.addLayout(form)
 
-        # ── Прогресс (скрыт до старта) ─────────────────────────
         self._prog_bar = QProgressBar()
         self._prog_bar.setMaximum(len(ports))
         self._prog_bar.setValue(0)
         self._prog_bar.setVisible(False)
         root.addWidget(self._prog_bar)
 
-        # ── Список результатов ─────────────────────────────────
         self._result_list = QListWidget()
         self._result_list.setSpacing(1)
         self._result_list.setVisible(False)
@@ -121,14 +115,12 @@ class BulkCredentialsDialog(QDialog):
             self._result_list.addItem(item)
             self._items[(server_id, port)] = item
 
-        # ── Итог ──────────────────────────────────────────────
         self._summary_lbl = QLabel("")
         self._summary_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._summary_lbl.setStyleSheet("font-weight: bold;")
         self._summary_lbl.setVisible(False)
         root.addWidget(self._summary_lbl)
 
-        # ── Кнопки ────────────────────────────────────────────
         btn_row = QHBoxLayout()
         btn_row.addStretch()
         self._btn_save = QPushButton("Сохранить")
@@ -138,8 +130,6 @@ class BulkCredentialsDialog(QDialog):
         btn_row.addWidget(self._btn_save)
         btn_row.addWidget(self._btn_close)
         root.addLayout(btn_row)
-
-    # ──────────────────────────────────────────────────────────
 
     def _toggle_pass(self, checked: bool):
         self._pass_input.setEchoMode(

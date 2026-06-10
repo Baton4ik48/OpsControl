@@ -1,6 +1,5 @@
 from core.api.base import BaseApi
 
-
 class ServerApi(BaseApi):
 
     def get_by_branch(self, branch_id: int):

@@ -1,7 +1,6 @@
 from PyQt6.QtWidgets import QTreeWidget, QTreeWidgetItem, QAbstractItemView
 from PyQt6.QtCore import Qt
 
-
 class InfrastructureTree(QTreeWidget):
     def __init__(self):
         super().__init__()
@@ -18,10 +17,6 @@ class InfrastructureTree(QTreeWidget):
                 _, server_id, port_data = data
                 result.append((server_id, port_data["port"]))
         return result
-
-    # =========================================================
-    # STATE SAVE / RESTORE
-    # =========================================================
 
     def _save_tree_state(self):
         expanded_branches: set[int] = set()
@@ -96,10 +91,6 @@ class InfrastructureTree(QTreeWidget):
                         and pd[2]["port"] == selected[2]
                     ):
                         self.setCurrentItem(port_item)
-
-    # =========================================================
-    # RENDER
-    # =========================================================
 
     def render(self, data):
         expanded_branches, expanded_servers, selected = self._save_tree_state()

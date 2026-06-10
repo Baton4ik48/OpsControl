@@ -19,11 +19,6 @@ def reset_pool():
     pool_module.pool = original
 
 
-# ============================================
-# init_pool
-# ============================================
-
-
 def test_init_pool_success(monkeypatch):
     """Успешная инициализация → True, pool установлен"""
     mock_creds = Mock(host="localhost", port=5432, dbname="db", user="u", password="p")
@@ -107,11 +102,6 @@ def test_init_pool_retry_then_success(monkeypatch):
     assert attempts["n"] == 2
 
 
-# ============================================
-# close_pool
-# ============================================
-
-
 def test_close_pool_when_pool_exists(monkeypatch):
     mock_pool = Mock()
     monkeypatch.setattr(pool_module, "pool", mock_pool)
@@ -126,11 +116,6 @@ def test_close_pool_when_pool_is_none(monkeypatch):
     monkeypatch.setattr(pool_module, "pool", None)
 
     close_pool()
-
-
-# ============================================
-# _execute
-# ============================================
 
 
 def test_execute_success(monkeypatch):

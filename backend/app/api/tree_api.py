@@ -18,11 +18,9 @@ def get_tree():
         sip = r[4]
         port = r[5]
 
-        # ===== BRANCH =====
         if bid not in tree:
             tree[bid] = {"id": bid, "name": bname, "servers": {}}
 
-        # ===== SERVER =====
         if sid is not None:
             if sid not in tree[bid]["servers"]:
                 tree[bid]["servers"][sid] = {
@@ -35,7 +33,6 @@ def get_tree():
                     "ports": [],
                 }
 
-            # ===== PORT =====
             if port is not None:
                 tree[bid]["servers"][sid]["ports"].append(
                     {

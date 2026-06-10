@@ -16,11 +16,6 @@ def get_overall_status() -> str:
     return "degraded"
 
 
-# ==========================
-# POSTGRES HEALTH
-# ==========================
-
-
 def check_postgres() -> bool:
     try:
 
@@ -35,11 +30,6 @@ def check_postgres() -> bool:
 
     except (ServiceUnavailableError, Exception):
         return False
-
-
-# ==========================
-# VAULT HEALTH
-# ==========================
 
 
 def check_vault() -> str:

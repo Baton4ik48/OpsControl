@@ -7,7 +7,6 @@ from ui.dialogs.envelope_print_dialog import EnvelopePrintDialog
 from ui.dialogs.firewall_dialog import FirewallDialog
 from ui.dialogs.infrastructure_dialog import InfrastructureManagerDialog
 
-
 class _StatusIndicator(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -43,7 +42,6 @@ class _StatusIndicator(QWidget):
         self._partial.setText(f"● {partial}")
         self._down.setText(f"● {down}")
 
-
 class ToolsMenu(QMenuBar):
     infrastructure_closed = pyqtSignal()
     statistics_requested = pyqtSignal()
@@ -55,22 +53,13 @@ class ToolsMenu(QMenuBar):
         self._settings = user_settings
         self._credentials_api = CredentialsApi()
 
-        # =========================
-        # Общее
-        # =========================
         general_menu = self.addMenu("Общее")
 
         stats_action = general_menu.addAction("Статистика")
         stats_action.triggered.connect(self.statistics_requested.emit)
 
-        # =========================
-        # Инструменты
-        # =========================
         tools_menu = self.addMenu("Инструменты")
 
-        # =========================
-        # Индикатор статусов
-        # =========================
         self._status = _StatusIndicator()
         self.setCornerWidget(self._status, Qt.Corner.TopRightCorner)
 

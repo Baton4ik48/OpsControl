@@ -23,7 +23,7 @@ router = APIRouter(prefix="/credentials", tags=["credentials"])
 
 
 def _ctx(request: Request) -> tuple[str, str]:
-    """Return (client_ip, request_id) from request state, with safe fallbacks."""
+    """Возвращает (client_ip, request_id) из request.state, с fallback-значениями."""
     ip = getattr(request.state, "client_ip", None) or (
         request.client.host if request.client else "unknown"
     )
@@ -66,7 +66,7 @@ def show_credentials_api(
             client_ip=client_ip,
         )
 
-        # Vault auth succeeded → username is verified
+        # Авторизация в Vault прошла → username подтверждён
         request.state.actor = data.username
 
         _audit.info(
@@ -130,7 +130,7 @@ def verify_admin_api(
             client_ip=client_ip,
         )
 
-        # Vault userpass auth succeeded → username is verified
+        # Авторизация в Vault прошла → username подтверждён
         request.state.actor = data.username
 
         _audit.info(
@@ -227,7 +227,7 @@ def rotate_credentials_api(data: RotateCredentialsRequest, request: Request):
             mnemonic=data.mnemonic,
         )
 
-        # Vault userpass auth succeeded → username is verified
+        # Авторизация в Vault прошла → username подтверждён
         request.state.actor = data.username
 
         _audit.info(

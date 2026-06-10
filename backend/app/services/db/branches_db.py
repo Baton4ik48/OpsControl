@@ -1,9 +1,5 @@
 from app.services.db.pool_db import _execute
 
-# ==========================
-# READ
-# ==========================
-
 
 def load_branches():
     def work(conn):
@@ -16,11 +12,6 @@ def load_branches():
     return _execute(work)
 
 
-# ==========================
-# CREATE
-# ==========================
-
-
 def create_branch(name: str) -> int:
     def work(conn):
         cur = conn.cursor()
@@ -31,11 +22,6 @@ def create_branch(name: str) -> int:
         return new_id
 
     return _execute(work)
-
-
-# ==========================
-# UPDATE
-# ==========================
 
 
 def update_branch(branch_id: int, new_name: str) -> int:
@@ -56,11 +42,6 @@ def update_branch(branch_id: int, new_name: str) -> int:
         return affected
 
     return _execute(work)
-
-
-# ==========================
-# DELETE
-# ==========================
 
 
 def delete_branch(branch_id: int) -> int:

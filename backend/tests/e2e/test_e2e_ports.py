@@ -36,11 +36,6 @@ def port(server_id):
     requests.delete(f"{BASE_URL}/ports/{server_id}/2222")
 
 
-# ============================================
-# GET /api/ports/by-server/{id}
-# ============================================
-
-
 @pytest.mark.e2e
 def test_get_ports_returns_list(server_id):
     resp = requests.get(f"{BASE_URL}/ports/by-server/{server_id}")
@@ -59,11 +54,6 @@ def test_get_ports_contains_created(server_id, port):
     assert 2222 in ports
 
 
-# ============================================
-# POST /api/ports/{server_id}/{port}
-# ============================================
-
-
 @pytest.mark.e2e
 def test_create_port(server_id):
     resp = requests.post(f"{BASE_URL}/ports/{server_id}/3333")
@@ -72,11 +62,6 @@ def test_create_port(server_id):
     assert resp.json()["success"] is True
 
     requests.delete(f"{BASE_URL}/ports/{server_id}/3333")
-
-
-# ============================================
-# PUT /api/ports/{server_id}/{old_port}
-# ============================================
 
 
 @pytest.mark.e2e
@@ -141,11 +126,6 @@ def test_update_port_conflict_returns_409(server_id):
     requests.delete(f"{BASE_URL}/ports/{server_id}/9991")
 
 
-# ============================================
-# PUT /api/ports/{server_id}/{port}/vault-path
-# ============================================
-
-
 @pytest.mark.e2e
 def test_update_vault_path_set(server_id, port):
     resp = requests.put(
@@ -169,11 +149,6 @@ def test_update_vault_path_clear(server_id, port):
         json={"vault_path": ""},
     )
     assert resp.status_code == 200
-
-
-# ============================================
-# POST /api/ports/{server_id}/{port}/result
-# ============================================
 
 
 @pytest.mark.e2e
@@ -204,11 +179,6 @@ def test_report_port_result_fail(server_id, port):
     assert row["last_failure"] is not None
 
 
-# ============================================
-# DELETE /api/ports/{server_id}/{port}/credentials
-# ============================================
-
-
 @pytest.mark.e2e
 def test_delete_credentials(server_id, port):
     requests.put(
@@ -218,11 +188,6 @@ def test_delete_credentials(server_id, port):
 
     resp = requests.delete(f"{BASE_URL}/ports/{server_id}/2222/credentials")
     assert resp.status_code == 200
-
-
-# ============================================
-# DELETE /api/ports/{server_id}/{port}
-# ============================================
 
 
 @pytest.mark.e2e

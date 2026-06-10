@@ -1,7 +1,6 @@
 import asyncio
 
-# Must be first: configures root logger + file handlers before any other import
-# uses logging.getLogger().
+# Должен быть первым: настраивает root-логгер и file handlers до остальных импортов
 import app.logging  # noqa: F401
 
 import logging
@@ -49,9 +48,9 @@ async def service_unavailable_handler(request: Request, exc: ServiceUnavailableE
     )
 
 
-# Middleware stack (last added = outermost = runs first):
-#   AllowedNetworkMiddleware → resolves & validates client IP, blocks denied networks
-#   RequestLoggingMiddleware → logs all allowed requests to audit.log
+# Стек middleware (последний добавленный = внешний = выполняется первым):
+#   AllowedNetworkMiddleware → определяет и проверяет IP клиента, блокирует запрещённые сети
+#   RequestLoggingMiddleware → пишет все допущенные запросы в audit.log
 app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(
     AllowedNetworkMiddleware,

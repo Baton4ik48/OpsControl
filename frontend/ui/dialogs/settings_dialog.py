@@ -20,7 +20,6 @@ from PyQt6.QtGui import QIcon
 from controllers.settings_controller import SettingsController
 from core.paths import ICONS_DIR
 
-
 class SettingsDialog(QDialog):
     def __init__(self, settings, api):
         super().__init__()
@@ -33,9 +32,6 @@ class SettingsDialog(QDialog):
 
         main_layout = QVBoxLayout(self)
 
-        # =========================
-        # STATUS (всегда сверху)
-        # =========================
         status_layout = QHBoxLayout()
 
         self.status_icon = QLabel()
@@ -49,18 +45,12 @@ class SettingsDialog(QDialog):
 
         main_layout.addLayout(status_layout)
 
-        # =========================
-        # TABS
-        # =========================
         tabs = QTabWidget()
         tabs.setDocumentMode(True)
         main_layout.addWidget(tabs)
         tabs.tabBar().setExpanding(True)
         tabs.tabBar().setUsesScrollButtons(False)
 
-        # =====================================================
-        # TAB 1 — ОБЩИЕ
-        # =====================================================
         general_tab = QWidget()
         general_layout = QVBoxLayout(general_tab)
 
@@ -104,9 +94,6 @@ class SettingsDialog(QDialog):
         tabs.addTab(general_tab, "Общие")
         general_layout.addStretch()
 
-        # =====================================================
-        # TAB 2 — BACKEND
-        # =====================================================
         backend_tab = QWidget()
         backend_layout_wrapper = QVBoxLayout(backend_tab)
 
@@ -151,9 +138,6 @@ class SettingsDialog(QDialog):
         tabs.addTab(backend_tab, "Сервер")
         backend_layout_wrapper.addStretch()
 
-        # =====================================================
-        # TAB 3 — WEB
-        # =====================================================
         web_tab = QWidget()
         web_layout_wrapper = QVBoxLayout(web_tab)
         desc_web = QLabel(
@@ -182,9 +166,6 @@ class SettingsDialog(QDialog):
         tabs.addTab(web_tab, "Порты")
         web_layout_wrapper.addStretch()
 
-        # =====================================================
-        # TAB 4 — EXTERNAL
-        # =====================================================
         external_tab = QWidget()
         external_layout_wrapper = QVBoxLayout(external_tab)
         desc_external = QLabel(
@@ -236,9 +217,6 @@ class SettingsDialog(QDialog):
             self.external_port_spin.setValue(app.get("port", 0))
             self.external_path_input.setText(app.get("path", ""))
 
-        # =====================================================
-        # TAB 5 — Генерация паролей
-        # =====================================================
         password_tab = QWidget()
         password_layout_wrapper = QVBoxLayout(password_tab)
 
@@ -278,9 +256,6 @@ class SettingsDialog(QDialog):
 
         tabs.addTab(password_tab, "Генерация паролей")
 
-        # =====================================================
-        # TAB 6 — Парольная политика
-        # =====================================================
         policy_tab = QWidget()
         policy_layout_wrapper = QVBoxLayout(policy_tab)
 
@@ -331,9 +306,6 @@ class SettingsDialog(QDialog):
 
         tabs.addTab(policy_tab, "Парольная политика")
 
-        # =========================
-        # КНОПКИ
-        # =========================
         buttons = QHBoxLayout()
 
         btn_save = QPushButton("Сохранить")
@@ -348,9 +320,6 @@ class SettingsDialog(QDialog):
 
         main_layout.addLayout(buttons)
 
-        # =========================
-        # SIGNALS
-        # =========================
         self.auto_refresh_checkbox.toggled.connect(self._update_auto_refresh_enabled)
         self.backend_override_checkbox.toggled.connect(self._update_backend_enabled)
 
@@ -386,9 +355,6 @@ class SettingsDialog(QDialog):
 
         self.spin_rotation_days.valueChanged.connect(lambda: self._mark_dirty("policy"))
 
-        # =========================
-        # CONTROLLER
-        # =========================
         self.controller = SettingsController(api)
         self.controller.status_changed.connect(self._set_status)
         self._set_status("unknown")
@@ -398,9 +364,6 @@ class SettingsDialog(QDialog):
         self.setMinimumWidth(550)
         self.setMinimumHeight(300)
 
-    # =====================================================
-    # SAVE
-    # =====================================================
     def _save_and_close(self):
         self.apply()
         self.accept()
@@ -466,9 +429,6 @@ class SettingsDialog(QDialog):
 
         self.settings.save()
 
-    # =====================================================
-    # HELPERS
-    # =====================================================
     def _mark_dirty(self, tab: str):
         self._dirty_tabs.add(tab)
 

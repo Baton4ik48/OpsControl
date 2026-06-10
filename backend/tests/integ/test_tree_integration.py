@@ -5,10 +5,6 @@ from app.services.db.servers_db import create_server, delete_server
 from app.services.db.ports_db import create_port, delete_port
 from app.services.db.tree_db import load_tree
 
-# ============================================
-# load_tree
-# ============================================
-
 
 @pytest.mark.integration
 def test_load_tree_returns_list():

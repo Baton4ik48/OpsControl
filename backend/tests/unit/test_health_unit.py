@@ -4,10 +4,6 @@ from unittest.mock import Mock
 from app.services.status_services import get_overall_status, check_postgres, check_vault
 from app.services.vault_client import VaultUnavailableError, VaultSealedError
 
-# ============================================
-# OVERALL STATUS
-# ============================================
-
 
 @pytest.mark.parametrize(
     "pg,vault,expected",
@@ -25,11 +21,6 @@ def test_overall_status(pg, vault, expected, monkeypatch):
     monkeypatch.setattr("app.services.status_services.check_vault", lambda: vault)
 
     assert get_overall_status() == expected
-
-
-# ============================================
-# POSTGRES
-# ============================================
 
 
 @pytest.mark.parametrize(
@@ -75,11 +66,6 @@ def test_check_postgres_calls_work_function(monkeypatch):
 
     assert result is True
     mock_conn.cursor.assert_called_once()
-
-
-# ============================================
-# VAULT
-# ============================================
 
 
 @pytest.mark.parametrize(

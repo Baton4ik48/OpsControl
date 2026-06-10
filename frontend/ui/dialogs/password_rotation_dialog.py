@@ -34,7 +34,6 @@ _ROTATE_FN = {
     "cisco": rotate_cisco_password,
 }
 
-
 class PasswordRotationDialog(QDialog):
     def __init__(
         self,
@@ -58,13 +57,11 @@ class PasswordRotationDialog(QDialog):
 
         layout = QVBoxLayout(self)
 
-        # ── Шапка ──────────────────────────────────────────────
         header = QLabel(f"Сервер: <b>{host}</b>  ·  Порт: <b>22</b>")
         header.setAlignment(Qt.AlignmentFlag.AlignCenter)
         header.setObjectName("settingsDescription")
         layout.addWidget(header)
 
-        # ── Мастер-пароль (общий для обеих вкладок) ────────────
         master_form = QFormLayout()
         master_form.setContentsMargins(0, 6, 0, 4)
         self.master_input = QLineEdit()
@@ -73,11 +70,9 @@ class PasswordRotationDialog(QDialog):
         master_form.addRow("Мастер-пароль:", self.master_input)
         layout.addLayout(master_form)
 
-        # ── Вкладки: Генерация / Свой пароль ───────────────────
         self._tabs = QTabWidget()
         layout.addWidget(self._tabs)
 
-        # ── Вкладка 1: Генерация ────────────────────────────────
         gen_page = QWidget()
         gen_layout = QFormLayout(gen_page)
         gen_layout.setContentsMargins(8, 10, 8, 10)
@@ -102,7 +97,6 @@ class PasswordRotationDialog(QDialog):
 
         self._tabs.addTab(gen_page, "Генерация")
 
-        # ── Вкладка 2: Свой пароль ──────────────────────────────
         custom_page = QWidget()
         custom_vlay = QVBoxLayout(custom_page)
         custom_vlay.setContentsMargins(8, 10, 8, 10)
@@ -142,7 +136,6 @@ class PasswordRotationDialog(QDialog):
 
         self._tabs.addTab(custom_page, "Свой пароль")
 
-        # ── Кнопки ─────────────────────────────────────────────
         buttons = QHBoxLayout()
         self.apply_btn = QPushButton("Применить")
         btn_cancel = QPushButton("Отмена")
@@ -254,12 +247,10 @@ class PasswordRotationDialog(QDialog):
 
         self.apply_btn.setEnabled(False)
 
-        # ── Режим повтора: SSH уже выполнен, пробуем снова записать в Vault ──
         if self._vault_retry_mode:
             self._save_to_vault(master, new_pass, self._saved_hint)
             return
 
-        # ── Полный цикл ───────────────────────────────────────────────────────
         current_password = None
         try:
             # Шаг 1: получаем текущие SSH-креды из Vault (заодно проверяет мастер-пароль)

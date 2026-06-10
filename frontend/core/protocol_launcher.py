@@ -5,7 +5,6 @@ import threading
 import webbrowser
 import os
 
-
 class ProtocolLauncher:
 
     @staticmethod
@@ -23,9 +22,6 @@ class ProtocolLauncher:
         else:
             raise RuntimeError("UNSUPPORTED_PROTOCOL")
 
-    # =========================
-    # SSH
-    # =========================
     @staticmethod
     def _open_ssh(user, password, host, port):
 
@@ -66,9 +62,6 @@ class ProtocolLauncher:
                     ]
                 )
 
-    # =========================
-    # RDP
-    # =========================
     @staticmethod
     def _open_rdp(user, password, host):
 
@@ -131,17 +124,11 @@ class ProtocolLauncher:
         else:
             raise RuntimeError("RDP_UNSUPPORTED_OS")
 
-    # =========================
-    # WEB
-    # =========================
     @staticmethod
     def _open_web(protocol, host, port):
         url = f"{protocol}://{host}:{port}"
         webbrowser.open(url)
 
-    # =========================
-    # EXTERNAL APP
-    # =========================
     @staticmethod
     def open_external(app_path: str):
 

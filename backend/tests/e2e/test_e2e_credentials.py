@@ -35,11 +35,6 @@ def server_id():
     requests.delete(f"{BASE_URL}/branches/{branch_id}")
 
 
-# ============================================
-# POST /api/credentials/verify-admin
-# ============================================
-
-
 @pytest.mark.e2e
 def test_verify_admin_success():
     resp = requests.post(
@@ -62,11 +57,6 @@ def test_verify_admin_invalid_password():
     assert resp.json()["error_code"] == "INVALID_MASTER_PASSWORD"
 
 
-# ============================================
-# POST /api/credentials/upsert
-# ============================================
-
-
 @pytest.mark.e2e
 def test_upsert_credentials(server_id):
     resp = requests.post(
@@ -84,11 +74,6 @@ def test_upsert_credentials(server_id):
     assert body["success"] is True
     assert "vault_path" in body["data"]
     assert body["data"]["vault_path"] == f"credentials/servers/{server_id}/22"
-
-
-# ============================================
-# POST /api/credentials/show
-# ============================================
 
 
 @pytest.mark.e2e
@@ -149,11 +134,6 @@ def test_show_credentials_not_found(server_id):
     )
 
     assert resp.status_code == 404
-
-
-# ============================================
-# POST /api/credentials/rotate
-# ============================================
 
 
 @pytest.mark.e2e

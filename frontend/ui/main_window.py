@@ -22,7 +22,6 @@ from ui.dialogs.password_rotation_dialog import PasswordRotationDialog
 from ui.dialogs.statistics_dialog import StatisticsDialog
 from ui.dialogs.batch_rotation_dialog import BatchRotationDialog
 
-
 class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
@@ -31,14 +30,8 @@ class MainWindow(QWidget):
         self.setWindowIcon(QIcon(os.path.join(ICONS_DIR, "app_icon.png")))
         self.resize(1200, 700)
 
-        # =========================
-        # SETTINGS
-        # =========================
         self.user_settings = UserSettings()
 
-        # =========================
-        # UI
-        # =========================
         main_layout = QVBoxLayout(self)
         body = QHBoxLayout()
 
@@ -55,33 +48,21 @@ class MainWindow(QWidget):
         body.addWidget(self.tabs)
         main_layout.addLayout(body)
 
-        # =========================
-        # BUSY
-        # =========================
         self.busy = BusyManager()
         self.busy_overlay = BusyOverlay(self)
 
         self.busy.started.connect(self.busy_overlay.show_message)
         self.busy.finished.connect(self.busy_overlay.hide_overlay)
 
-        # =========================
-        # API + CONTROLLERS
-        # =========================
         self.api = ApiClient()
         self.controller = TreeController(
             self.api, self.tree, self.tree_xclarity, self.user_settings, self.busy
         )
 
-        # =========================
-        # AUTO REFRESH
-        # =========================
         self.auto_refresh_timer = QTimer(self)
         self.auto_refresh_timer.timeout.connect(self.on_refresh_all)
         self._apply_auto_refresh()
 
-        # =========================
-        # SIGNALS
-        # =========================
         self.menu.infrastructure_closed.connect(self.reload)
         self.menu.statistics_requested.connect(self._open_statistics)
         self.menu.batch_rotation_requested.connect(self._open_batch_rotation)
@@ -118,9 +99,6 @@ class MainWindow(QWidget):
     def _on_api_error(self, error: ApiError):
         handle_api_error(self, error)
 
-    # =========================
-    # TREE
-    # =========================
     def reload(self):
         self.sidebar.set_actions_enabled(False)
         self.controller.start_load()
@@ -128,9 +106,6 @@ class MainWindow(QWidget):
     def on_tree_loaded(self):
         self.sidebar.set_actions_enabled(True)
 
-    # =========================
-    # ACTIONS
-    # =========================
     def on_refresh_all(self):
         self.controller.refresh_all()
 
@@ -140,9 +115,6 @@ class MainWindow(QWidget):
     def on_show_problem(self):
         self.controller.show_problem()
 
-    # =========================
-    # AUTO REFRESH
-    # =========================
     def _apply_auto_refresh(self):
         self.auto_refresh_timer.stop()
 
@@ -150,9 +122,6 @@ class MainWindow(QWidget):
             interval = self.user_settings.get("auto_refresh_interval_sec")
             self.auto_refresh_timer.start(interval * 1000)
 
-    # =========================
-    # STATUS COUNTS
-    # =========================
     def _update_status_counts(self, _tab_index=None):
         data = self.controller._active_data
         if not data:
@@ -177,9 +146,6 @@ class MainWindow(QWidget):
                     down += 1
         self.menu.update_server_counts(up, partial, down)
 
-    # =========================
-    # BATCH ROTATION
-    # =========================
     def _open_batch_rotation(self):
         data = self.controller._data
         if not data:
@@ -193,16 +159,10 @@ class MainWindow(QWidget):
         dlg = BatchRotationDialog(data, parent=self)
         dlg.exec()
 
-    # =========================
-    # STATISTICS
-    # =========================
     def _open_statistics(self):
         dlg = StatisticsDialog(self.controller._data, parent=self)
         dlg.exec()
 
-    # =========================
-    # PASSWORD ROTATION
-    # =========================
     def _open_password_rotation(
         self, server_id: int, ip: str, device_type: str = "linux"
     ):
@@ -230,9 +190,6 @@ class MainWindow(QWidget):
         )
         dlg.exec()
 
-    # =========================
-    # SETTINGS
-    # =========================
     def open_settings(self):
         old_backend = (
             self.user_settings.get("backend_override_enabled"),
@@ -258,9 +215,6 @@ class MainWindow(QWidget):
                     "Сетевые изменения вступят в силу после перезапуска приложения.",
                 )
 
-    # =========================
-    # EXIT
-    # =========================
     def exit_app(self):
         reply = QMessageBox.question(
             self,

@@ -1,7 +1,6 @@
 from PyQt6.QtCore import QThreadPool, QObject, pyqtSlot
 from core.workers.port_check_worker import PortCheckWorker
 
-
 class _ResultReceiver(QObject):
     """
     Мост между рабочими потоками и главным потоком.
@@ -24,7 +23,6 @@ class _ResultReceiver(QObject):
     @pyqtSlot(int, int, bool)
     def receive(self, server_id: int, port: int, ok: bool) -> None:
         self._callback(server_id, port, ok)
-
 
 class PortCheckManager:
     def __init__(self, max_threads: int = 10):

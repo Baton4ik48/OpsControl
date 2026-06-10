@@ -19,7 +19,6 @@ DEFAULT_SETTINGS = {
     "password_rotation_days": 31,
 }
 
-
 class UserSettings:
     def __init__(self):
         self._data = DEFAULT_SETTINGS.copy()

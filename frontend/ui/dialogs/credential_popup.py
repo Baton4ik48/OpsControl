@@ -86,7 +86,6 @@ QFrame#separator {
 }
 """
 
-
 class CredentialPopup(QDialog):
     """
     Компактное окно с учётными данными для веб / внешних приложений.
@@ -116,7 +115,6 @@ class CredentialPopup(QDialog):
         root.setContentsMargins(16, 12, 16, 14)
         root.setSpacing(0)
 
-        # ── IP : port ──────────────────────────────────────────
         host_lbl = QLabel(f"{ip}  :  {port}")
         host_lbl.setObjectName("host_label")
         host_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -128,7 +126,6 @@ class CredentialPopup(QDialog):
         root.addWidget(sep)
         root.addSpacing(10)
 
-        # ── Логин ──────────────────────────────────────────────
         grid = QGridLayout()
         grid.setHorizontalSpacing(8)
         grid.setVerticalSpacing(8)
@@ -148,7 +145,6 @@ class CredentialPopup(QDialog):
         grid.addWidget(self._user_field, 0, 1)
         grid.addWidget(btn_copy_user,  0, 2)
 
-        # ── Пароль ─────────────────────────────────────────────
         lbl_pass = QLabel("Пароль")
         lbl_pass.setObjectName("field_label")
         self._pass_field = QLineEdit(password)
@@ -186,29 +182,22 @@ class CredentialPopup(QDialog):
         root.addWidget(sep2)
         root.addSpacing(6)
 
-        # ── Таймер ─────────────────────────────────────────────
         self._countdown_lbl = QLabel()
         self._countdown_lbl.setObjectName("countdown_label")
         self._countdown_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         root.addWidget(self._countdown_lbl)
         root.addSpacing(8)
 
-        # ── Закрыть ────────────────────────────────────────────
         btn_close = QPushButton("Закрыть")
         btn_close.setObjectName("btn_close")
         btn_close.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_close.clicked.connect(self.close)
         root.addWidget(btn_close)
 
-        # ── Старт таймера ──────────────────────────────────────
         self._refresh_countdown()
         self._tick_timer = QTimer(self)
         self._tick_timer.timeout.connect(self._on_tick)
         self._tick_timer.start(1000)
-
-    # ──────────────────────────────────────────────────────────
-    # Slots
-    # ──────────────────────────────────────────────────────────
 
     def _toggle_visibility(self, checked: bool):
         mode = QLineEdit.EchoMode.Normal if checked else QLineEdit.EchoMode.Password
@@ -244,8 +233,6 @@ class CredentialPopup(QDialog):
         self._user_field.setText("")
         self._password = None
         self._username = None
-
-    # ──────────────────────────────────────────────────────────
 
     def closeEvent(self, event):
         self._tick_timer.stop()

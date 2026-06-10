@@ -26,11 +26,6 @@ def _patch(monkeypatch, conn, module_fn="app.services.db.credentials_db._execute
     monkeypatch.setattr(module_fn, lambda fn, retries=1: fn(conn))
 
 
-# ============================================
-# get_vault_path_by_server_port
-# ============================================
-
-
 def test_get_vault_path_found(monkeypatch):
     conn, cur = _make_conn(fetchone=("credentials/servers/1/22",))
     _patch(monkeypatch, conn)
@@ -59,11 +54,6 @@ def test_get_vault_path_db_unavailable(monkeypatch):
     )
     with pytest.raises(ServiceUnavailableError):
         get_vault_path_by_server_port(1, 22)
-
-
-# ============================================
-# get_credentials_username
-# ============================================
 
 
 def test_get_credentials_username_found(monkeypatch):
@@ -95,11 +85,6 @@ def test_get_credentials_username_db_unavailable(monkeypatch):
         get_credentials_username(1, 22)
 
 
-# ============================================
-# touch_credentials_updated_at
-# ============================================
-
-
 def test_touch_credentials_updated_at_executes_update(monkeypatch):
     conn, cur = _make_conn()
     _patch(monkeypatch, conn)
@@ -122,11 +107,6 @@ def test_touch_credentials_updated_at_db_unavailable(monkeypatch):
     )
     with pytest.raises(ServiceUnavailableError):
         touch_credentials_updated_at(1, 22)
-
-
-# ============================================
-# upsert_vault_path
-# ============================================
 
 
 def test_upsert_vault_path_inserts_or_updates(monkeypatch):
@@ -153,11 +133,6 @@ def test_upsert_vault_path_db_unavailable(monkeypatch):
     )
     with pytest.raises(ServiceUnavailableError):
         upsert_vault_path(1, 22, "path")
-
-
-# ============================================
-# get_all_credentials_with_server_info
-# ============================================
 
 
 def _make_conn_fetchall(rows):

@@ -1,10 +1,8 @@
 from PyQt6.QtCore import QObject, QRunnable, pyqtSignal
 from core.port_checker import check_port
 
-
 class PortCheckSignals(QObject):
     result = pyqtSignal(int, int, bool)
-
 
 class PortCheckWorker(QRunnable):
     def __init__(self, server_id, ip, port, api):

@@ -1,9 +1,5 @@
 from app.services.db.pool_db import _execute
 
-# ==========================
-# READ
-# ==========================
-
 
 def get_vault_path_by_server_port(server_id: int, port: int) -> str | None:
     def work(conn):
@@ -26,11 +22,6 @@ def get_vault_path_by_server_port(server_id: int, port: int) -> str | None:
     return _execute(work)
 
 
-# ==========================
-# READ USERNAME
-# ==========================
-
-
 def get_credentials_username(server_id: int, port: int) -> str | None:
     """Возвращает username из vault_path (не трогает Vault — только путь из БД)."""
 
@@ -51,11 +42,6 @@ def get_credentials_username(server_id: int, port: int) -> str | None:
     return _execute(work)
 
 
-# ==========================
-# TOUCH updated_at
-# ==========================
-
-
 def touch_credentials_updated_at(server_id: int, port: int) -> None:
     def work(conn):
         cur = conn.cursor()
@@ -73,13 +59,8 @@ def touch_credentials_updated_at(server_id: int, port: int) -> None:
     _execute(work)
 
 
-# ==========================
-# READ ALL (envelope export)
-# ==========================
-
-
 def get_all_credentials_with_server_info() -> list[dict]:
-    """Returns all credentials joined with server and branch info, ordered by branch → server → port."""
+    """Возвращает все credentials с данными сервера и филиала, отсортированные по филиалу → серверу → порту."""
 
     def work(conn):
         cur = conn.cursor()
@@ -111,11 +92,6 @@ def get_all_credentials_with_server_info() -> list[dict]:
         ]
 
     return _execute(work)
-
-
-# ==========================
-# UPSERT
-# ==========================
 
 
 def upsert_vault_path(server_id: int, port: int, vault_path: str) -> None:

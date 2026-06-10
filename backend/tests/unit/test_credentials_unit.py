@@ -19,10 +19,6 @@ from app.services.vault_client import (
 )
 from app.services.login_throttle import TooManyAttempts
 
-# ============================================================
-# verify_admin_password
-# ============================================================
-
 
 @patch("app.services.credentials.get_vault_client")
 @patch("app.services.credentials.throttle")
@@ -134,11 +130,6 @@ def test_verify_admin_password_no_reset_when_throttle_disabled(
     throttle.reset.assert_not_called()
 
 
-# ============================================================
-# upsert_credentials
-# ============================================================
-
-
 @patch("app.services.credentials.upsert_vault_path")
 @patch("app.services.credentials.get_vault_client")
 def test_upsert_credentials_success(get_vault_client, upsert_vault_path):
@@ -167,11 +158,6 @@ def test_upsert_credentials_vault_error(get_vault_client, upsert_vault_path):
         upsert_credentials(1, 22, "user", "pass")
 
     upsert_vault_path.assert_not_called()
-
-
-# ============================================================
-# show_credentials
-# ============================================================
 
 
 @patch("app.services.credentials.get_vault_path_by_server_port")
@@ -273,11 +259,6 @@ def test_show_credentials_throttle_block(settings, throttle):
         show_credentials(1, 22, "admin", "pass", "ip")
 
     assert exc.value.retry_after_seconds == 10
-
-
-# ============================================================
-# rotate_credentials
-# ============================================================
 
 
 @patch("app.services.credentials.touch_credentials_updated_at")
@@ -392,10 +373,6 @@ def test_rotate_touch_not_called_on_write_error(
 
     touch_updated.assert_not_called()
 
-
-# ============================================================
-# export_all_credentials
-# ============================================================
 
 _ALL_ROWS = [
     {

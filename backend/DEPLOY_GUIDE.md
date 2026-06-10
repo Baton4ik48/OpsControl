@@ -1,31 +1,12 @@
 # OpsControl — Production Deployment Guide
 
 ---
-
-## 📁 Структура проекта
-
-```
-backend/
-├── app/
-├── vault-config/
-├── pg-data/
-├── vault-data/
-├── .env
-├── .dockerignore
-├── Dockerfile
-├── docker-compose.yml
-├── requirements.txt
-├── vault-init.sh
-└── init.sql
-```
-
----
 ## Шаг 0 — Сборка image backend
 
 docker build -t name-backend:v1.0 .
 
 
-## 🚀 Шаг 1 — Запуск контейнеров
+## Шаг 1 — Запуск контейнеров
 
 ```bash
 cd backend
@@ -46,7 +27,7 @@ docker compose ps
 
 ---
 
-## 🐘 Шаг 2 — Инициализация PostgreSQL
+## Шаг 2 — Инициализация PostgreSQL
 
 ```bash
 cat init.sql | docker compose exec -T postgres-staging psql -U login_opscontrol -d opscontrol_database
@@ -63,7 +44,7 @@ docker exec -it postgres-staging psql -U login_opscontrol -d opscontrol_database
 
 ---
 
-## 🔐 Шаг 3 — Инициализация Vault (ПЕРВЫЙ ЗАПУСК)
+## Шаг 3 — Инициализация Vault (ПЕРВЫЙ ЗАПУСК)
 
 ### 1. Init
 
@@ -109,7 +90,7 @@ VAULT_SECRET_ID=...
 
 ---
 
-## 📝 Шаг 5 — Обновить .env
+## Шаг 5 — Обновить .env
 
 ```env
 VAULT_ROLE_ID=...
@@ -119,7 +100,7 @@ VAULT_SECRET_ID=...
 
 ---
 
-## 🔄 Шаг 6 — Перезапуск backend
+## Шаг 6 — Перезапуск backend
 
 ```bash
 docker compose up -d --no-deps backend
@@ -141,7 +122,7 @@ PostgreSQL pool initialized
 
 ---
 
-## 🌐 Шаг 7 — Проверка API
+## Шаг 7 — Проверка API
 
 ```bash
 curl http://localhost:8001/api/status
@@ -164,23 +145,3 @@ docker compose down -v
 5. обновить `.env`
 
 ---
-
-## 💣 ВАЖНО
-
-### Root Token
-
-* используется только для init
-* НЕ хранится в `.env`
-* НЕ используется backend
-
----
-
-### Backend использует
-
-```env
-VAULT_ROLE_ID
-VAULT_SECRET_ID
-```
-
----
-

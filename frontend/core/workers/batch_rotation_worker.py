@@ -13,7 +13,6 @@ _ROTATE_FN = {
     "cisco":  rotate_cisco_password,
 }
 
-
 class BatchRotationWorker(QThread):
     """
     Последовательно меняет пароль на выбранных серверах (только порт 22).
@@ -63,7 +62,6 @@ class BatchRotationWorker(QThread):
                 self.server_done.emit(server_id, "skip", "тип устройства не поддерживается")
                 continue
 
-            # ── Шаг 1: получить текущие учётные данные ──────────────
             try:
                 creds = self._api.show(
                     server_id=server_id,
@@ -84,7 +82,6 @@ class BatchRotationWorker(QThread):
                 self.server_done.emit(server_id, "error", f"Vault: {str(e)}")
                 continue
 
-            # ── Шаг 2: SSH ──────────────────────────────────────────
             try:
                 rotate_fn(
                     host=server["ip"],
@@ -100,7 +97,6 @@ class BatchRotationWorker(QThread):
                 self.server_done.emit(server_id, "error", f"SSH: {str(e)}")
                 continue
 
-            # ── Шаг 3: сохранить в Vault ────────────────────────────
             try:
                 self._api.rotate(
                     server_id=server_id,

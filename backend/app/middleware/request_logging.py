@@ -1,16 +1,16 @@
 """
-HTTP request / audit logging middleware.
+Middleware для HTTP-аудита запросов.
 
-Runs INSIDE AllowedNetworkMiddleware (which is outermost), so it only
-sees requests that have already passed the network access check.
+Выполняется ВНУТРИ AllowedNetworkMiddleware (который снаружи) — видит только запросы,
+прошедшие проверку сети.
 
-Writes one line per request to the "audit" logger → audit.log.
-5xx responses are additionally mirrored to the "http" logger → errors.log.
+Пишет одну строку на запрос в логгер "audit" → audit.log.
+Ответы 5xx дополнительно дублируются в логгер "http" → errors.log.
 
-High-frequency suppression:
-  POST /…/result (port status updates) — frontend sends 100+ of these per
-  poll cycle (one per monitored server). Successful 200s are silently
-  dropped to keep audit.log readable. Failures (non-200) are still logged.
+Подавление высокочастотных запросов:
+  POST /…/result (обновление статуса порта) — фронтенд шлёт 100+ таких запросов
+  за один poll-цикл (по одному на каждый сервер). Успешные 200 молча отбрасываются
+  чтобы audit.log оставался читаемым. Ошибки (не 200) по-прежнему логируются.
 """
 
 import time
@@ -39,11 +39,11 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         path = request.url.path
         status = response.status_code
 
-        # Suppress successful port-result pings — too noisy for audit log
+        # Подавляем успешные port-result пинги — слишком много шума в audit.log
         if method == "POST" and path.endswith(_RESULT_SUFFIX) and status == 200:
             return response
 
-        # client_ip is set by AllowedNetworkMiddleware before reaching us
+        # client_ip устанавливается AllowedNetworkMiddleware до нас
         client_ip = getattr(request.state, "client_ip", None) or (
             request.client.host if request.client else "unknown"
         )

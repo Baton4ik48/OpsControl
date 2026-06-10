@@ -19,7 +19,6 @@ from ui.dialogs.infrastructureDialog.port_form import PortForm
 from ui.dialogs.infrastructureDialog.branch_form import BranchForm
 from ui.dialogs.bulk_credentials_dialog import BulkCredentialsDialog
 
-
 class InfrastructureManagerDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -29,15 +28,10 @@ class InfrastructureManagerDialog(QDialog):
 
         self.busy = BusyOverlay(self)
         self.controller = InfrastructureController(self, self.busy)
-
-        # ===== MAIN LAYOUT =====
+MAIN LAYOUT =====
         main_layout = QVBoxLayout(self)
         splitter = QSplitter(Qt.Orientation.Horizontal)
         main_layout.addWidget(splitter)
-
-        # =========================================================
-        # LEFT SIDE (TREE)
-        # =========================================================
 
         self.tree = InfrastructureTree()
         splitter.addWidget(self.tree)
@@ -46,10 +40,6 @@ class InfrastructureManagerDialog(QDialog):
         self.tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.tree.customContextMenuRequested.connect(self.context_menu.open)
         self.tree.itemClicked.connect(self.on_item_selected)
-
-        # =========================================================
-        # RIGHT SIDE (REAL CENTER)
-        # =========================================================
 
         right_container = QWidget()
         right_layout = QVBoxLayout(right_container)
@@ -72,10 +62,6 @@ class InfrastructureManagerDialog(QDialog):
 
         splitter.setSizes([750, 350])
 
-        # =========================================================
-        # STACK CONTENT
-        # =========================================================
-
         self.empty_widget = QLabel("Выберите элемент")
         self.empty_widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.stack.addWidget(self.empty_widget)
@@ -88,10 +74,6 @@ class InfrastructureManagerDialog(QDialog):
         self.stack.addWidget(self.server_form)
         self.stack.addWidget(self.port_form)
 
-        # =========================================================
-        # FORM SIGNALS
-        # =========================================================
-
         self.server_form.saved.connect(self.controller.save_server)
         self.server_form.error.connect(self.show_error)
 
@@ -101,20 +83,12 @@ class InfrastructureManagerDialog(QDialog):
         self.branch_form.saved.connect(self.controller.save_branch)
         self.branch_form.error.connect(self.show_error)
 
-    # =========================================================
-    # LOAD ONCE
-    # =========================================================
-
     def showEvent(self, event):
         super().showEvent(event)
 
         if not hasattr(self, "_loaded"):
             self._loaded = True
             self.controller.load_tree_async()
-
-    # =========================================================
-    # VIEW API (для контроллера)
-    # =========================================================
 
     def render_tree(self, data):
         self.tree.render(data)
@@ -141,10 +115,6 @@ class InfrastructureManagerDialog(QDialog):
         self.tree.clearSelection()
         self.stack.setCurrentWidget(self.empty_widget)
 
-    # =========================================================
-    # TREE EVENTS
-    # =========================================================
-
     def on_item_selected(self, item):
         data = item.data(0, Qt.ItemDataRole.UserRole)
 
@@ -163,10 +133,6 @@ class InfrastructureManagerDialog(QDialog):
         elif data[0] == "branch":
             _, branch_id = data
             self.controller.select_branch(branch_id)
-
-    # =========================================================
-    # ADD / DELETE (используются ContextMenu)
-    # =========================================================
 
     def add_server_dialog(self, branch_id):
         name, ok1 = QInputDialog.getText(self, "Новый сервер", "Название сервера:")

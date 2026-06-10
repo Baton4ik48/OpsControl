@@ -9,10 +9,6 @@ from app.services.ssh_rotate import (
 )
 from paramiko.ssh_exception import AuthenticationException
 
-# ============================================
-# _sh_escape
-# ============================================
-
 
 @pytest.mark.parametrize(
     "value",
@@ -46,11 +42,6 @@ def test_sh_escape_empty():
     assert _sh_escape("") == "''"
 
 
-# ============================================
-# helpers
-# ============================================
-
-
 def _mock_ssh_success(exit_code=0, output=""):
     stdout = Mock()
     stdout.read.return_value = output.encode()
@@ -60,11 +51,6 @@ def _mock_ssh_success(exit_code=0, output=""):
     stdin.channel.shutdown_write = Mock()
 
     return stdin, stdout, None
-
-
-# ============================================
-# rotate_linux_password
-# ============================================
 
 
 def test_rotate_success():
