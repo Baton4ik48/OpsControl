@@ -19,7 +19,7 @@ from core.workers.batch_rotation_worker import BatchRotationWorker
 _SUPPORTED = {"linux", "nateks", "natex", "cisco"}
 
 def _eligible(server: dict) -> bool:
-    """Сервер подходит для пакетной смены: поддерживаемый тип + порт 22 с учётными данными."""
+    # Сервер подходит для пакетной смены: поддерживаемый тип + порт 22 с учётными данными.
     if server.get("device_type") not in _SUPPORTED:
         return False
     for p in server.get("ports", []):
@@ -28,13 +28,6 @@ def _eligible(server: dict) -> bool:
     return False
 
 class BatchRotationDialog(QDialog):
-    """
-    Диалог пакетной смены паролей.
-
-    Фаза 1 — выбор серверов + новый пароль.
-    Фаза 2 — прогресс выполнения с результатом по каждому серверу.
-    """
-
     def __init__(self, tree_data: list, parent=None):
         super().__init__(parent)
 

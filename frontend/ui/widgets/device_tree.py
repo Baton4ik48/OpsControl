@@ -222,7 +222,7 @@ class DeviceTree(QTreeWidget):
         self.setHeaderLabels(
             ["Устройство", "IP", "Статус", "Учётные данные", "Дата обновления пароля", "Комментарий"]
         )
-Icons =====
+
         self.icon_up = QIcon(os.path.join(ICONS_DIR, "status_up.png"))
         self.icon_down = QIcon(os.path.join(ICONS_DIR, "status_down.png"))
         self.icon_unknown = QIcon(os.path.join(ICONS_DIR, "status_unknown.png"))
@@ -257,25 +257,25 @@ Icons =====
         self.setRootIsDecorated(True)
         self.setIndentation(18)
         self.setUniformRowHeights(False)
-Шрифты =====
+
         self._font_branch = QFont()
         self._font_branch.setBold(True)
         self._font_branch.setPointSize(10)
 
         self._font_server = QFont()
         self._font_server.setWeight(QFont.Weight.DemiBold)
-Цвета фона строк =====
+
         self._brush_branch_bg = QBrush(QColor(42, 54, 66))  # section header
         self._brush_port_up = QBrush(QColor(18, 48, 30))  # зелёный тинт
         self._brush_port_down = QBrush(QColor(58, 20, 20))  # красный тинт
-Цвета текста (QSS color убран — красим только программно) =====
+
         self._brush_text_branch = QBrush(QColor(0xCF, 0xD8, 0xDC))  # ветки / серверы
         self._brush_text_port = QBrush(QColor(0x9F, 0xBF, 0xC2))  # порты (дефолт)
         self._brush_text_down = QBrush(QColor(220, 100, 100))  # имя порта DOWN
         self._brush_text_muted = QBrush(
             QColor(130, 145, 160)
         )  # дата при DOWN без кредов
-Context menu вынесен =====
+
         self.context_menu = DeviceTreeContextMenu(self)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.context_menu.open)
@@ -284,7 +284,7 @@ Context menu вынесен =====
         self.user_settings = settings
 
     def _save_tree_state(self):
-        """Возвращает (expanded_branches, expanded_servers, selected)."""
+        # Возвращает (expanded_branches, expanded_servers, selected).
         expanded_branches: set[str] = set()
         expanded_servers: set[int] = set()
         selected = None  # ("server", server_id, None) | ("port", server_id, port)
@@ -489,7 +489,7 @@ Context menu вынесен =====
         return None
 
     def update_port_item(self, server_id: int, port: int, port_data: dict):
-        """Точечно обновляет строку порта без полного rebuild дерева."""
+        # Точечно обновляет строку порта без полного rebuild дерева.
         item = self._find_port_item(server_id, port)
         if not item:
             return
@@ -624,7 +624,7 @@ Context menu вынесен =====
 
     def update_comment_item(self, item_type: str, server_id: int, port: int,
                             comment: str, updated_at: str):
-        """Обновляет ячейку комментария и тултип после сохранения в БД."""
+        # Обновляет ячейку комментария и тултип после сохранения в БД.
         for i in range(self.topLevelItemCount()):
             branch = self.topLevelItem(i)
             for j in range(branch.childCount()):

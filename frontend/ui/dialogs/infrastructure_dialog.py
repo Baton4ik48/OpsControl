@@ -28,7 +28,7 @@ class InfrastructureManagerDialog(QDialog):
 
         self.busy = BusyOverlay(self)
         self.controller = InfrastructureController(self, self.busy)
-MAIN LAYOUT =====
+
         main_layout = QVBoxLayout(self)
         splitter = QSplitter(Qt.Orientation.Horizontal)
         main_layout.addWidget(splitter)

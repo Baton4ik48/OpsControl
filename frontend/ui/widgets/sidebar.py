@@ -27,7 +27,7 @@ class Sidebar(QFrame):
         self.setFixedWidth(170)
 
         layout = QVBoxLayout(self)
-ОСНОВНЫЕ ДЕЙСТВИЯ =====
+
         self.reload_btn = QPushButton(self.icon_tree, "Топология сети")
         self.show_all_btn = QPushButton(self.icon_full, "Все устройства")
         self.show_problem_btn = QPushButton(self.icon_down_all, "Недоступные")
@@ -39,13 +39,13 @@ class Sidebar(QFrame):
         layout.addWidget(self.refresh_btn)
 
         layout.addStretch()
-СИСТЕМНЫЕ =====
+
         self.settings_btn = QPushButton(self.icon_settings, "Настройки")
         self.exit_btn = QPushButton(self.icon_exit, "Выход")
 
         layout.addWidget(self.settings_btn)
         layout.addWidget(self.exit_btn)
-СИГНАЛЫ =====
+
         self.reload_btn.clicked.connect(self.reload_clicked.emit)
         self.show_all_btn.clicked.connect(self.show_all_clicked.emit)
         self.show_problem_btn.clicked.connect(self.show_problem_clicked.emit)

@@ -13,7 +13,7 @@ from core.api.credentials import CredentialsApi
 from core.api.base import ApiError
 
 class _UpsertWorker(QThread):
-    """Последовательно записывает учётные данные для каждого порта в Vault."""
+    # Последовательно записывает учётные данные для каждого порта в Vault.
     port_done = pyqtSignal(int, int, str, str)  # server_id, port, status("ok"/"error"), message
     finished_all = pyqtSignal()
 
@@ -41,15 +41,11 @@ class _UpsertWorker(QThread):
         self.finished_all.emit()
 
 class BulkCredentialsDialog(QDialog):
-    """
-    Пакетное обновление учётных данных в Vault для нескольких портов.
-    Вводишь логин + пароль один раз — сохраняется во все выбранные порты.
-    """
+    # Пакетное обновление учётных данных в Vault для нескольких портов.
+    # Вводишь логин + пароль один раз — сохраняется во все выбранные порты.
 
     def __init__(self, ports: list[tuple[int, int]], parent=None):
-        """
-        ports — список (server_id, port_number)
-        """
+        # ports — список (server_id, port_number)
         super().__init__(parent)
 
         self._ports = ports

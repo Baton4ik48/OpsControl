@@ -7,90 +7,18 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QIcon, QGuiApplication, QFont
 
-from core.paths import ICONS_DIR
+from core.paths import ICONS_DIR, RESOURCES_DIR
 
 _POPUP_SECONDS = 30
 
-_STYLE = """
-QDialog {
-    background-color: #1a2530;
-}
-QLabel {
-    background: transparent;
-    color: #cfd8dc;
-}
-QLabel#host_label {
-    color: #4fc3f7;
-    font-size: 12pt;
-    font-weight: bold;
-    padding: 6px 0 10px 0;
-}
-QLabel#field_label {
-    color: #90a4ae;
-    font-size: 9pt;
-}
-QLabel#countdown_label {
-    color: #546e7a;
-    font-size: 8pt;
-    padding-top: 4px;
-}
-QLineEdit {
-    background-color: #0f1b1e;
-    color: #eceff1;
-    border: 1px solid #1e3a42;
-    border-radius: 4px;
-    padding: 5px 8px;
-    font-size: 10pt;
-    selection-background-color: #4fc3f7;
-}
-QPushButton {
-    background-color: #1e3a42;
-    color: #81d4fa;
-    border: 1px solid #2a5566;
-    border-radius: 4px;
-    padding: 5px 14px;
-    font-size: 9pt;
-    min-height: 28px;
-}
-QPushButton:hover {
-    background-color: #2a5566;
-    color: #e1f5fe;
-}
-QPushButton:pressed {
-    background-color: #4fc3f7;
-    color: #0d1f26;
-}
-QPushButton#btn_copy {
-    min-width: 90px;
-}
-QPushButton#btn_eye {
-    min-width: 36px;
-    max-width: 36px;
-    padding: 5px 6px;
-    font-size: 11pt;
-}
-QPushButton#btn_close {
-    background-color: #263238;
-    color: #90a4ae;
-    border: 1px solid #37474f;
-    min-height: 30px;
-}
-QPushButton#btn_close:hover {
-    background-color: #37474f;
-    color: #cfd8dc;
-}
-QFrame#separator {
-    color: #1e3a42;
-    background-color: #1e3a42;
-    max-height: 1px;
-}
-"""
+def _load_style() -> str:
+    path = os.path.join(RESOURCES_DIR, "styles", "credential_popup.qss")
+    with open(path, "r", encoding="utf-8") as f:
+        return f.read()
 
 class CredentialPopup(QDialog):
-    """
-    Компактное окно с учётными данными для веб / внешних приложений.
-    Закрывается через 30 сек, очищает буфер обмена.
-    """
+    # Компактное окно с учётными данными для веб / внешних приложений.
+    # Закрывается через 30 сек, очищает буфер обмена.
 
     def __init__(self, ip: str, port: int, username: str, password: str, parent=None):
         super().__init__(parent)
@@ -109,7 +37,7 @@ class CredentialPopup(QDialog):
         )
         self.setModal(False)
         self.setFixedWidth(400)
-        self.setStyleSheet(_STYLE)
+        self.setStyleSheet(_load_style())
 
         root = QVBoxLayout(self)
         root.setContentsMargins(16, 12, 16, 14)

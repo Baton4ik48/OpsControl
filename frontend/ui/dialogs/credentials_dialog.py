@@ -1,5 +1,3 @@
-import os
-
 from PyQt6.QtWidgets import (
     QDialog,
     QVBoxLayout,
@@ -9,9 +7,6 @@ from PyQt6.QtWidgets import (
     QMessageBox,
 )
 from PyQt6.QtCore import pyqtSignal, QTimer
-from PyQt6.QtGui import QIcon
-
-from core.paths import ICONS_DIR
 
 class CredentialsDialog(QDialog):
     submitted = pyqtSignal(str)

@@ -3,10 +3,9 @@ from PyQt6.QtCore import Qt
 
 class InfrastructureContextMenu:
     def __init__(self, parent_dialog):
-        """
-        parent_dialog — это InfrastructureManagerDialog
-        Нужен для вызова методов add/delete
-        """
+
+        #parent_dialog — это InfrastructureManagerDialog
+        #Нужен для вызова методов add/delete
         self.dialog = parent_dialog
         self.tree = parent_dialog.tree
         self.controller = parent_dialog.controller
@@ -14,7 +13,7 @@ class InfrastructureContextMenu:
     def open(self, position):
         item = self.tree.itemAt(position)
         menu = QMenu(self.dialog)
-МУЛЬТИВЫБОР ПОРТОВ =====
+
         # Показываем bulk-меню только если выбрано 2+ портов И
         # правый клик на порту или пустом месте (не на ветке/сервере)
         selected_ports = self.tree.get_selected_ports()
@@ -30,7 +29,7 @@ class InfrastructureContextMenu:
             if menu.exec(self.tree.viewport().mapToGlobal(position)) == bulk_action:
                 self.dialog.bulk_update_credentials(selected_ports)
             return
-ПУСТОЕ МЕСТО =====
+
         if item is None:
             action = menu.addAction("Добавить филиал")
 
@@ -41,7 +40,7 @@ class InfrastructureContextMenu:
         data = item.data(0, Qt.ItemDataRole.UserRole)
         if not data:
             return
-BRANCH =====
+
         if data[0] == "branch":
             _, branch_id = data
 
@@ -55,7 +54,7 @@ BRANCH =====
 
             elif action == delete_branch:
                 self.dialog.confirm_delete_branch(branch_id)
-SERVER =====
+
         elif data[0] == "server":
             _, server_id, _ = data
 
@@ -69,7 +68,7 @@ SERVER =====
 
             elif action == delete_server:
                 self.dialog.confirm_delete_server(server_id)
-PORT =====
+
         elif data[0] == "port":
             _, server_id, port_data = data
 
