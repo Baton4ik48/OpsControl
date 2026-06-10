@@ -118,7 +118,7 @@ def _port_row(state, last_success, last_failure) -> list[str]:
     return rows
 
 def _build_tooltip(server: dict) -> str:
-    """HTML-тултип с детализацией по всем портам сервера."""
+    # HTML-тултип с детализацией по всем портам сервера.
     rows = [
         f'<tr><td colspan="2"><b>{server["name"]}</b></td></tr>',
         '<tr><td colspan="2"><hr/></td></tr>',
@@ -247,7 +247,7 @@ def _branch_label(text: str) -> QLabel:
     return lbl
 
 def _status_tag(server: dict) -> QLabel:
-    """Плашка оборудования: цвет по статусу, тултип с детализацией по портам."""
+    # Плашка оборудования: цвет по статусу, тултип с детализацией по портам.
     status = _server_status(server["ports"])
     bg, bor, txt = _STATUS[status]
     lbl = QLabel(server["type"])

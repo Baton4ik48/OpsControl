@@ -59,6 +59,18 @@ QSpinBox::up-button:hover, QSpinBox::down-button:hover {
     background-color: #2a4a52;
 }
 
+QSpinBox::up-arrow {
+    image: url($$ICONS_DIR$$/arrow_up.svg);
+    width: 8px;
+    height: 5px;
+}
+
+QSpinBox::down-arrow {
+    image: url($$ICONS_DIR$$/arrow_down.svg);
+    width: 8px;
+    height: 5px;
+}
+
 QComboBox {
     background-color: #0f1b1e;
     color: #d8d8d8;
@@ -74,6 +86,12 @@ QComboBox:focus {
 QComboBox::drop-down {
     border: none;
     width: 20px;
+}
+
+QComboBox::down-arrow {
+    image: url($$ICONS_DIR$$/arrow_down.svg);
+    width: 8px;
+    height: 5px;
 }
 
 QComboBox QAbstractItemView {
@@ -176,6 +194,7 @@ QCheckBox::indicator {
 QCheckBox::indicator:checked {
     background: #2fa4a9;
     border-color: #2fa4a9;
+    image: url($$ICONS_DIR$$/checkmark.svg);
 }
 
 QCheckBox::indicator:hover {

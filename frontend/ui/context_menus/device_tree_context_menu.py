@@ -96,7 +96,7 @@ class DeviceTreeContextMenu:
         menu.exec(self.tree.viewport().mapToGlobal(pos))
 
     def _expand_branch(self, branch_item):
-        """Разворачивает филиал и все серверы внутри него."""
+        # Разворачивает филиал и все серверы внутри него.
         branch_item.setExpanded(True)
         for i in range(branch_item.childCount()):
             branch_item.child(i).setExpanded(True)

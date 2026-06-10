@@ -85,14 +85,10 @@ class ToolsMenu(QMenuBar):
     def update_server_counts(self, up: int, partial: int, down: int):
         self._status.update_counts(up, partial, down)
 
-    # -------------------------------------
-
     def open_firewall_generator(self):
         dlg = FirewallDialog(self)
         dlg.setModal(True)
         dlg.exec()
-
-    # -------------------------------------
 
     def open_envelope_print(self):
         username = self._settings.get("admin_login") or ""

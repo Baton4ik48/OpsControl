@@ -18,7 +18,7 @@ from ui.error_handler import handle_system_error
 log = get_logger(__name__)
 
 def _split_data(data: list[dict]) -> tuple[list[dict], list[dict]]:
-    """Делит список филиалов на основные серверы и xClarity по device_type."""
+    # Делит список филиалов на основные серверы и xClarity по device_type.
     main_branches: list[dict] = []
     xclarity_branches: list[dict] = []
 
@@ -268,7 +268,7 @@ class TreeController(QObject):
         self._credentials_worker.start()
 
     def _has_credentials(self, server_id: int, port: int) -> bool:
-        """True если для порта в дереве есть credentials_updated_at — значит пароль сохранён."""
+        # True если для порта в дереве есть credentials_updated_at — значит пароль сохранён.
         for b in self._data:
             for s in b["servers"]:
                 if s["id"] != server_id:
@@ -388,10 +388,8 @@ class TreeController(QObject):
         self._credentials_worker.start()
 
     def _ask_then_open(self, server_id: int, ip: str, port: int, open_fn):
-        """
-        Запрашивает мастер-пароль → получает учётные данные →
-        вызывает open_fn() (открывает браузер/приложение) → показывает popup.
-        """
+
+        # Запрашивает мастер-пароль → получает учётные данные → вызывает open_fn() (открывает браузер/приложение) → показывает popup.
         dlg = CredentialsDialog(ip, port, mode="show")
         dlg.submitted.connect(
             lambda mp: self._start_popup_worker(server_id, ip, port, mp, open_fn)
@@ -438,7 +436,7 @@ class TreeController(QObject):
                     return s["ip"]
 
     def save_comment(self, item_type: str, server_id: int, port: int, comment: str):
-        """Сохраняет комментарий в БД в фоновом потоке, обновляет in-memory и UI."""
+        # Сохраняет комментарий в БД в фоновом потоке, обновляет in-memory и UI.
         def _do():
             try:
                 if item_type == "server":

@@ -9,7 +9,7 @@ class InfrastructureTree(QTreeWidget):
         self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
 
     def get_selected_ports(self) -> list[tuple[int, int]]:
-        """Возвращает список (server_id, port) для всех выделенных портов."""
+        # Возвращает список (server_id, port) для всех выделенных портов.
         result = []
         for item in self.selectedItems():
             data = item.data(0, Qt.ItemDataRole.UserRole)

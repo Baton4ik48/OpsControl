@@ -156,7 +156,7 @@ class PasswordRotationDialog(QDialog):
         self._generate()
 
     def _msgbox(self, icon, title: str, text: str):
-        """QMessageBox с гарантированной шириной под заголовок."""
+        # QMessageBox с гарантированной шириной под заголовок.
         msg = QMessageBox(self)
         msg.setIcon(icon)
         msg.setWindowTitle(title)
@@ -222,7 +222,7 @@ class PasswordRotationDialog(QDialog):
         self._pass_stats_label.setText("  ·  ".join(parts))
 
     def _get_password_and_hint(self) -> tuple[str, str]:
-        """Возвращает (пароль, подсказка_plain) из активной вкладки."""
+        # Возвращает (пароль, подсказка_plain) из активной вкладки.
         if self._tabs.currentIndex() == 0:
             password = self.new_password_input.text().strip()
             hint = re.sub(r"<[^>]+>", "", self.mnemonic_label.text()).strip()
@@ -314,11 +314,9 @@ class PasswordRotationDialog(QDialog):
             self.master_input.clear()
 
     def _save_to_vault(self, master: str, new_pass: str, hint: str = ""):
-        """
-        Шаг 3: записывает новый пароль в Vault.
-        Вызывается как из полного цикла, так и при повторной попытке
-        (когда SSH уже выполнен, но Vault ранее не ответил).
-        """
+        # Шаг 3: записывает новый пароль в Vault.
+        # Вызывается как из полного цикла, так и при повторной попытке
+        # (когда SSH уже выполнен, но Vault ранее не ответил).
         current_password = None
         try:
             self.apply_btn.setText("Сохраняю в хранилище...")

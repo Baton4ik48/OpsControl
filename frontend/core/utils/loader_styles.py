@@ -1,8 +1,9 @@
 import os
-from core.paths import RESOURCES_DIR
+from core.paths import RESOURCES_DIR, ICONS_DIR
 
 def load_styles():
     base_dir = os.path.join(RESOURCES_DIR, "styles")
+    icons_url = ICONS_DIR.replace("\\", "/")
 
     files = [
         "base.qss",
@@ -21,4 +22,4 @@ def load_styles():
         with open(path, "r", encoding="utf-8") as f:
             style += f.read() + "\n"
 
-    return style
+    return style.replace("$$ICONS_DIR$$", icons_url)
