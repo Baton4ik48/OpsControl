@@ -24,6 +24,7 @@ DEVICE_TYPES = [
     ("Коммутатор Cisco", "cisco"),
     ("xClarity (интерфейс управления)", "xclarity"),
     ("VipNet Coordinator", "coordinator"),
+    ("ИБП", "ups"),
 ]
 
 class ServerForm(QWidget):
