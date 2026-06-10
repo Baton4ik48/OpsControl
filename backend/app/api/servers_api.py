@@ -30,7 +30,7 @@ def _validate_host(value: str) -> str:
     raise ValueError(f"'{value}' не является корректным IP-адресом или доменным именем")
 
 
-ALLOWED_DEVICE_TYPES = {"linux", "windows", "nateks", "natex", "cisco", "xclarity"}
+ALLOWED_DEVICE_TYPES = {"linux", "windows", "nateks", "natex", "cisco", "xclarity", "coordinator", "ups"}
 
 
 class _ServerBase(BaseModel):
