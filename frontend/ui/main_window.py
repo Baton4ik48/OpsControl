@@ -7,6 +7,7 @@ from PyQt6.QtCore import QTimer
 from core.paths import ICONS_DIR
 from core.config.user_settings import UserSettings
 from core.api import ApiClient
+from core.configuration import settings as app_settings
 from ui.error_handler import handle_api_error
 from core.api.base import ApiError
 from ui.managers.busy_manager import BusyManager
@@ -95,6 +96,19 @@ class MainWindow(QWidget):
 
         self.tabs.currentChanged.connect(self.controller.set_active_tab)
         self.tabs.currentChanged.connect(self._update_status_counts)
+
+        QTimer.singleShot(0, self._warn_if_insecure)
+
+    def _warn_if_insecure(self):
+        if app_settings.BACKEND_BASE_URL.startswith("http://"):
+            QMessageBox.warning(
+                self,
+                "Незащищённое соединение",
+                f"Подключение к серверу выполняется по протоколу HTTP:\n"
+                f"{app_settings.BACKEND_BASE_URL}\n\n"
+                "Данные передаются без шифрования.\n"
+                "Для защиты трафика настройте HTTPS в разделе «Настройки → Сервер».",
+            )
 
     def _on_api_error(self, error: ApiError):
         handle_api_error(self, error)
