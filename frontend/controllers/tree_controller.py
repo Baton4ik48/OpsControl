@@ -17,18 +17,22 @@ from ui.error_handler import handle_system_error
 
 log = get_logger(__name__)
 
-def _split_data(data: list[dict]) -> tuple[list[dict], list[dict]]:
-    # Делит список филиалов на основные серверы и xClarity по device_type.
+def _split_data(data: list[dict]) -> tuple[list[dict], list[dict], list[dict]]:
     main_branches: list[dict] = []
     xclarity_branches: list[dict] = []
+    ups_branches: list[dict] = []
 
     for branch in data:
         main_servers = []
         xclarity_servers = []
+        ups_servers = []
 
         for server in branch.get("servers", []):
-            if server.get("device_type") == "xclarity":
+            dt = server.get("device_type")
+            if dt == "xclarity":
                 xclarity_servers.append(server)
+            elif dt == "ups":
+                ups_servers.append(server)
             else:
                 main_servers.append(server)
 
@@ -36,8 +40,10 @@ def _split_data(data: list[dict]) -> tuple[list[dict], list[dict]]:
             main_branches.append({**branch, "servers": main_servers})
         if xclarity_servers:
             xclarity_branches.append({**branch, "servers": xclarity_servers})
+        if ups_servers:
+            ups_branches.append({**branch, "servers": ups_servers})
 
-    return main_branches, xclarity_branches
+    return main_branches, xclarity_branches, ups_branches
 
 class TreeController(QObject):
     loaded = pyqtSignal()
@@ -45,19 +51,22 @@ class TreeController(QObject):
     checking_started = pyqtSignal()
     checking_finished = pyqtSignal()
 
-    def __init__(self, api, tree_main, tree_xclarity, user_settings, busy):
+    def __init__(self, api, tree_main, tree_xclarity, tree_ups, user_settings, busy):
         super().__init__()
         self.api = api
         self.tree_main = tree_main
         self.tree_xclarity = tree_xclarity
+        self.tree_ups = tree_ups
         self.user_settings = user_settings
         self.busy = busy
         self.tree_main.set_user_settings(self.user_settings)
         self.tree_xclarity.set_user_settings(self.user_settings)
+        self.tree_ups.set_user_settings(self.user_settings)
 
         self._data: list[dict] = []
         self._data_main: list[dict] = []
         self._data_xclarity: list[dict] = []
+        self._data_ups: list[dict] = []
         self._active_tab: int = 0
         self._runtime_status = {}
         self.checker = PortCheckManager(max_threads=10)
@@ -66,11 +75,19 @@ class TreeController(QObject):
 
     @property
     def _active_tree(self):
-        return self.tree_main if self._active_tab == 0 else self.tree_xclarity
+        if self._active_tab == 1:
+            return self.tree_xclarity
+        if self._active_tab == 2:
+            return self.tree_ups
+        return self.tree_main
 
     @property
     def _active_data(self) -> list[dict]:
-        return self._data_main if self._active_tab == 0 else self._data_xclarity
+        if self._active_tab == 1:
+            return self._data_xclarity
+        if self._active_tab == 2:
+            return self._data_ups
+        return self._data_main
 
     def set_active_tab(self, index: int):
         self._active_tab = index
@@ -83,10 +100,11 @@ class TreeController(QObject):
 
     def _on_loaded(self, data):
         self._data = data
-        self._data_main, self._data_xclarity = _split_data(data)
+        self._data_main, self._data_xclarity, self._data_ups = _split_data(data)
         self._runtime_status.clear()
         self.tree_main.render(self._data_main)
         self.tree_xclarity.render(self._data_xclarity)
+        self.tree_ups.render(self._data_ups)
         self.loaded.emit()
 
     def _on_error(self, message):
@@ -124,6 +142,7 @@ class TreeController(QObject):
         if port_data is not None:
             self.tree_main.update_port_item(server_id, port, port_data)
             self.tree_xclarity.update_port_item(server_id, port, port_data)
+            self.tree_ups.update_port_item(server_id, port, port_data)
 
         self._end_one()
 
@@ -249,7 +268,7 @@ class TreeController(QObject):
         )
 
         def on_success(data):
-            for tree in (self.tree_main, self.tree_xclarity):
+            for tree in (self.tree_main, self.tree_xclarity, self.tree_ups):
                 tree.show_credentials(
                     server_id,
                     port,
@@ -447,7 +466,7 @@ class TreeController(QObject):
                 now = datetime.now(timezone.utc).isoformat()
                 self._update_comment_in_data(item_type, server_id, port, comment, now)
 
-                for tree in (self.tree_main, self.tree_xclarity):
+                for tree in (self.tree_main, self.tree_xclarity, self.tree_ups):
                     tree.update_comment_item(item_type, server_id, port, comment, now)
 
             except Exception as e:

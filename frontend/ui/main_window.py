@@ -40,9 +40,11 @@ class MainWindow(QWidget):
         self.sidebar = Sidebar()
         self.tree = DeviceTree()
         self.tree_xclarity = DeviceTree()
+        self.tree_ups = DeviceTree()
         self.tabs = QTabWidget()
         self.tabs.addTab(self.tree, "Сетевое оборудование")
-        self.tabs.addTab(self.tree_xclarity, "BMC серверов")
+        self.tabs.addTab(self.tree_xclarity, "BMC")
+        self.tabs.addTab(self.tree_ups, "ИБП")
         main_layout.setMenuBar(self.menu)
 
         body.addWidget(self.sidebar)
@@ -57,7 +59,7 @@ class MainWindow(QWidget):
 
         self.api = ApiClient()
         self.controller = TreeController(
-            self.api, self.tree, self.tree_xclarity, self.user_settings, self.busy
+            self.api, self.tree, self.tree_xclarity, self.tree_ups, self.user_settings, self.busy
         )
 
         self.auto_refresh_timer = QTimer(self)
@@ -85,7 +87,7 @@ class MainWindow(QWidget):
         )
         self.controller.checking_finished.connect(self._update_status_counts)
 
-        for _tree in (self.tree, self.tree_xclarity):
+        for _tree in (self.tree, self.tree_xclarity, self.tree_ups):
             _tree.refresh_branch_requested.connect(self.controller.refresh_branch)
             _tree.refresh_server_requested.connect(self.controller.refresh_server)
             _tree.refresh_port_requested.connect(self.controller.refresh_port)
