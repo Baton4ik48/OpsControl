@@ -18,7 +18,6 @@ from core.workers.batch_rotation_worker import BatchRotationWorker
 # Типы устройств с поддержкой автоматической смены пароля по SSH
 _SUPPORTED = {"linux", "nateks", "natex", "cisco"}
 
-
 def _eligible(server: dict) -> bool:
     """Сервер подходит для пакетной смены: поддерживаемый тип + порт 22 с учётными данными."""
     if server.get("device_type") not in _SUPPORTED:
@@ -27,7 +26,6 @@ def _eligible(server: dict) -> bool:
         if p.get("port") == 22 and p.get("credentials_updated_at"):
             return True
     return False
-
 
 class BatchRotationDialog(QDialog):
     """
@@ -74,23 +72,17 @@ class BatchRotationDialog(QDialog):
         self._refresh_selected_count()
         self._do_generate()
 
-    # ══════════════════════════════════════════════════════════════
-    # ФАЗА 1 — выбор
-    # ══════════════════════════════════════════════════════════════
-
     def _make_selection_page(self) -> QWidget:
         page = QWidget()
         lay = QVBoxLayout(page)
         lay.setSpacing(8)
 
-        # ── Мастер-пароль ──────────────────────────────────────
         lay.addWidget(QLabel("Мастер-пароль:"))
         self._master_input = QLineEdit()
         self._master_input.setEchoMode(QLineEdit.EchoMode.Password)
         self._master_input.setPlaceholderText("Введите мастер-пароль администратора")
         lay.addWidget(self._master_input)
 
-        # ── Вкладки: Генерация / Свой пароль ───────────────────
         self._pass_tabs = QTabWidget()
         lay.addWidget(self._pass_tabs)
 
@@ -148,7 +140,6 @@ class BatchRotationDialog(QDialog):
         self._custom_pass_input.textChanged.connect(self._update_batch_stats)
         self._pass_tabs.addTab(custom_page, "Свой пароль")
 
-        # ── Кнопки выбора ──────────────────────────────────────
         sel_hdr = QHBoxLayout()
         sel_hdr.addWidget(QLabel("Выберите серверы:"))
         sel_hdr.addStretch()
@@ -162,7 +153,6 @@ class BatchRotationDialog(QDialog):
         sel_hdr.addWidget(btn_none)
         lay.addLayout(sel_hdr)
 
-        # ── Дерево серверов ────────────────────────────────────
         self._srv_tree = QTreeWidget()
         self._srv_tree.setHeaderHidden(True)
         self._srv_tree.itemChanged.connect(self._on_item_changed)
@@ -170,7 +160,6 @@ class BatchRotationDialog(QDialog):
         self._srv_tree.expandAll()
         lay.addWidget(self._srv_tree)
 
-        # ── Нижняя строка ──────────────────────────────────────
         footer = QHBoxLayout()
         self._count_lbl = QLabel()
         footer.addWidget(self._count_lbl)
@@ -335,10 +324,6 @@ class BatchRotationDialog(QDialog):
 
         self._launch_progress(selected, master, new_pass, hint)
 
-    # ══════════════════════════════════════════════════════════════
-    # ФАЗА 2 — прогресс
-    # ══════════════════════════════════════════════════════════════
-
     def _make_progress_page(self) -> QWidget:
         page = QWidget()
         lay = QVBoxLayout(page)
@@ -445,10 +430,6 @@ class BatchRotationDialog(QDialog):
         if self._worker:
             self._worker.stop()
         self._btn_stop.setEnabled(False)
-
-    # ══════════════════════════════════════════════════════════════
-    # Qt overrides
-    # ══════════════════════════════════════════════════════════════
 
     def closeEvent(self, event):
         if self._worker and self._worker.isRunning():

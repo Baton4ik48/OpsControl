@@ -10,7 +10,6 @@ from core.logger import setup_logging
 
 # from core.paths import ICONS_DIR
 
-
 def run():
     setup_logging()
 

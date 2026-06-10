@@ -20,7 +20,6 @@ from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QSize, QModelIndex
 from core.paths import ICONS_DIR, path_to_file_uri
 from ui.context_menus.device_tree_context_menu import DeviceTreeContextMenu
 
-
 ROLE_TYPE = Qt.ItemDataRole.UserRole + 1
 ROLE_SERVER_ID = Qt.ItemDataRole.UserRole + 2
 ROLE_PORT = Qt.ItemDataRole.UserRole + 3
@@ -28,7 +27,6 @@ ROLE_IP = Qt.ItemDataRole.UserRole + 4
 ROLE_DEVICE_TYPE = Qt.ItemDataRole.UserRole + 5
 
 CREDENTIALS_SHOW_TIMEOUT_MS = 1 * 60 * 1000
-
 
 def format_dt(value):
     if not value:
@@ -42,10 +40,8 @@ def format_dt(value):
     local = dt.astimezone()
     return local.strftime("%d.%m.%Y %H:%M")
 
-
 def _icon_img(icon_path, size=13):
     return f'<img src="{path_to_file_uri(icon_path)}" width="{size}" height="{size}">'
-
 
 def _build_port_tooltip(state, last_success, last_failure):
     icon_up = os.path.join(ICONS_DIR, "status_up.png")
@@ -91,7 +87,6 @@ def _build_port_tooltip(state, last_success, last_failure):
 
     return f'<table cellspacing="3">{"".join(rows)}</table>'
 
-
 def _password_age_color(credentials_updated_at, rotation_days):
     """Возвращает QColor для столбца 'Дата обновления пароля' по % оставшегося срока.
 
@@ -122,7 +117,6 @@ def _password_age_color(credentials_updated_at, rotation_days):
     except Exception:
         return None
 
-
 class _CommentDialog(QDialog):
     """Диалог редактирования комментария с многострочным полем."""
 
@@ -137,7 +131,6 @@ class _CommentDialog(QDialog):
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(0)
 
-        # ── Заголовок ────────────────────────────────────────────
         title_lbl = QLabel(title)
         title_lbl.setObjectName("dialogTitle")
         title_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -151,7 +144,6 @@ class _CommentDialog(QDialog):
             sub_lbl.setWordWrap(True)
             lay.addWidget(sub_lbl)
 
-        # ── Поле ввода ──────────────────────────────────────────
         body = QVBoxLayout()
         body.setContentsMargins(14, 12, 14, 6)
         body.setSpacing(4)
@@ -169,7 +161,6 @@ class _CommentDialog(QDialog):
 
         lay.addLayout(body)
 
-        # ── Кнопки по центру ───────────────────────────────────
         btn_row = QHBoxLayout()
         btn_row.setContentsMargins(14, 4, 14, 14)
         btn_row.addStretch()
@@ -204,7 +195,6 @@ class _CommentDialog(QDialog):
                 return True
         return super().eventFilter(obj, event)
 
-
 class DeviceTree(QTreeWidget):
 
     # делаем роли доступными для context menu
@@ -232,8 +222,7 @@ class DeviceTree(QTreeWidget):
         self.setHeaderLabels(
             ["Устройство", "IP", "Статус", "Учётные данные", "Дата обновления пароля", "Комментарий"]
         )
-
-        # ===== Icons =====
+Icons =====
         self.icon_up = QIcon(os.path.join(ICONS_DIR, "status_up.png"))
         self.icon_down = QIcon(os.path.join(ICONS_DIR, "status_down.png"))
         self.icon_unknown = QIcon(os.path.join(ICONS_DIR, "status_unknown.png"))
@@ -268,39 +257,31 @@ class DeviceTree(QTreeWidget):
         self.setRootIsDecorated(True)
         self.setIndentation(18)
         self.setUniformRowHeights(False)
-
-        # ===== Шрифты =====
+Шрифты =====
         self._font_branch = QFont()
         self._font_branch.setBold(True)
         self._font_branch.setPointSize(10)
 
         self._font_server = QFont()
         self._font_server.setWeight(QFont.Weight.DemiBold)
-
-        # ===== Цвета фона строк =====
+Цвета фона строк =====
         self._brush_branch_bg = QBrush(QColor(42, 54, 66))  # section header
         self._brush_port_up = QBrush(QColor(18, 48, 30))  # зелёный тинт
         self._brush_port_down = QBrush(QColor(58, 20, 20))  # красный тинт
-
-        # ===== Цвета текста (QSS color убран — красим только программно) =====
+Цвета текста (QSS color убран — красим только программно) =====
         self._brush_text_branch = QBrush(QColor(0xCF, 0xD8, 0xDC))  # ветки / серверы
         self._brush_text_port = QBrush(QColor(0x9F, 0xBF, 0xC2))  # порты (дефолт)
         self._brush_text_down = QBrush(QColor(220, 100, 100))  # имя порта DOWN
         self._brush_text_muted = QBrush(
             QColor(130, 145, 160)
         )  # дата при DOWN без кредов
-
-        # ===== Context menu вынесен =====
+Context menu вынесен =====
         self.context_menu = DeviceTreeContextMenu(self)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.context_menu.open)
 
     def set_user_settings(self, settings):
         self.user_settings = settings
-
-    # ==================================================
-    # RENDER
-    # ==================================================
 
     def _save_tree_state(self):
         """Возвращает (expanded_branches, expanded_servers, selected)."""
@@ -489,10 +470,6 @@ class DeviceTree(QTreeWidget):
         self._has_rendered = True
         self._restore_selection(selected)
 
-    # ==================================================
-    # CREDENTIALS
-    # ==================================================
-
     def _find_port_item(self, server_id: int, port: int):
         for i in range(self.topLevelItemCount()):
             branch = self.topLevelItem(i)
@@ -619,10 +596,6 @@ class DeviceTree(QTreeWidget):
         self._credential_timers.clear()
         self.header().setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed)
         self.setColumnWidth(3, 160)
-
-    # ==================================================
-    # INLINE COMMENT EDITING
-    # ==================================================
 
     def _on_comment_double_click(self, item, column):
         if column != 5:

@@ -29,11 +29,6 @@ def server(branch_id):
     requests.delete(f"{BASE_URL}/servers/{server_id}")
 
 
-# ============================================
-# GET /api/servers/by-branch/{id}
-# ============================================
-
-
 @pytest.mark.e2e
 def test_get_servers_returns_list(branch_id):
     resp = requests.get(f"{BASE_URL}/servers/by-branch/{branch_id}")
@@ -50,11 +45,6 @@ def test_get_servers_contains_created(branch_id, server):
 
     ids = [s["id"] for s in resp.json()["data"]]
     assert server in ids
-
-
-# ============================================
-# POST /api/servers
-# ============================================
 
 
 @pytest.mark.e2e
@@ -107,11 +97,6 @@ def test_create_server_invalid_device_type(branch_id):
     assert resp.status_code == 422
 
 
-# ============================================
-# PUT /api/servers/{id}
-# ============================================
-
-
 @pytest.mark.e2e
 def test_update_server(branch_id, server):
     resp = requests.put(
@@ -138,11 +123,6 @@ def test_update_server_not_found():
 
     assert resp.status_code == 404
     assert resp.json()["detail"] == "Server not found"
-
-
-# ============================================
-# DELETE /api/servers/{id}
-# ============================================
 
 
 @pytest.mark.e2e

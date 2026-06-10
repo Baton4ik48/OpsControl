@@ -2,12 +2,10 @@ import os
 import sys
 from pathlib import Path
 
-
 def get_base_path():
     if hasattr(sys, "_MEIPASS"):
         return sys._MEIPASS
     return os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-
 
 BASE_DIR = get_base_path()
 
@@ -20,7 +18,6 @@ TEMPLATES_DIR = os.path.join(RESOURCES_DIR, "templates")
 FIREWALL_TEMPLATE_PATH = os.path.join(TEMPLATES_DIR, "firewall_template.xlsx")
 
 LOG_DIR = os.path.join(BASE_DIR, "logs")
-
 
 def path_to_file_uri(path):
     return Path(path).as_uri()

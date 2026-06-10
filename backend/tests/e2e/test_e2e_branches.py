@@ -15,11 +15,6 @@ def branch():
     requests.delete(f"{BASE_URL}/branches/{branch_id}")
 
 
-# ============================================
-# GET /api/branches
-# ============================================
-
-
 @pytest.mark.e2e
 def test_get_branches_returns_list():
     resp = requests.get(f"{BASE_URL}/branches")
@@ -38,11 +33,6 @@ def test_get_branches_contains_created(branch):
     assert branch in ids
 
 
-# ============================================
-# POST /api/branches
-# ============================================
-
-
 @pytest.mark.e2e
 def test_create_branch_returns_id():
     resp = requests.post(f"{BASE_URL}/branches", json={"name": "e2e-create-test"})
@@ -53,11 +43,6 @@ def test_create_branch_returns_id():
     assert isinstance(body["data"]["id"], int)
 
     requests.delete(f"{BASE_URL}/branches/{body['data']['id']}")
-
-
-# ============================================
-# PUT /api/branches/{id}
-# ============================================
 
 
 @pytest.mark.e2e
@@ -81,11 +66,6 @@ def test_update_branch_not_found():
 
     assert resp.status_code == 404
     assert resp.json()["detail"] == "Branch not found"
-
-
-# ============================================
-# DELETE /api/branches/{id}
-# ============================================
 
 
 @pytest.mark.e2e

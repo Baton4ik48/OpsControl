@@ -15,10 +15,6 @@ from app.services.vault_client import (
     VaultAuthError,
 )
 
-# ============================================
-# _static_creds
-# ============================================
-
 
 def test_static_creds():
     creds = _static_creds()
@@ -29,11 +25,6 @@ def test_static_creds():
     assert creds.dbname == "db"
     assert creds.user == "user"
     assert creds.password == "pass"
-
-
-# ============================================
-# _get_dynamic_db_creds
-# ============================================
 
 
 def test_dynamic_creds_success():
@@ -97,11 +88,6 @@ def test_dynamic_creds_unexpected_exception():
             _get_dynamic_db_creds()
 
     assert "Boom" in str(exc.value)
-
-
-# ============================================
-# get_db_credentials
-# ============================================
 
 
 def test_get_db_credentials_static_mode(monkeypatch):

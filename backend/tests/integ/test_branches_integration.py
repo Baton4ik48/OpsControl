@@ -16,11 +16,6 @@ def branch():
     delete_branch(branch_id)
 
 
-# ============================================
-# load_branches
-# ============================================
-
-
 @pytest.mark.integration
 def test_load_branches_returns_list():
     result = load_branches()
@@ -32,11 +27,6 @@ def test_load_branches_contains_created(branch):
     rows = load_branches()
     ids = [r[0] for r in rows]
     assert branch in ids
-
-
-# ============================================
-# create_branch
-# ============================================
 
 
 @pytest.mark.integration
@@ -57,11 +47,6 @@ def test_create_branch_appears_in_list():
     delete_branch(branch_id)  # cleanup
 
 
-# ============================================
-# update_branch
-# ============================================
-
-
 @pytest.mark.integration
 def test_update_branch_changes_name(branch):
     affected = update_branch(branch, "integ-test-branch-updated")
@@ -76,11 +61,6 @@ def test_update_branch_changes_name(branch):
 def test_update_branch_not_found():
     affected = update_branch(999999, "nope")
     assert affected == 0
-
-
-# ============================================
-# delete_branch
-# ============================================
 
 
 @pytest.mark.integration

@@ -25,11 +25,6 @@ def _client():
     return _app_client
 
 
-# ==========================
-# _validate_host
-# ==========================
-
-
 def test_validate_ipv4_valid():
     assert _validate_host("192.168.1.1") == "192.168.1.1"
 
@@ -79,11 +74,6 @@ def test_validate_subdomain():
     assert _validate_host("api.example.com") == "api.example.com"
 
 
-# ==========================
-# ensure_found
-# ==========================
-
-
 def test_ensure_found_zero():
     with pytest.raises(HTTPException) as exc:
         ensure_found(0, "Server")
@@ -96,11 +86,6 @@ def test_ensure_found_positive():
     # не должен бросать
     ensure_found(1, "Server")
     ensure_found(10, "Server")
-
-
-# ==========================
-# ServerCreate / ServerUpdate validators
-# ==========================
 
 
 @pytest.mark.parametrize(
@@ -129,11 +114,6 @@ def test_server_update_valid_device_type():
 def test_server_update_invalid_device_type():
     with pytest.raises(Exception):
         ServerUpdate(name="x", ip="1.2.3.4", device_type="router")
-
-
-# ==========================
-# Router endpoints
-# ==========================
 
 
 def test_get_servers_by_branch():

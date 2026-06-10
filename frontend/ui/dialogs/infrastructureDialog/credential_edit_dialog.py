@@ -16,7 +16,6 @@ from core.paths import ICONS_DIR
 from core.api.credentials import CredentialsApi
 from core.api.base import ApiError
 
-
 class CredentialEditDialog(QDialog):
     def __init__(self, server_id: int, port: int, parent=None):
         super().__init__(parent)

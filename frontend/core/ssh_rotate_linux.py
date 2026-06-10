@@ -9,10 +9,8 @@ from paramiko.ssh_exception import (
     SSHException,
 )
 
-
 class SSHRotateError(Exception):
     pass
-
 
 def _wipe(s: str) -> None:
     """
@@ -30,7 +28,6 @@ def _wipe(s: str) -> None:
         ctypes.memset(id(s) + offset, 0, len(s))
     except Exception:
         pass
-
 
 def _try_auth(host: str, port: int, username: str, password: str, timeout: int):
     """
@@ -61,7 +58,6 @@ def _try_auth(host: str, port: int, username: str, password: str, timeout: int):
         return None  # таймаут, разрыв сети, прочие — неизвестно
     finally:
         client.close()
-
 
 def rotate_linux_password(
     host: str,
@@ -145,7 +141,6 @@ def rotate_linux_password(
     if not channel_dropped:
         return
 
-    # ── Верификация после разрыва канала ──────────────────────────────────────
     # Важно различать три случая:
     #   True  — пароль точно работает
     #   False — пароль точно НЕ работает (сервер ответил AuthenticationException)

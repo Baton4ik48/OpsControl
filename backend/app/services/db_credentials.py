@@ -13,11 +13,6 @@ from app.services.vault_client import (
 logger = logging.getLogger("db-creds")
 
 
-# ===============================
-# MODEL
-# ===============================
-
-
 @dataclass
 class DBCreds:
     host: str
@@ -25,11 +20,6 @@ class DBCreds:
     dbname: str
     user: str
     password: str
-
-
-# ===============================
-# STATIC CREDS
-# ===============================
 
 
 def _static_creds() -> DBCreds:
@@ -40,11 +30,6 @@ def _static_creds() -> DBCreds:
         user=settings.POSTGRES_USER,
         password=settings.POSTGRES_PASSWORD,
     )
-
-
-# ===============================
-# VAULT CREDS
-# ===============================
 
 
 def _get_dynamic_db_creds() -> DBCreds:
@@ -78,11 +63,6 @@ def _get_dynamic_db_creds() -> DBCreds:
         user=data["username"],
         password=data["password"],
     )
-
-
-# ===============================
-# PUBLIC ENTRYPOINT
-# ===============================
 
 
 def get_db_credentials() -> DBCreds:

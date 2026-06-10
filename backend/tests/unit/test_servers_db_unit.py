@@ -27,11 +27,6 @@ def _patch(monkeypatch, conn):
     )
 
 
-# ============================================
-# load_servers
-# ============================================
-
-
 def test_load_servers_returns_rows(monkeypatch):
     rows = [(1, "srv1", "10.0.0.1", "linux"), (2, "srv2", "10.0.0.2", "windows")]
     conn, cur = _make_conn(fetchall=rows)
@@ -60,11 +55,6 @@ def test_load_servers_db_unavailable(monkeypatch):
     )
     with pytest.raises(ServiceUnavailableError):
         load_servers(1)
-
-
-# ============================================
-# create_server
-# ============================================
 
 
 def test_create_server_returns_new_id(monkeypatch):
@@ -102,11 +92,6 @@ def test_create_server_db_unavailable(monkeypatch):
         create_server(1, "x", "1.1.1.1")
 
 
-# ============================================
-# update_server
-# ============================================
-
-
 def test_update_server_returns_rowcount(monkeypatch):
     conn, cur = _make_conn(rowcount=1)
     _patch(monkeypatch, conn)
@@ -137,11 +122,6 @@ def test_update_server_db_unavailable(monkeypatch):
     )
     with pytest.raises(ServiceUnavailableError):
         update_server(1, "x", "1.1.1.1")
-
-
-# ============================================
-# delete_server
-# ============================================
 
 
 def test_delete_server_returns_rowcount(monkeypatch):

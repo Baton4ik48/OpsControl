@@ -7,7 +7,6 @@ from PyQt6.QtCore import pyqtSignal
 from core.paths import ICONS_DIR
 from ui.dialogs.infrastructureDialog.credential_edit_dialog import CredentialEditDialog
 
-
 class PortForm(QWidget):
     saved = pyqtSignal(int)
     error = pyqtSignal(str)

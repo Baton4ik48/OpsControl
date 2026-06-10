@@ -15,7 +15,6 @@ from PyQt6.QtCore import Qt
 from core.firewall_generator import generate_firewall_rules
 from core.paths import FIREWALL_TEMPLATE_PATH
 
-
 README_TEXT = """
 ===========================================================
                 xFirewall Rule Generator
@@ -40,14 +39,12 @@ F — dst ip (IP-адрес куда)
 Формат: firewall forward add <id> rule "NAME" src <ip> dst <ip> tcp dport <port> ... pass
 """
 
-
 class FirewallDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
 
         self.setWindowTitle("Генератор firewall правил")
 
-        # === 50% экрана ===
         screen = QGuiApplication.primaryScreen().availableGeometry()
         self.resize(int(screen.width() * 0.6), int(screen.height() * 0.6))
 
@@ -58,14 +55,12 @@ class FirewallDialog(QDialog):
 
         layout = QVBoxLayout(self)
 
-        # === ТЕКСТ ===
         self.text = QTextEdit()
         self.text.setReadOnly(True)
         self.text.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
         self.text.setPlainText(README_TEXT)
         layout.addWidget(self.text)
 
-        # === КНОПКИ В ОДНУ СТРОКУ ===
         buttons_layout = QHBoxLayout()
 
         buttons_layout.addStretch()

@@ -13,7 +13,6 @@ print("ENV BACKEND_SCHEME =", os.getenv("BACKEND_SCHEME"))
 print("ENV BACKEND_HOST =", os.getenv("BACKEND_HOST"))
 print("ENV BACKEND_PORT =", os.getenv("BACKEND_PORT"))
 
-
 class Settings:
     def __init__(self):
         self._user = UserSettings()
@@ -34,6 +33,5 @@ class Settings:
             port = self._env_port
 
         return f"{scheme}://{host}:{port}"
-
 
 settings = Settings()

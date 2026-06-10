@@ -60,8 +60,6 @@ services:
       VAULT_ADDR: http://vault:8200
     volumes:
       - ./.env:/app/.env:ro
-      # Persist logs across container restarts/rebuilds.
-      # Without this volume, logs are lost when the container is recreated.
       - backend_logs:/app/logs
     ports:
       - "8001:8000"

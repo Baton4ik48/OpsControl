@@ -30,11 +30,6 @@ def _patch(monkeypatch, conn):
     )
 
 
-# ============================================
-# load_ports
-# ============================================
-
-
 def test_load_ports_returns_dict_list(monkeypatch):
     from datetime import datetime
 
@@ -67,11 +62,6 @@ def test_load_ports_db_unavailable(monkeypatch):
     )
     with pytest.raises(ServiceUnavailableError):
         load_ports(1)
-
-
-# ============================================
-# create_port
-# ============================================
 
 
 def test_create_port_returns_one(monkeypatch):
@@ -107,11 +97,6 @@ def test_create_port_reraises_cursor_exception(monkeypatch):
         create_port(1, 22)
 
     conn.commit.assert_not_called()
-
-
-# ============================================
-# update_port
-# ============================================
 
 
 def test_update_port_same_port_returns_one_no_sql(monkeypatch):
@@ -179,11 +164,6 @@ def test_update_port_db_unavailable(monkeypatch):
         update_port(1, 22, 2222)
 
 
-# ============================================
-# report_port_result
-# ============================================
-
-
 def test_report_port_result_ok_updates_last_success(monkeypatch):
     conn, cur = _make_conn(rowcount=1)
     _patch(monkeypatch, conn)
@@ -215,11 +195,6 @@ def test_report_port_result_db_unavailable(monkeypatch):
     )
     with pytest.raises(ServiceUnavailableError):
         report_port_result(1, 22, True)
-
-
-# ============================================
-# update_vault_path
-# ============================================
 
 
 def test_update_vault_path_empty_deletes_credentials(monkeypatch):
@@ -272,11 +247,6 @@ def test_update_vault_path_db_unavailable(monkeypatch):
         update_vault_path(1, 22, "path")
 
 
-# ============================================
-# delete_port
-# ============================================
-
-
 def test_delete_port_returns_rowcount(monkeypatch):
     conn, cur = _make_conn(rowcount=1)
     _patch(monkeypatch, conn)
@@ -304,11 +274,6 @@ def test_delete_port_db_unavailable(monkeypatch):
     )
     with pytest.raises(ServiceUnavailableError):
         delete_port(1, 22)
-
-
-# ============================================
-# delete_credentials
-# ============================================
 
 
 def test_delete_credentials_returns_rowcount(monkeypatch):

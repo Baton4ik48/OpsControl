@@ -1,14 +1,14 @@
 """
-Production logging setup. Called once at import time via _configure_once().
+Настройка логирования. Вызывается один раз при импорте через _configure_once().
 
-Two file sinks:
-  errors.log  — WARNING / ERROR / CRITICAL with full tracebacks (RotatingFileHandler)
-  audit.log   — all allowed HTTP requests + sensitive business events (TimedRotatingFileHandler)
+Два файловых обработчика:
+  errors.log  — WARNING / ERROR / CRITICAL с трейсбэками (RotatingFileHandler)
+  audit.log   — все допущенные HTTP-запросы + чувствительные события (TimedRotatingFileHandler)
 
-The "audit" logger has propagate=False so audit records go ONLY to audit.log
-and never appear in errors.log or console.
+Логгер "audit" имеет propagate=False — записи идут ТОЛЬКО в audit.log
+и никогда не попадают в errors.log или консоль.
 
-All other loggers propagate normally to root → console + errors.log.
+Все остальные логгеры propagate нормально до root → консоль + errors.log.
 """
 
 import logging
@@ -32,13 +32,13 @@ def _configure_once() -> None:
 
     root.setLevel(logging.DEBUG)
 
-    # Console: INFO+ (dev / docker logs / uvicorn captures this)
+    # Консоль: INFO+ (разработка / docker logs / uvicorn)
     console = logging.StreamHandler()
     console.setLevel(logging.INFO)
     console.setFormatter(logging.Formatter(_FMT))
     root.addHandler(console)
 
-    # errors.log: WARNING+ with rotation (10 MB × 5 archives)
+    # errors.log: WARNING+ с ротацией (10 МБ × 5 архивов)
     err_handler = logging.handlers.RotatingFileHandler(
         _LOG_DIR / "errors.log",
         maxBytes=10 * 1024 * 1024,
@@ -49,7 +49,7 @@ def _configure_once() -> None:
     err_handler.setFormatter(logging.Formatter(_FMT))
     root.addHandler(err_handler)
 
-    # audit logger: isolated, no propagation → only goes to audit.log
+    # audit-логгер: изолирован, без propagation → только в audit.log
     audit_log = logging.getLogger("audit")
     audit_log.setLevel(logging.INFO)
     audit_log.propagate = False

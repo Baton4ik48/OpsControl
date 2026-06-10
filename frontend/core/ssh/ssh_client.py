@@ -1,6 +1,5 @@
 import paramiko
 
-
 class SshClient:
     def __init__(self, timeout=5):
         self.timeout = timeout

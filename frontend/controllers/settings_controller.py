@@ -1,7 +1,6 @@
 from PyQt6.QtCore import QObject, pyqtSignal
 from controllers.status_worker import StatusWorker
 
-
 class SettingsController(QObject):
     status_changed = pyqtSignal(str)
 

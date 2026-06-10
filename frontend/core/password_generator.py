@@ -1,7 +1,7 @@
 import random
 import string
 
-# ЙЦУКЕН → QWERTY transliteration
+# Транслитерация ЙЦУКЕН → QWERTY
 _RU_TO_EN = {
     "й": "q", "ц": "w", "у": "e", "к": "r", "е": "t",
     "н": "y", "г": "u", "ш": "i", "щ": "o", "з": "p",
@@ -57,7 +57,6 @@ _WORDS = [
 
 _LETTERS_PER_WORD = 4   # фиксировано: слова подобраны под 4 буквы
 
-
 def _transliterate(word: str) -> str:
     result = []
     for ch in word:
@@ -67,7 +66,6 @@ def _transliterate(word: str) -> str:
             mapped = mapped.upper()
         result.append(mapped)
     return "".join(result)
-
 
 def generate_password(word_count: int = 3, digit_count: int = 2) -> tuple[str, str]:
     """
@@ -108,7 +106,6 @@ def generate_password(word_count: int = 3, digit_count: int = 2) -> tuple[str, s
     mnemonic = " &middot; ".join(mnemonic_parts)
 
     return password, mnemonic
-
 
 if __name__ == "__main__":
     print("=== Генератор паролей (спецсимволы через ж,э,б,ю,х,ъ) ===\n")

@@ -3,7 +3,7 @@ import pytest
 
 @pytest.fixture(autouse=True)
 def settings_fixture(monkeypatch):
-    # Vault
+    # Vault (название продукта, не переводится)
     monkeypatch.setattr(
         "app.services.vault_client.settings.VAULT_ADDR", "http://vault:8200"
     )

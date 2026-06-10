@@ -4,7 +4,6 @@ from core.logger import get_logger
 
 log = get_logger(__name__)
 
-
 class ApiError(Exception):
     def __init__(
         self,
@@ -18,7 +17,6 @@ class ApiError(Exception):
         self.status_code = status_code
         self.error_code = error_code
         self.retry_after = retry_after
-
 
 class BaseApi:
     def __init__(self):

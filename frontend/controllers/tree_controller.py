@@ -15,7 +15,6 @@ from ui.dialogs.credential_popup import CredentialPopup
 
 from ui.error_handler import handle_system_error
 
-
 log = get_logger(__name__)
 
 def _split_data(data: list[dict]) -> tuple[list[dict], list[dict]]:
@@ -39,7 +38,6 @@ def _split_data(data: list[dict]) -> tuple[list[dict], list[dict]]:
             xclarity_branches.append({**branch, "servers": xclarity_servers})
 
     return main_branches, xclarity_branches
-
 
 class TreeController(QObject):
     loaded = pyqtSignal()
@@ -77,9 +75,6 @@ class TreeController(QObject):
     def set_active_tab(self, index: int):
         self._active_tab = index
 
-    # =========================
-    # ЗАГРУЗКА ДЕРЕВА
-    # =========================
     def start_load(self):
         self._worker = TreeLoaderWorker(self.api)
         self._worker.success.connect(self._on_loaded)
@@ -98,9 +93,6 @@ class TreeController(QObject):
         error = ApiError(message, status_code=None)
         self.error_occurred.emit(error)
 
-    # =========================
-    # ПРОВЕРКА ПОРТОВ
-    # =========================
     def _begin_check(self, n: int):
         if n == 0:
             return
@@ -167,9 +159,6 @@ class TreeController(QObject):
 
                     return
 
-    # =========================
-    # ФИЛЬТРЫ
-    # =========================
     def show_all(self):
         if not self._data:
             return
@@ -190,10 +179,6 @@ class TreeController(QObject):
                 result.append({"name": b["name"], "servers": bad})
 
         self._active_tree.render(result)
-
-    # =========================
-    # Контекст меню
-    # =========================
 
     def refresh_branch(self, branch_name: str):
         if not self._data:
@@ -301,9 +286,6 @@ class TreeController(QObject):
         web_ports = settings.get("web_ports") or []
         has_creds = self._has_credentials(server_id, port)
 
-        # =========================
-        # SSH
-        # =========================
         if port == 22:
             if has_creds:
                 # Есть пароль → запрашиваем мастер-пароль → подключаемся с кредами
@@ -320,9 +302,6 @@ class TreeController(QObject):
                     handle_system_error(None, e)
             return
 
-        # =========================
-        # RDP
-        # =========================
         if port == 3389:
             if has_creds:
                 dlg = CredentialsDialog(ip, port, mode="rdp")
@@ -337,9 +316,6 @@ class TreeController(QObject):
                     handle_system_error(None, e)
             return
 
-        # =========================
-        # EXTERNAL APP (приоритет над web_ports)
-        # =========================
         for app in external_apps:
             if app.get("port") == port:
                 if has_creds:
@@ -355,9 +331,6 @@ class TreeController(QObject):
                         handle_system_error(None, e)
                 return
 
-        # =========================
-        # WEB
-        # =========================
         scheme = None
         for entry in web_ports:
             if entry.get("port") == port:
@@ -463,10 +436,6 @@ class TreeController(QObject):
             for s in b["servers"]:
                 if s["id"] == server_id:
                     return s["ip"]
-
-    # =========================
-    # КОММЕНТАРИИ
-    # =========================
 
     def save_comment(self, item_type: str, server_id: int, port: int, comment: str):
         """Сохраняет комментарий в БД в фоновом потоке, обновляет in-memory и UI."""

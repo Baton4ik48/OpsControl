@@ -1,7 +1,6 @@
 from PyQt6.QtCore import QThread, pyqtSignal
 from core.api.base import ApiError
 
-
 class StatusWorker(QThread):
     success = pyqtSignal(dict)
     error = pyqtSignal(ApiError)

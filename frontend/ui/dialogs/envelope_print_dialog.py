@@ -16,7 +16,6 @@ from core.api.credentials import CredentialsApi
 from core.api.base import ApiError
 from core.ssh_rotate_linux import _wipe
 
-
 class _ExportWorker(QThread):
     success = pyqtSignal(list)
     error = pyqtSignal(Exception)
@@ -36,7 +35,6 @@ class _ExportWorker(QThread):
         finally:
             _wipe(self._master_password)
             self._master_password = ""
-
 
 class EnvelopePrintDialog(QDialog):
     """Загружает все пароли с бекенда и открывает окно предпросмотра печати."""
@@ -168,7 +166,6 @@ class EnvelopePrintDialog(QDialog):
 
         doc.setHtml(html)
         doc.print(printer)
-
 
 def _esc(text: str) -> str:
     return (

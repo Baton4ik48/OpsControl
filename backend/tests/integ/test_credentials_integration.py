@@ -32,11 +32,6 @@ def server_id():
     delete_branch(branch_id)
 
 
-# ============================================
-# verify_admin_password
-# ============================================
-
-
 @pytest.mark.integration
 def test_verify_admin_password_success():
     """Верный мастер-пароль → не бросает исключение"""
@@ -50,11 +45,6 @@ def test_verify_admin_password_invalid():
         verify_admin_password(VAULT_ADMIN_USER, "wrong-password", CLIENT_IP)
 
 
-# ============================================
-# upsert_credentials
-# ============================================
-
-
 @pytest.mark.integration
 def test_upsert_credentials_writes_to_vault_and_db(server_id):
     vault_path = upsert_credentials(server_id, 22, "root", "secret123")
@@ -64,11 +54,6 @@ def test_upsert_credentials_writes_to_vault_and_db(server_id):
     # Проверяем что путь сохранён в БД
     path_in_db = get_vault_path_by_server_port(server_id, 22)
     assert path_in_db == vault_path
-
-
-# ============================================
-# show_credentials
-# ============================================
 
 
 @pytest.mark.integration
@@ -110,11 +95,6 @@ def test_show_credentials_not_found(server_id):
             master_password=VAULT_ADMIN_PASSWORD,
             client_ip=CLIENT_IP,
         )
-
-
-# ============================================
-# rotate_credentials
-# ============================================
 
 
 @pytest.mark.integration

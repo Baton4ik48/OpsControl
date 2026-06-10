@@ -1,6 +1,5 @@
 from PyQt6.QtWidgets import QMenu
 
-
 class DeviceTreeContextMenu:
     def __init__(self, tree):
         self.tree = tree
@@ -9,9 +8,6 @@ class DeviceTreeContextMenu:
         item = self.tree.itemAt(pos)
         menu = QMenu(self.tree)
 
-        # =========================
-        # ПУСТОЕ МЕСТО
-        # =========================
         if not item:
             expand_all = menu.addAction("Развернуть всё")
             collapse_all = menu.addAction("Свернуть всё")
@@ -22,9 +18,6 @@ class DeviceTreeContextMenu:
 
         item_type = item.data(0, self.tree.ROLE_TYPE)
 
-        # =========================
-        # ФИЛИАЛ
-        # =========================
         if item_type is None:
             branch_name = item.text(0)
             refresh_branch = menu.addAction(self.tree.icon_update, "Опросить филиал")
@@ -52,9 +45,6 @@ class DeviceTreeContextMenu:
         server_id = item.data(0, self.tree.ROLE_SERVER_ID)
         ip = item.data(0, self.tree.ROLE_IP)
 
-        # =========================
-        # SERVER
-        # =========================
         if item_type == "server":
             device_type = item.data(0, self.tree.ROLE_DEVICE_TYPE) or "linux"
 
@@ -74,9 +64,6 @@ class DeviceTreeContextMenu:
                 lambda: self.tree.refresh_server_requested.emit(server_id, ip)
             )
 
-        # =========================
-        # PORT
-        # =========================
         elif item_type == "port":
             port = item.data(0, self.tree.ROLE_PORT)
             # device_type хранится на родительском узле сервера, не на порту
@@ -108,19 +95,11 @@ class DeviceTreeContextMenu:
 
         menu.exec(self.tree.viewport().mapToGlobal(pos))
 
-    # ==================================================
-    # EXPAND BRANCH
-    # ==================================================
-
     def _expand_branch(self, branch_item):
         """Разворачивает филиал и все серверы внутри него."""
         branch_item.setExpanded(True)
         for i in range(branch_item.childCount()):
             branch_item.child(i).setExpanded(True)
-
-    # ==================================================
-    # CONNECT ACTIONS
-    # ==================================================
 
     def _add_connect_action(self, menu, server_id, ip, port, device_type="linux"):
 

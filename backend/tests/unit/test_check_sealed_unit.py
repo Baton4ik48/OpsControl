@@ -10,10 +10,6 @@ from app.services.vault_client import (
 
 class TestVaultCheckSealed:
 
-    # ============================================
-    # OK состояния (без исключений)
-    # ============================================
-
     @pytest.mark.parametrize("code", [200, 429, 472, 473])
     def test_check_sealed_ok(self, code):
         vault = VaultClient()
@@ -22,10 +18,6 @@ class TestVaultCheckSealed:
             mock_get.return_value.status_code = code
 
             assert vault.check_sealed() is None
-
-    # ============================================
-    # Ошибки Vault
-    # ============================================
 
     def test_check_sealed_503_sealed(self):
         vault = VaultClient()
@@ -53,10 +45,6 @@ class TestVaultCheckSealed:
 
             with pytest.raises(VaultUnavailableError):
                 vault.check_sealed()
-
-    # ============================================
-    # Сетевые ошибки
-    # ============================================
 
     @pytest.mark.parametrize(
         "exception",

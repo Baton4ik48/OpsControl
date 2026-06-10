@@ -1,7 +1,6 @@
 import os
 from core.paths import RESOURCES_DIR
 
-
 def load_styles():
     base_dir = os.path.join(RESOURCES_DIR, "styles")
 

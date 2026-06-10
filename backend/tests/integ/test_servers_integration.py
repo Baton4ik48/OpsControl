@@ -23,11 +23,6 @@ def server(branch):
     delete_server(server_id)
 
 
-# ============================================
-# load_servers
-# ============================================
-
-
 @pytest.mark.integration
 def test_load_servers_empty(branch):
     result = load_servers(branch)
@@ -50,11 +45,6 @@ def test_load_servers_row_structure(server, branch):
     assert row[3] == "linux"
 
 
-# ============================================
-# create_server
-# ============================================
-
-
 @pytest.mark.integration
 def test_create_server_returns_int(branch):
     server_id = create_server(branch, "integ-create", "10.0.0.2", "linux")
@@ -69,11 +59,6 @@ def test_create_server_default_device_type(branch):
     row = next(r for r in rows if r[0] == server_id)
     assert row[3] == "linux"
     delete_server(server_id)
-
-
-# ============================================
-# update_server
-# ============================================
 
 
 @pytest.mark.integration
@@ -92,11 +77,6 @@ def test_update_server_changes_data(server, branch):
 def test_update_server_not_found():
     affected = update_server(999999, "x", "1.2.3.4")
     assert affected == 0
-
-
-# ============================================
-# delete_server
-# ============================================
 
 
 @pytest.mark.integration

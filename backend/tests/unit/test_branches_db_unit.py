@@ -27,11 +27,6 @@ def _patch(monkeypatch, conn):
     )
 
 
-# ============================================
-# load_branches
-# ============================================
-
-
 def test_load_branches_returns_rows(monkeypatch):
     rows = [(1, "Alpha"), (2, "Beta")]
     conn, cur = _make_conn(fetchall=rows)
@@ -61,11 +56,6 @@ def test_load_branches_db_unavailable(monkeypatch):
         load_branches()
 
 
-# ============================================
-# create_branch
-# ============================================
-
-
 def test_create_branch_returns_new_id(monkeypatch):
     conn, cur = _make_conn(fetchone=(42,))
     _patch(monkeypatch, conn)
@@ -87,11 +77,6 @@ def test_create_branch_db_unavailable(monkeypatch):
     )
     with pytest.raises(ServiceUnavailableError):
         create_branch("X")
-
-
-# ============================================
-# update_branch
-# ============================================
 
 
 def test_update_branch_returns_rowcount(monkeypatch):
@@ -122,11 +107,6 @@ def test_update_branch_db_unavailable(monkeypatch):
     )
     with pytest.raises(ServiceUnavailableError):
         update_branch(1, "X")
-
-
-# ============================================
-# delete_branch
-# ============================================
 
 
 def test_delete_branch_returns_rowcount(monkeypatch):

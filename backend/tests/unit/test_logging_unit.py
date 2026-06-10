@@ -1,12 +1,12 @@
 """
-Unit tests for logging infrastructure.
+Юнит-тесты инфраструктуры логирования.
 
-Tests verify:
-  1. RequestLoggingMiddleware writes to the "audit" logger.
-  2. Successful port-result (POST …/result) requests are NOT written to audit log.
-  3. No secret values (passwords, master_password) appear in audit log entries.
-  4. 5xx responses are additionally written to the "http" (errors) logger.
-  5. AllowedNetworkMiddleware stores client_ip in request.state for downstream use.
+Проверяют:
+  1. RequestLoggingMiddleware пишет в логгер "audit".
+  2. Успешные port-result (POST …/result) НЕ пишутся в audit.
+  3. Секретные значения (пароли, master_password) не попадают в audit.
+  4. Ответы 5xx дополнительно пишутся в логгер "http" (errors).
+  5. AllowedNetworkMiddleware сохраняет client_ip в request.state для downstream.
 """
 
 import logging
@@ -19,12 +19,12 @@ from app.middleware.request_logging import RequestLoggingMiddleware
 from app.middleware.allowed_network import AllowedNetworkMiddleware
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Вспомогательные функции
 # ---------------------------------------------------------------------------
 
 
 def make_logging_app(route_handler=None, status_code=200):
-    """Minimal app with only RequestLoggingMiddleware for isolated testing."""
+    """Минимальное приложение только с RequestLoggingMiddleware для изолированного тестирования."""
     app = FastAPI()
     app.add_middleware(RequestLoggingMiddleware)
 
@@ -50,7 +50,7 @@ def make_logging_app(route_handler=None, status_code=200):
 
 
 # ---------------------------------------------------------------------------
-# 1. Audit logger receives normal requests
+# 1. Аудит-логгер получает обычные запросы
 # ---------------------------------------------------------------------------
 
 
@@ -64,7 +64,7 @@ def test_request_is_logged_to_audit():
     assert resp.status_code == 200
     mock_audit.assert_called_once()
 
-    # Verify key fields appear in the log call
+    # Проверяем наличие ключевых полей в записи лога
     call_args = mock_audit.call_args
     log_str = call_args.args[0] % call_args.args[1:]
     assert "method=GET" in log_str
@@ -75,7 +75,7 @@ def test_request_is_logged_to_audit():
 
 
 # ---------------------------------------------------------------------------
-# 2. Successful port-result POSTs are suppressed (noisy polling endpoint)
+# 2. Успешные port-result POST подавляются (шумный polling-эндпоинт)
 # ---------------------------------------------------------------------------
 
 
@@ -91,7 +91,7 @@ def test_port_result_success_not_logged_to_audit():
 
 
 def test_port_result_failure_is_logged_to_audit():
-    """Non-200 results (server offline) must still be audited."""
+    """Не-200 результаты (сервер недоступен) всё равно должны логироваться."""
     app = make_logging_app()
     client = TestClient(app)
 
@@ -103,12 +103,12 @@ def test_port_result_failure_is_logged_to_audit():
 
 
 # ---------------------------------------------------------------------------
-# 3. No secret values in audit log (credentials endpoints)
+# 3. Секретные значения не попадают в audit (эндпоинты credentials)
 # ---------------------------------------------------------------------------
 
 
 def make_credentials_app():
-    """App with credentials router and only RequestLoggingMiddleware."""
+    """Приложение с credentials router и только RequestLoggingMiddleware."""
     from app.api.credentials_api import router as creds_router
 
     app = FastAPI()
@@ -147,8 +147,8 @@ def test_verify_admin_no_password_in_audit():
         )
 
     for entry in _all_audit_strings(mock_audit):
-        assert SECRET_PASSWORD not in entry, f"Password leaked in: {entry}"
-        assert "master_password" not in entry, f"Field name leaked in: {entry}"
+        assert SECRET_PASSWORD not in entry, f"Пароль утёк в: {entry}"
+        assert "master_password" not in entry, f"Имя поля утекло в: {entry}"
 
 
 def test_show_credentials_no_password_in_audit():
@@ -172,8 +172,8 @@ def test_show_credentials_no_password_in_audit():
         )
 
     for entry in _all_audit_strings(mock_audit):
-        assert SECRET_PASSWORD not in entry, f"master_password leaked in: {entry}"
-        assert "returned_secret" not in entry, f"Vault secret value leaked in: {entry}"
+        assert SECRET_PASSWORD not in entry, f"master_password утёк в: {entry}"
+        assert "returned_secret" not in entry, f"Секрет из Vault утёк в: {entry}"
 
 
 def test_upsert_credentials_no_password_in_audit():
@@ -198,7 +198,7 @@ def test_upsert_credentials_no_password_in_audit():
         )
 
     for entry in _all_audit_strings(mock_audit):
-        assert SECRET_NEW_PASS not in entry, f"password leaked in: {entry}"
+        assert SECRET_NEW_PASS not in entry, f"password утёк в: {entry}"
 
 
 def test_rotate_credentials_no_password_in_audit():
@@ -222,12 +222,12 @@ def test_rotate_credentials_no_password_in_audit():
         )
 
     for entry in _all_audit_strings(mock_audit):
-        assert SECRET_PASSWORD not in entry, f"master_password leaked in: {entry}"
-        assert SECRET_NEW_PASS not in entry, f"new_password leaked in: {entry}"
+        assert SECRET_PASSWORD not in entry, f"master_password утёк в: {entry}"
+        assert SECRET_NEW_PASS not in entry, f"new_password утёк в: {entry}"
 
 
 # ---------------------------------------------------------------------------
-# 4. 5xx responses are forwarded to errors logger
+# 4. Ответы 5xx пишутся в errors-логгер
 # ---------------------------------------------------------------------------
 
 
@@ -253,7 +253,7 @@ def test_5xx_written_to_error_logger():
 
 
 # ---------------------------------------------------------------------------
-# 5. AllowedNetworkMiddleware stores client_ip in request.state
+# 5. AllowedNetworkMiddleware сохраняет client_ip в request.state
 # ---------------------------------------------------------------------------
 
 
@@ -280,7 +280,7 @@ def test_allowed_network_sets_client_ip_in_state():
 
 
 def test_denied_request_does_not_set_client_ip_in_state():
-    """Blocked requests never call call_next, so request.state.client_ip is irrelevant."""
+    """Заблокированные запросы не вызывают call_next, поэтому request.state.client_ip неактуален."""
     app = FastAPI()
     app.add_middleware(
         AllowedNetworkMiddleware,

@@ -28,11 +28,6 @@ app.include_router(router)
 client = TestClient(app, raise_server_exceptions=False)
 
 
-# ============================================
-# POST /credentials/verify-admin
-# ============================================
-
-
 def test_verify_admin_success():
     with patch("app.api.credentials_api.verify_admin_password"):
         resp = client.post(
@@ -71,11 +66,6 @@ def test_verify_admin_throttled():
     assert resp.status_code == 429
     assert resp.json()["error_code"] == "LOGIN_THROTTLED"
     assert resp.json()["retry_after"] == 60
-
-
-# ============================================
-# POST /credentials/show
-# ============================================
 
 
 def test_show_credentials_success():
@@ -154,11 +144,6 @@ def test_show_credentials_not_found():
     assert resp.status_code == 404
 
 
-# ============================================
-# POST /credentials/upsert
-# ============================================
-
-
 def test_upsert_credentials_success():
     with patch(
         "app.api.credentials_api.upsert_credentials",
@@ -207,11 +192,6 @@ def test_upsert_internal_details_not_leaked():
     assert "vault-internal" not in body
     assert "role_id" not in body
     assert "8200" not in body
-
-
-# ============================================
-# POST /credentials/rotate
-# ============================================
 
 
 def test_rotate_credentials_success():
@@ -324,11 +304,6 @@ def test_rotate_internal_details_not_leaked():
     assert "8201" not in body
     assert "Forbidden" not in body
     assert resp.json()["detail"] == "Credential rotation failed"
-
-
-# ============================================
-# POST /credentials/export-all
-# ============================================
 
 
 def test_export_all_success():

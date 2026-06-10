@@ -30,15 +30,10 @@ def _validate_host(value: str) -> str:
     raise ValueError(f"'{value}' не является корректным IP-адресом или доменным именем")
 
 
-# ==========================
-# Pydantic models
-# ==========================
-
 ALLOWED_DEVICE_TYPES = {"linux", "windows", "nateks", "natex", "cisco", "xclarity"}
 
 
-class ServerCreate(BaseModel):
-    branch_id: int
+class _ServerBase(BaseModel):
     name: str
     ip: str
     device_type: str = "linux"
@@ -54,38 +49,23 @@ class ServerCreate(BaseModel):
         if v not in ALLOWED_DEVICE_TYPES:
             raise ValueError(f"device_type must be one of: {ALLOWED_DEVICE_TYPES}")
         return v
+
+
+class ServerCreate(_ServerBase):
+    branch_id: int
+
+
+class ServerUpdate(_ServerBase):
+    pass
 
 
 class CommentUpdate(BaseModel):
     comment: str
 
 
-class ServerUpdate(BaseModel):
-    name: str
-    ip: str
-    device_type: str = "linux"
-
-    @field_validator("ip")
-    @classmethod
-    def validate_ip(cls, v):
-        return _validate_host(v.strip())
-
-    @field_validator("device_type")
-    @classmethod
-    def validate_device_type(cls, v):
-        if v not in ALLOWED_DEVICE_TYPES:
-            raise ValueError(f"device_type must be one of: {ALLOWED_DEVICE_TYPES}")
-        return v
-
-
 def ensure_found(affected: int, entity: str):
     if affected == 0:
         raise HTTPException(status_code=404, detail=f"{entity} not found")
-
-
-# ==========================
-# READ
-# ==========================
 
 
 @router.get("/by-branch/{branch_id}")
@@ -99,11 +79,6 @@ def get_servers(branch_id: int):
     }
 
 
-# ==========================
-# CREATE
-# ==========================
-
-
 @router.post("")
 def create_server_api(payload: ServerCreate):
     new_id = create_server(
@@ -115,12 +90,7 @@ def create_server_api(payload: ServerCreate):
     return {"success": True, "data": {"id": new_id}}
 
 
-# ==========================
-# UPDATE (атомарный)
-# ==========================
-
-
-@router.put("/{server_id}")
+@router.put("/{server_id}")  # атомарный
 def update_server_api(server_id: int, payload: ServerUpdate):
     affected = update_server(
         server_id,
@@ -132,21 +102,11 @@ def update_server_api(server_id: int, payload: ServerUpdate):
     return {"success": True, "data": None}
 
 
-# ==========================
-# UPDATE COMMENT
-# ==========================
-
-
 @router.put("/{server_id}/comment")
 def update_server_comment_api(server_id: int, payload: CommentUpdate):
     affected = update_server_comment(server_id, payload.comment)
     ensure_found(affected, "Server")
     return {"success": True, "data": None}
-
-
-# ==========================
-# DELETE
-# ==========================
 
 
 @router.delete("/{server_id}")

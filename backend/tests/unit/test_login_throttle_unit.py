@@ -8,10 +8,6 @@ class TestLoginThrottle:
     def throttle(self):
         return LoginThrottle(max_attempts=3, block_seconds=10)
 
-    # ============================================
-    # CHECK
-    # ============================================
-
     def test_check_first_attempt_ok(self, throttle):
         throttle.check("user")  # не падает
 
@@ -51,10 +47,6 @@ class TestLoginThrottle:
         # старые попытки должны очиститься
         assert throttle.failed["user"] == []
 
-    # ============================================
-    # REGISTER_FAIL
-    # ============================================
-
     def test_register_fail_accumulates(self, throttle, monkeypatch):
         monkeypatch.setattr("time.time", lambda: 1000)
 
@@ -62,10 +54,6 @@ class TestLoginThrottle:
 
         assert "user" in throttle.failed
         assert len(throttle.failed["user"]) == 1
-
-    # ============================================
-    # RESET
-    # ============================================
 
     def test_reset_clears_key(self, throttle, monkeypatch):
         monkeypatch.setattr("time.time", lambda: 1000)
@@ -81,10 +69,6 @@ class TestLoginThrottle:
 
     def test_reset_nonexistent_key(self, throttle):
         throttle.reset("unknown")  # не падает
-
-    # ============================================
-    # TIME UNTIL UNBLOCK
-    # ============================================
 
     def test_time_until_unblock_not_blocked(self, throttle):
         assert throttle.time_until_unblock("user") == 0

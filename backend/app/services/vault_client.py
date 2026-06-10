@@ -35,10 +35,6 @@ class VaultClient:
 
         self._backend_token = None
 
-    # ==========================================
-    # APPROLE LOGIN (для backend)
-    # ==========================================
-
     def check_sealed(self) -> None:
         """Бросает VaultSealedError или VaultUnavailableError если Vault недоступен."""
         try:
@@ -133,10 +129,6 @@ class VaultClient:
         logger.debug("Backend token renewed (ttl=%ss)", ttl)
         return True
 
-    # ==========================================
-    # USER LOGIN (GUI → Vault userpass)
-    # ==========================================
-
     def login_userpass(self, username: str, password: str) -> str:
         username = username.lower()
         url = f"{self.addr}/v1/auth/userpass/login/{username}"
@@ -163,9 +155,6 @@ class VaultClient:
         except KeyError as e:
             raise VaultAuthError("Vault не вернул client_token") from e
 
-    # ==========================================
-    # READ KV (user token)
-    # ==========================================
     def read_kv_v2(self, token: str, vault_path: str) -> dict:
         if not vault_path.startswith("credentials/"):
             raise VaultReadError("Invalid vault path")
@@ -200,10 +189,6 @@ class VaultClient:
         except KeyError as e:
             raise VaultReadError("Некорректная структура ответа Vault") from e
 
-    # ==========================================
-    # WRITE KV (backend AppRole token)
-    # ==========================================
-
     def write_kv_v2(self, vault_path: str, data: dict) -> None:
         if not vault_path.startswith("credentials/"):
             raise VaultReadError("Invalid vault path")
@@ -224,10 +209,6 @@ class VaultClient:
 
         if resp.status_code not in (200, 204):
             raise VaultReadError(resp.text)
-
-    # ==========================================
-    # DATABASE CREDS (backend token)
-    # ==========================================
 
     def read_database_creds(self) -> dict:
         token = self._get_backend_token()

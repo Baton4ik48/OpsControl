@@ -10,14 +10,11 @@ from paramiko.ssh_exception import (
 
 from core.ssh_rotate_linux import SSHRotateError, _try_auth
 
-
 # ANSI escape-последовательности — встречаются в выводе некоторых устройств
 _ANSI_RE = re.compile(r"\x1b\[[0-9;]*[mGKHABCDJr]")
 
-
 def _strip_ansi(text: str) -> str:
     return _ANSI_RE.sub("", text)
-
 
 def _wait_prompt(channel, expected: str, timeout: int = 15) -> str:
     """
@@ -53,7 +50,6 @@ def _wait_prompt(channel, expected: str, timeout: int = 15) -> str:
         f"Таймаут ({timeout}с) ожидания промпта '{expected}'.\n"
         f"Последний вывод: {buf[-300:]!r}"
     )
-
 
 def rotate_nateks_password(
     host: str,
@@ -147,7 +143,6 @@ def rotate_nateks_password(
     if not channel_dropped:
         return
 
-    # ── Верификация после разрыва канала ──────────────────────────────────────
     # Если канал разорвался посередине — неизвестно на каком шаге.
     # Проверяем новым паролем: если заходит — пароль точно сменён.
     # Важно: даже если `write` не выполнился, пароль будет работать до перезагрузки.

@@ -1,9 +1,5 @@
 from app.services.db.pool_db import _execute
 
-# ==========================
-# READ
-# ==========================
-
 
 def load_servers(branch_id: int):
     def work(conn):
@@ -22,11 +18,6 @@ def load_servers(branch_id: int):
         return rows
 
     return _execute(work)
-
-
-# ==========================
-# CREATE
-# ==========================
 
 
 def create_server(
@@ -48,11 +39,6 @@ def create_server(
         return new_id
 
     return _execute(work)
-
-
-# ==========================
-# UPDATE (атомарный)
-# ==========================
 
 
 def update_server(
@@ -79,11 +65,6 @@ def update_server(
     return _execute(work)
 
 
-# ==========================
-# UPDATE COMMENT
-# ==========================
-
-
 def update_server_comment(server_id: int, comment: str) -> int:
     def work(conn):
         cur = conn.cursor()
@@ -102,11 +83,6 @@ def update_server_comment(server_id: int, comment: str) -> int:
         return affected
 
     return _execute(work)
-
-
-# ==========================
-# DELETE
-# ==========================
 
 
 def delete_server(server_id: int) -> int:

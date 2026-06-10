@@ -30,11 +30,6 @@ def port(server_id):
     delete_port(server_id, 2222)
 
 
-# ============================================
-# load_ports
-# ============================================
-
-
 @pytest.mark.integration
 def test_load_ports_empty(server_id):
     result = load_ports(server_id)
@@ -56,21 +51,11 @@ def test_load_ports_row_structure(server_id, port):
     assert "last_failure" in row
 
 
-# ============================================
-# create_port
-# ============================================
-
-
 @pytest.mark.integration
 def test_create_port(server_id):
     result = create_port(server_id, 3333)
     assert result == 1
     delete_port(server_id, 3333)
-
-
-# ============================================
-# update_port
-# ============================================
 
 
 @pytest.mark.integration
@@ -142,11 +127,6 @@ def test_update_port_conflict_preserves_credentials(server_id):
     delete_port(server_id, 7771)
 
 
-# ============================================
-# update_vault_path
-# ============================================
-
-
 @pytest.mark.integration
 def test_update_vault_path_nonempty(server_id, port):
     result = update_vault_path(server_id, 2222, "credentials/servers/1/2222")
@@ -164,11 +144,6 @@ def test_update_vault_path_empty_deletes(server_id, port):
 
     path = get_vault_path_by_server_port(server_id, 2222)
     assert path is None
-
-
-# ============================================
-# report_port_result
-# ============================================
 
 
 @pytest.mark.integration
@@ -189,11 +164,6 @@ def test_report_port_result_fail(server_id, port):
     result = load_ports(server_id)
     row = next(r for r in result if r["port"] == 2222)
     assert row["last_failure"] is not None
-
-
-# ============================================
-# delete_port / delete_credentials
-# ============================================
 
 
 @pytest.mark.integration

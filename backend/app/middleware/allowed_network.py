@@ -17,7 +17,7 @@ class AllowedNetworkMiddleware(BaseHTTPMiddleware):
     ):
         super().__init__(app)
         self.allowed_networks = [ipaddress.ip_network(net) for net in allowed_networks]
-        # strict=False allows host addresses like "172.18.0.5" alongside CIDRs
+        # strict=False разрешает адреса хостов типа "172.18.0.5" вместе с CIDR
         self.trusted_proxies = [
             ipaddress.ip_network(p, strict=False) for p in (trusted_proxies or [])
         ]
@@ -25,7 +25,7 @@ class AllowedNetworkMiddleware(BaseHTTPMiddleware):
     def _normalize(
         self, ip: ipaddress.IPv4Address | ipaddress.IPv6Address
     ) -> ipaddress.IPv4Address | ipaddress.IPv6Address:
-        """Unwrap IPv4-mapped IPv6 addresses (::ffff:x.x.x.x → x.x.x.x)."""
+        """Разворачивает IPv4-mapped IPv6 адреса (::ffff:x.x.x.x → x.x.x.x)."""
         if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped:
             return ip.ipv4_mapped
         return ip
@@ -37,15 +37,14 @@ class AllowedNetworkMiddleware(BaseHTTPMiddleware):
 
     def _resolve_client_ip(self, request: Request) -> str:
         """
-        Return the effective client IP.
+        Возвращает эффективный IP клиента.
 
-        If the direct connection comes from a trusted proxy, read the real
-        client IP from the X-Real-IP header (set by nginx as $remote_addr —
-        cannot be spoofed by the end-client).  Otherwise fall back to the
-        raw TCP connection address.
+        Если прямое соединение пришло от доверенного прокси, читает реальный IP
+        из заголовка X-Real-IP (выставляется nginx как $remote_addr —
+        клиент не может его подделать). Иначе использует сырой адрес TCP-соединения.
 
-        X-Forwarded-For is intentionally never used: its leftmost value is
-        fully controlled by the client and is trivially spoofable.
+        X-Forwarded-For намеренно не используется: его крайнее левое значение
+        полностью контролируется клиентом и тривиально подделывается.
         """
         connection_host = request.client.host
 
@@ -58,7 +57,7 @@ class AllowedNetworkMiddleware(BaseHTTPMiddleware):
             real_ip = request.headers.get("X-Real-IP", "").strip()
             if real_ip:
                 try:
-                    ipaddress.ip_address(real_ip)  # validate before using
+                    ipaddress.ip_address(real_ip)  # валидация перед использованием
                     return real_ip
                 except ValueError:
                     logger.warning(
@@ -99,8 +98,7 @@ class AllowedNetworkMiddleware(BaseHTTPMiddleware):
                 },
             )
 
-        # Store resolved IP so downstream middleware and route handlers can read it
-        # without repeating the trusted-proxy logic.
+        # Сохраняем определённый IP, чтобы downstream middleware и обработчики могли его читать
         request.state.client_ip = client_ip
 
         return await call_next(request)

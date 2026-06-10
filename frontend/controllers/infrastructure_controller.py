@@ -6,7 +6,6 @@ from core.api.base import ApiError
 
 from core.workers.infrastructure_worker import InfrastructureWorker
 
-
 class InfrastructureController:
 
     def __init__(self, view, busy):
@@ -24,10 +23,6 @@ class InfrastructureController:
         self.cached_tree_data = None
 
         self._worker = None
-
-    # =========================================================
-    # Универсальный запуск worker
-    # =========================================================
 
     def _run_task(self, message, fn):
         self.busy.show_message(message)
@@ -61,10 +56,6 @@ class InfrastructureController:
         self.cached_tree_data = data
         self.view.render_tree(data)
 
-    # =========================================================
-    # LOAD TREE
-    # =========================================================
-
     def load_tree(self):
         try:
             data = self.tree_api.load_tree()
@@ -72,10 +63,6 @@ class InfrastructureController:
             self.view.render_tree(data)
         except ApiError as e:
             self.view.show_api_error(e.message)
-
-    # =========================================================
-    # SERVER
-    # =========================================================
 
     def select_server(self, server_id, server_data):
         self.current_server_id = server_id
@@ -93,10 +80,6 @@ class InfrastructureController:
 
         self._run_task("Сохранение сервера…", task)
 
-    # =========================================================
-    # PORT
-    # =========================================================
-
     def select_port(self, server_id, port_data):
         self.current_server_id = server_id
         self.current_port = port_data["port"]
@@ -112,10 +95,6 @@ class InfrastructureController:
                 self.current_port = new_port
 
         self._run_task("Сохранение порта…", task)
-
-    # =========================================================
-    # BRANCH
-    # =========================================================
 
     def create_branch(self, name):
         def task():
@@ -148,10 +127,6 @@ class InfrastructureController:
             self.port_api.create(server_id, port)
 
         self._run_task("Создание порта…", task)
-
-    # =========================================================
-    # DELETE
-    # =========================================================
 
     def delete_branch(self, branch_id):
         def task():
