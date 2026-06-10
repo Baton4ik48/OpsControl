@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QScrollArea, QWidget, QGridLayout
+from PyQt6.QtWidgets import QScrollArea, QWidget, QVBoxLayout, QHBoxLayout
 from PyQt6.QtCore import pyqtSignal, Qt
 
 from ui.widgets.branch_card import BranchCard
@@ -15,38 +15,51 @@ class DashboardView(QScrollArea):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         self._container = QWidget()
-        self._grid = QGridLayout(self._container)
-        self._grid.setContentsMargins(16, 16, 16, 16)
-        self._grid.setSpacing(12)
-        self._grid.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        self._vbox = QVBoxLayout(self._container)
+        self._vbox.setContentsMargins(16, 16, 16, 16)
+        self._vbox.setSpacing(12)
         self.setWidget(self._container)
 
         self._cards: dict[str, BranchCard] = {}
-        self._order: list[str] = []
+        self._row_widgets: list[QWidget] = []
+
+    def _clear_layout(self):
+        while self._vbox.count():
+            item = self._vbox.takeAt(0)
+            w = item.widget()
+            if w:
+                w.deleteLater()
+        self._row_widgets.clear()
+        self._cards.clear()
 
     def render(self, branches: list[dict]):
-        new_names = {b["name"] for b in branches}
+        self._clear_layout()
 
-        for name in list(self._cards):
-            if name not in new_names:
-                card = self._cards.pop(name)
-                self._grid.removeWidget(card)
-                card.deleteLater()
-
-        for card in self._cards.values():
-            self._grid.removeWidget(card)
-
-        self._order = [b["name"] for b in branches]
-
-        for i, branch in enumerate(branches):
+        cards: list[BranchCard] = []
+        for branch in branches:
             name = branch["name"]
-            if name not in self._cards:
-                card = BranchCard(name, self._container)
-                card.double_clicked.connect(self.branch_selected)
-                self._cards[name] = card
-            self._cards[name].update_data(branch)
-            row, col = divmod(i, _COLS)
-            self._grid.addWidget(self._cards[name], row, col)
+            card = BranchCard(name)
+            card.double_clicked.connect(self.branch_selected)
+            card.update_data(branch)
+            self._cards[name] = card
+            cards.append(card)
+
+        for row_start in range(0, len(cards), _COLS):
+            row_cards = cards[row_start : row_start + _COLS]
+            row_w = QWidget(self._container)
+            row_layout = QHBoxLayout(row_w)
+            row_layout.setContentsMargins(0, 0, 0, 0)
+            row_layout.setSpacing(12)
+            row_layout.addStretch()
+            for card in row_cards:
+                card.setParent(row_w)
+                row_layout.addWidget(card)
+            row_layout.addStretch()
+            self._vbox.addWidget(row_w)
+            self._row_widgets.append(row_w)
+
+        # Прижимаем строки к верху
+        self._vbox.addStretch(1)
 
     def update_branch(self, branch: dict):
         card = self._cards.get(branch["name"])

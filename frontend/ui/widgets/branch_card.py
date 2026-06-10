@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel
+from PyQt6.QtWidgets import QFrame, QVBoxLayout, QLabel
 from PyQt6.QtCore import pyqtSignal, Qt
 from PyQt6.QtGui import QFont
 
@@ -39,8 +39,8 @@ class BranchCard(QFrame):
         self.setObjectName("branchCard")
 
         root = QVBoxLayout(self)
-        root.setContentsMargins(12, 8, 12, 10)
-        root.setSpacing(0)
+        root.setContentsMargins(12, 10, 12, 10)
+        root.setSpacing(6)
 
         self._lbl_name = QLabel(branch_name)
         font = QFont()
@@ -48,23 +48,14 @@ class BranchCard(QFrame):
         font.setPointSize(9)
         self._lbl_name.setFont(font)
         self._lbl_name.setWordWrap(True)
+        self._lbl_name.setAlignment(Qt.AlignmentFlag.AlignCenter)
         root.addWidget(self._lbl_name)
 
-        root.addStretch()
-
-        stats_row = QHBoxLayout()
-        stats_row.setSpacing(10)
-        self._lbl_up = QLabel()
-        self._lbl_partial = QLabel()
-        self._lbl_down = QLabel()
-        for lbl in (self._lbl_up, self._lbl_partial, self._lbl_down):
-            lbl.setTextFormat(Qt.TextFormat.RichText)
-            lbl.setStyleSheet("font-size: 9pt; background: transparent;")
-        stats_row.addWidget(self._lbl_up)
-        stats_row.addWidget(self._lbl_partial)
-        stats_row.addWidget(self._lbl_down)
-        stats_row.addStretch()
-        root.addLayout(stats_row)
+        self._lbl_stats = QLabel()
+        self._lbl_stats.setTextFormat(Qt.TextFormat.RichText)
+        self._lbl_stats.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._lbl_stats.setStyleSheet("font-size: 9pt; background: transparent;")
+        root.addWidget(self._lbl_stats)
 
         self._apply_style("unknown")
 
@@ -79,12 +70,17 @@ class BranchCard(QFrame):
         down = counts["down"]
         unknown = counts["unknown"]
 
-        self._lbl_up.setText(f'<span style="color:#4caf50">● {up}</span>' if up else "")
-        self._lbl_partial.setText(f'<span style="color:#ffc107">◑ {partial}</span>' if partial else "")
-        self._lbl_down.setText(f'<span style="color:#ef5350">✗ {down}</span>' if down else "")
+        parts = []
+        if up:
+            parts.append(f'<span style="color:#4caf50">● {up}</span>')
+        if partial:
+            parts.append(f'<span style="color:#ffc107">◑ {partial}</span>')
+        if down:
+            parts.append(f'<span style="color:#ef5350">✗ {down}</span>')
+        if not parts:
+            parts.append(f'<span style="color:#607d8b">{unknown}</span>')
 
-        if not up and not partial and not down:
-            self._lbl_up.setText(f'<span style="color:#607d8b">? {unknown}</span>')
+        self._lbl_stats.setText('&nbsp;&nbsp;'.join(parts))
 
         if down > 0 and up == 0 and partial == 0:
             state = "down"
