@@ -51,35 +51,27 @@ class TreeController(QObject):
     checking_started = pyqtSignal()
     checking_finished = pyqtSignal()
 
-    def __init__(self, api, tree_main, tree_xclarity, tree_ups, user_settings, busy):
+    def __init__(self, api, dash_main, dash_xclarity, dash_ups, detail_tree, user_settings, busy):
         super().__init__()
         self.api = api
-        self.tree_main = tree_main
-        self.tree_xclarity = tree_xclarity
-        self.tree_ups = tree_ups
+        self.dash_main = dash_main
+        self.dash_xclarity = dash_xclarity
+        self.dash_ups = dash_ups
+        self.detail_tree = detail_tree
         self.user_settings = user_settings
         self.busy = busy
-        self.tree_main.set_user_settings(self.user_settings)
-        self.tree_xclarity.set_user_settings(self.user_settings)
-        self.tree_ups.set_user_settings(self.user_settings)
+        self.detail_tree.set_user_settings(self.user_settings)
 
         self._data: list[dict] = []
         self._data_main: list[dict] = []
         self._data_xclarity: list[dict] = []
         self._data_ups: list[dict] = []
         self._active_tab: int = 0
+        self._current_branch: str | None = None
         self._runtime_status = {}
         self.checker = PortCheckManager(max_threads=10)
         self._worker = None
         self._check_count = 0
-
-    @property
-    def _active_tree(self):
-        if self._active_tab == 1:
-            return self.tree_xclarity
-        if self._active_tab == 2:
-            return self.tree_ups
-        return self.tree_main
 
     @property
     def _active_data(self) -> list[dict]:
@@ -102,9 +94,9 @@ class TreeController(QObject):
         self._data = data
         self._data_main, self._data_xclarity, self._data_ups = _split_data(data)
         self._runtime_status.clear()
-        self.tree_main.render(self._data_main)
-        self.tree_xclarity.render(self._data_xclarity)
-        self.tree_ups.render(self._data_ups)
+        self.dash_main.render(self._data_main)
+        self.dash_xclarity.render(self._data_xclarity)
+        self.dash_ups.render(self._data_ups)
         self.loaded.emit()
 
     def _on_error(self, message):
@@ -140,9 +132,16 @@ class TreeController(QObject):
 
         port_data = self._get_port_data(server_id, port)
         if port_data is not None:
-            self.tree_main.update_port_item(server_id, port, port_data)
-            self.tree_xclarity.update_port_item(server_id, port, port_data)
-            self.tree_ups.update_port_item(server_id, port, port_data)
+            self.detail_tree.update_port_item(server_id, port, port_data)
+            for ds, data in (
+                (self.dash_main, self._data_main),
+                (self.dash_xclarity, self._data_xclarity),
+                (self.dash_ups, self._data_ups),
+            ):
+                for b in data:
+                    if any(s["id"] == server_id for s in b.get("servers", [])):
+                        ds.update_branch(b)
+                        break
 
         self._end_one()
 
@@ -179,25 +178,30 @@ class TreeController(QObject):
                     return
 
     def show_all(self):
-        if not self._data:
+        if not self._data or not self._current_branch:
             return
-        self._active_tree.render(self._active_data)
+        branch = next((b for b in self._active_data if b["name"] == self._current_branch), None)
+        if branch:
+            self.detail_tree.render([branch])
 
     def show_problem(self):
-        if not self._data:
+        if not self._data or not self._current_branch:
             return
+        branch = next((b for b in self._active_data if b["name"] == self._current_branch), None)
+        if not branch:
+            return
+        bad = [s for s in branch["servers"] if any(p.get("is_up") is False for p in s["ports"])]
+        if bad:
+            self.detail_tree.render([{"name": branch["name"], "servers": bad}])
 
-        result = []
-        for b in self._active_data:
-            bad = [
-                s
-                for s in b["servers"]
-                if any(p.get("is_up") is False for p in s["ports"])
-            ]
-            if bad:
-                result.append({"name": b["name"], "servers": bad})
+    def drill_into_branch(self, branch_name: str):
+        self._current_branch = branch_name
+        branch = next((b for b in self._active_data if b["name"] == branch_name), None)
+        if branch:
+            self.detail_tree.render([branch])
 
-        self._active_tree.render(result)
+    def clear_current_branch(self):
+        self._current_branch = None
 
     def refresh_branch(self, branch_name: str):
         if not self._data:
@@ -268,14 +272,13 @@ class TreeController(QObject):
         )
 
         def on_success(data):
-            for tree in (self.tree_main, self.tree_xclarity, self.tree_ups):
-                tree.show_credentials(
-                    server_id,
-                    port,
-                    data["username"],
-                    data["password"],
-                    data.get("mnemonic", ""),
-                )
+            self.detail_tree.show_credentials(
+                server_id,
+                port,
+                data["username"],
+                data["password"],
+                data.get("mnemonic", ""),
+            )
             del data
 
         def on_error(e: ApiError):
@@ -466,8 +469,7 @@ class TreeController(QObject):
                 now = datetime.now(timezone.utc).isoformat()
                 self._update_comment_in_data(item_type, server_id, port, comment, now)
 
-                for tree in (self.tree_main, self.tree_xclarity, self.tree_ups):
-                    tree.update_comment_item(item_type, server_id, port, comment, now)
+                self.detail_tree.update_comment_item(item_type, server_id, port, comment, now)
 
             except Exception as e:
                 log.error("Ошибка сохранения комментария: %s", e)
