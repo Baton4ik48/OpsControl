@@ -57,6 +57,7 @@ class Sidebar(QFrame):
         self.set_actions_enabled(False)
 
     def set_actions_enabled(self, enabled: bool):
+        self.reload_btn.setEnabled(enabled)
         self.refresh_btn.setEnabled(enabled)
         self.show_all_btn.setEnabled(enabled)
         self.show_problem_btn.setEnabled(enabled)
