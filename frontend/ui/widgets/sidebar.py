@@ -53,8 +53,9 @@ class Sidebar(QFrame):
         self.settings_btn.clicked.connect(self.settings_clicked.emit)
         self.exit_btn.clicked.connect(self.exit_clicked.emit)
 
-        # по умолчанию действия недоступны
+        # по умолчанию действия недоступны, кроме кнопки загрузки топологии
         self.set_actions_enabled(False)
+        self.reload_btn.setEnabled(True)
 
     def set_actions_enabled(self, enabled: bool):
         self.reload_btn.setEnabled(enabled)
