@@ -50,6 +50,10 @@
 
 ![Main Window](docs/screenshots/main-window.png)
 
+### Окно уровня филиала
+
+![Main Window](docs/screenshots/main-window_2.png)
+
 
 ## Функциональность
 
