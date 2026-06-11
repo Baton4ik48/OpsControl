@@ -25,12 +25,6 @@ class DeviceTreeContextMenu:
                 lambda: self.tree.refresh_branch_requested.emit(branch_name)
             )
             menu.addSeparator()
-            if item.isExpanded():
-                action = menu.addAction("Свернуть филиал")
-                action.triggered.connect(lambda: item.setExpanded(False))
-            else:
-                action = menu.addAction("Развернуть филиал")
-                action.triggered.connect(lambda: self._expand_branch(item))
             menu.addSeparator()
             expand_all = menu.addAction("Развернуть всё")
             collapse_all = menu.addAction("Свернуть всё")

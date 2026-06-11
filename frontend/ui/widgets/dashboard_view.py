@@ -44,6 +44,8 @@ class DashboardView(QScrollArea):
             self._cards[name] = card
             cards.append(card)
 
+        self._vbox.addStretch(1)
+
         for row_start in range(0, len(cards), _COLS):
             row_cards = cards[row_start : row_start + _COLS]
             row_w = QWidget(self._container)
@@ -58,7 +60,6 @@ class DashboardView(QScrollArea):
             self._vbox.addWidget(row_w)
             self._row_widgets.append(row_w)
 
-        # Прижимаем строки к верху
         self._vbox.addStretch(1)
 
     def update_branch(self, branch: dict):

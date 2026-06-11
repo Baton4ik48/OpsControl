@@ -199,6 +199,7 @@ class TreeController(QObject):
         branch = next((b for b in self._active_data if b["name"] == branch_name), None)
         if branch:
             self.detail_tree.render([branch])
+            self.detail_tree.expandAll()
 
     def clear_current_branch(self):
         self._current_branch = None
