@@ -20,6 +20,10 @@ variables:
 
   DB_CREDS_MODE: static
 
+.default_docker:
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD localhost:5050
+
 .verify_base:
   stage: verify
   tags: [docker]
@@ -61,9 +65,8 @@ stages:
 prepare_job:
   stage: prepare
   tags: [docker]
-  image: docker:latest
-  before_script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD localhost:5050
+  image: docker:29.4.1
+  extends: .default_docker
   script:
     - docker build -t localhost:5050/root/opscontrol/ci-image:$CI_COMMIT_SHA -f backend/Dockerfile-ci backend/
     - docker push localhost:5050/root/opscontrol/ci-image:$CI_COMMIT_SHA
@@ -102,9 +105,8 @@ unit_job:
 build_job:
   stage: build
   tags: [docker]
-  image: docker:latest
-  before_script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD localhost:5050
+  image: docker:29.4.1
+  extends: .default_docker
   script:
     - docker build -t localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA -f backend/Dockerfile backend/
     - docker push localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA
@@ -154,7 +156,7 @@ report_job:
 # 
 deploy_staging_job:
   stage: deploy
-  image: docker:latest
+  image: docker:29.4.1
   tags: [docker]
   environment:
     name: staging
@@ -164,9 +166,8 @@ deploy_staging_job:
       allow_failure: true
     - when: never
   manual_confirmation: "Задеплоить staging?"
-  before_script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD localhost:5050
   script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD localhost:5050
     - docker pull localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA
     - docker rm -f opscontrol-backend-staging || true
     - |
@@ -192,7 +193,7 @@ deploy_staging_job:
 
 deploy_prod_job:
   stage: deploy
-  image: docker:latest
+  image: docker:29.4.1
   tags: [docker]
   environment:
     name: production
