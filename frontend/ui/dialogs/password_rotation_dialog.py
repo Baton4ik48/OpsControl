@@ -19,20 +19,11 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
 
 from core.paths import ICONS_DIR
-from core.api.credentials import CredentialsApi
 from core.api.base import ApiError
 from core.password_generator import generate_password
 from core.config.user_settings import UserSettings
-from core.ssh_rotate_linux import rotate_linux_password, SSHRotateError, _wipe
-from core.ssh_rotate_nateks import rotate_nateks_password
-from core.ssh_rotate_cisco import rotate_cisco_password
+from core.workers.rotation_worker import RotationWorker
 
-_ROTATE_FN = {
-    "linux": rotate_linux_password,
-    "nateks": rotate_nateks_password,
-    "natex": rotate_nateks_password,  # backward compat для старых записей в БД
-    "cisco": rotate_cisco_password,
-}
 
 class PasswordRotationDialog(QDialog):
     def __init__(
@@ -40,6 +31,7 @@ class PasswordRotationDialog(QDialog):
         server_id: int,
         host: str,
         admin_login: str,
+        credentials_api,
         device_type: str = "linux",
         parent=None,
     ):
@@ -47,9 +39,10 @@ class PasswordRotationDialog(QDialog):
 
         self.server_id = server_id
         self.host = host
-        self._rotate_fn = _ROTATE_FN.get(device_type, rotate_linux_password)
+        self.device_type = device_type
         self.admin_login = admin_login
-        self._api = CredentialsApi()
+        self._api = credentials_api
+        self._worker: RotationWorker | None = None
 
         self.setWindowTitle(f"Смена пароля — {host}")
         self.setWindowIcon(QIcon(os.path.join(ICONS_DIR, "key_icon.png")))
@@ -118,7 +111,9 @@ class PasswordRotationDialog(QDialog):
         custom_form.addRow("Новый пароль:", custom_pass_row)
 
         self.custom_hint_input = QLineEdit()
-        self.custom_hint_input.setPlaceholderText("Необязательно — подсказка для пароля")
+        self.custom_hint_input.setPlaceholderText(
+            "Необязательно — подсказка для пароля"
+        )
         custom_form.addRow("Подсказка:", self.custom_hint_input)
 
         custom_vlay.addLayout(custom_form)
@@ -151,7 +146,7 @@ class PasswordRotationDialog(QDialog):
 
         # Флаг: SSH уже выполнен, но Vault не обновился
         self._vault_retry_mode = False
-        self._saved_hint = ""   # запоминаем hint для retry-режима
+        self._saved_hint = ""  # запоминаем hint для retry-режима
 
         self._generate()
 
@@ -232,6 +227,9 @@ class PasswordRotationDialog(QDialog):
         return password, hint
 
     def _on_apply(self):
+        if self._worker is not None and self._worker.isRunning():
+            return
+
         master = self.master_input.text().strip()
         new_pass, hint = self._get_password_and_hint()
 
@@ -245,125 +243,88 @@ class PasswordRotationDialog(QDialog):
             )
             return
 
-        self.apply_btn.setEnabled(False)
-
-        if self._vault_retry_mode:
-            self._save_to_vault(master, new_pass, self._saved_hint)
-            return
-
-        current_password = None
-        try:
-            # Шаг 1: получаем текущие SSH-креды из Vault (заодно проверяет мастер-пароль)
-            self.apply_btn.setText("Проверка доступа...")
-            try:
-                creds = self._api.show(
-                    server_id=self.server_id,
-                    port=22,
-                    username=self.admin_login,
-                    master_password=master,
-                )
-            except ApiError as e:
-                if e.status_code == 403:
-                    self._msgbox(
-                        QMessageBox.Icon.Warning, "Ошибка", "Неверный мастер-пароль"
-                    )
-                elif e.status_code == 429:
-                    self._msgbox(
-                        QMessageBox.Icon.Warning,
-                        "Заблокировано",
-                        f"Попробуйте через {e.retry_after} сек.",
-                    )
-                else:
-                    self._msgbox(QMessageBox.Icon.Critical, "Ошибка", e.message)
-                self.apply_btn.setEnabled(True)
-                self.apply_btn.setText("Применить")
-                return
-
-            current_username = creds["username"]
-            current_password = creds["password"]
-
-            # Шаг 2: меняем пароль на сервере по SSH с машины фронтенда
-            self.apply_btn.setText("Меняю пароль по SSH...")
-            try:
-                self._rotate_fn(
-                    host=self.host,
-                    username=current_username,
-                    current_password=current_password,
-                    new_password=new_pass,
-                    port=22,
-                )
-            except SSHRotateError as e:
-                self._msgbox(QMessageBox.Icon.Critical, "Ошибка SSH", str(e))
-                self.apply_btn.setEnabled(True)
-                self.apply_btn.setText("Применить")
-                return
-
-            # SSH прошёл — устанавливаем флаг до попытки записи в Vault.
-            # Если Vault упадёт ниже, повторное нажатие пропустит SSH.
-            self._vault_retry_mode = True
+        if not self._vault_retry_mode:
             self._saved_hint = hint
 
-            # Шаг 3: сохраняем новый пароль в Vault
-            self._save_to_vault(master, new_pass, hint)
+        self.apply_btn.setEnabled(False)
+        self.master_input.clear()
 
-        finally:
-            _wipe(master)
-            _wipe(new_pass)
-            if current_password is not None:
-                _wipe(current_password)
-            self.master_input.clear()
+        # Вся работа (Vault → SSH → Vault) — в фоновом потоке,
+        # окно остаётся живым и показывает текущий шаг на кнопке.
+        self._worker = RotationWorker(
+            api=self._api,
+            server_id=self.server_id,
+            host=self.host,
+            admin_login=self.admin_login,
+            master_password=master,
+            new_password=new_pass,
+            mnemonic=self._saved_hint,
+            device_type=self.device_type,
+            vault_only=self._vault_retry_mode,
+        )
+        self._worker.step_changed.connect(self.apply_btn.setText)
+        self._worker.success.connect(self._on_rotation_success)
+        self._worker.error.connect(self._on_rotation_error)
+        self._worker.start()
 
-    def _save_to_vault(self, master: str, new_pass: str, hint: str = ""):
-        # Шаг 3: записывает новый пароль в Vault.
-        # Вызывается как из полного цикла, так и при повторной попытке
-        # (когда SSH уже выполнен, но Vault ранее не ответил).
-        current_password = None
-        try:
-            self.apply_btn.setText("Сохраняю в хранилище...")
-            try:
-                self._api.rotate(
-                    server_id=self.server_id,
-                    ssh_port=22,
-                    new_password=new_pass,
-                    username=self.admin_login,
-                    master_password=master,
-                    mnemonic=hint,
-                )
-            except ApiError as e:
-                # Пароль уже сменён на сервере, но не записан в Vault.
-                # Кнопка меняет текст — следующее нажатие пойдёт сразу в Vault,
-                # минуя SSH (который уже сделал своё дело).
+    def _on_rotation_success(self):
+        self._vault_retry_mode = False
+
+        msg = QMessageBox(self)
+        msg.setWindowTitle("Готово")
+        msg.setTextFormat(Qt.TextFormat.RichText)
+        hint_display = self._saved_hint if self._saved_hint else "—"
+        msg.setText(
+            f"Пароль успешно изменён на сервере <b>{self.host}</b><br><br>"
+            f"Подсказка:&nbsp; {hint_display}"
+        )
+        msg.exec()
+        self.accept()
+
+    def _on_rotation_error(self, stage: str, exc: Exception):
+        new_pass, _ = self._get_password_and_hint()
+
+        if stage == "verify":
+            if isinstance(exc, ApiError) and exc.status_code == 403:
                 self._msgbox(
-                    QMessageBox.Icon.Critical,
-                    "Ошибка записи в хранилище",
-                    f"Пароль на сервере <b>{self.host}</b> уже изменён, "
-                    f"но записать в хранилище не удалось.\n\n"
-                    f"Новый пароль: {new_pass}\n\n"
-                    f"Введите мастер-пароль и нажмите «Повторить запись» "
-                    f"или сохраните пароль вручную.\n\n"
-                    f"Ошибка: {e.message}",
+                    QMessageBox.Icon.Warning, "Ошибка", "Неверный мастер-пароль"
                 )
-                self.apply_btn.setText("Повторить запись в Vault")
-                self.apply_btn.setEnabled(True)
-                return
+            elif isinstance(exc, ApiError) and exc.status_code == 429:
+                self._msgbox(
+                    QMessageBox.Icon.Warning,
+                    "Заблокировано",
+                    f"Попробуйте через {exc.retry_after} сек.",
+                )
+            else:
+                message = exc.message if isinstance(exc, ApiError) else str(exc)
+                self._msgbox(QMessageBox.Icon.Critical, "Ошибка", message)
+            self.apply_btn.setText("Применить")
 
-            # Успех — сбрасываем флаг режима повтора
-            self._vault_retry_mode = False
+        elif stage == "ssh":
+            self._msgbox(QMessageBox.Icon.Critical, "Ошибка SSH", str(exc))
+            self.apply_btn.setText("Применить")
 
-            msg = QMessageBox(self)
-            msg.setWindowTitle("Готово")
-            msg.setTextFormat(Qt.TextFormat.RichText)
-            hint_display = hint if hint else "—"
-            msg.setText(
-                f"Пароль успешно изменён на сервере <b>{self.host}</b><br><br>"
-                f"Подсказка:&nbsp; {hint_display}"
+        else:  # vault
+            # Пароль уже сменён на сервере, но не записан в Vault.
+            # Кнопка меняет текст — следующее нажатие пойдёт сразу в Vault,
+            # минуя SSH (который уже сделал своё дело).
+            self._vault_retry_mode = True
+            message = exc.message if isinstance(exc, ApiError) else str(exc)
+            self._msgbox(
+                QMessageBox.Icon.Critical,
+                "Ошибка записи в хранилище",
+                f"Пароль на сервере <b>{self.host}</b> уже изменён, "
+                f"но записать в хранилище не удалось.\n\n"
+                f"Новый пароль: {new_pass}\n\n"
+                f"Введите мастер-пароль и нажмите «Повторить запись» "
+                f"или сохраните пароль вручную.\n\n"
+                f"Ошибка: {message}",
             )
-            msg.exec()
-            self.accept()
+            self.apply_btn.setText("Повторить запись в Vault")
 
-        finally:
-            _wipe(master)
-            _wipe(new_pass)
-            if current_password is not None:
-                _wipe(current_password)
-            self.master_input.clear()
+        self.apply_btn.setEnabled(True)
+
+    def closeEvent(self, event):
+        if self._worker is not None and self._worker.isRunning():
+            self._worker.wait(15000)
+        super().closeEvent(event)

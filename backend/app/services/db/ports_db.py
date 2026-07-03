@@ -1,6 +1,6 @@
 import logging
 
-from app.services.db.pool_db import _execute
+from app.services.db.pool_db import execute
 
 _log = logging.getLogger("ports_db")
 
@@ -29,7 +29,7 @@ def load_ports(server_id: int):
             for r in rows
         ]
 
-    return _execute(work)
+    return execute(work)
 
 
 def create_port(server_id: int, port: int) -> int:
@@ -57,7 +57,7 @@ def create_port(server_id: int, port: int) -> int:
             cur.close()
         return 1
 
-    return _execute(work)
+    return execute(work)
 
 
 def update_port(server_id: int, old_port: int, new_port: int) -> int:
@@ -110,7 +110,7 @@ def update_port(server_id: int, old_port: int, new_port: int) -> int:
 
         return affected
 
-    return _execute(work)
+    return execute(work)
 
 
 def report_port_result(server_id: int, port: int, ok: bool) -> int:
@@ -141,7 +141,7 @@ def report_port_result(server_id: int, port: int, ok: bool) -> int:
         cur.close()
         return affected
 
-    return _execute(work)
+    return execute(work)
 
 
 def update_vault_path(server_id: int, port: int, new_path: str) -> int:
@@ -179,7 +179,7 @@ def update_vault_path(server_id: int, port: int, new_path: str) -> int:
         cur.close()
         return 1
 
-    return _execute(work)
+    return execute(work)
 
 
 def update_port_comment(server_id: int, port: int, comment: str) -> int:
@@ -199,7 +199,7 @@ def update_port_comment(server_id: int, port: int, comment: str) -> int:
         cur.close()
         return affected
 
-    return _execute(work)
+    return execute(work)
 
 
 def delete_port(server_id: int, port: int) -> int:
@@ -218,7 +218,7 @@ def delete_port(server_id: int, port: int) -> int:
         cur.close()
         return affected
 
-    return _execute(work)
+    return execute(work)
 
 
 def delete_credentials(server_id: int, port: int) -> int:
@@ -237,4 +237,4 @@ def delete_credentials(server_id: int, port: int) -> int:
         cur.close()
         return affected
 
-    return _execute(work)
+    return execute(work)

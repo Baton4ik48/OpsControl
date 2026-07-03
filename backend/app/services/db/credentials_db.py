@@ -1,4 +1,4 @@
-from app.services.db.pool_db import _execute
+from app.services.db.pool_db import execute
 
 
 def get_vault_path_by_server_port(server_id: int, port: int) -> str | None:
@@ -19,7 +19,7 @@ def get_vault_path_by_server_port(server_id: int, port: int) -> str | None:
 
         return row[0] if row else None
 
-    return _execute(work)
+    return execute(work)
 
 
 def get_credentials_username(server_id: int, port: int) -> str | None:
@@ -39,7 +39,7 @@ def get_credentials_username(server_id: int, port: int) -> str | None:
         cur.close()
         return row[0] if row else None
 
-    return _execute(work)
+    return execute(work)
 
 
 def touch_credentials_updated_at(server_id: int, port: int) -> None:
@@ -56,7 +56,7 @@ def touch_credentials_updated_at(server_id: int, port: int) -> None:
         conn.commit()
         cur.close()
 
-    _execute(work)
+    execute(work)
 
 
 def get_all_credentials_with_server_info() -> list[dict]:
@@ -91,7 +91,7 @@ def get_all_credentials_with_server_info() -> list[dict]:
             for row in rows
         ]
 
-    return _execute(work)
+    return execute(work)
 
 
 def upsert_vault_path(server_id: int, port: int, vault_path: str) -> None:
@@ -111,4 +111,4 @@ def upsert_vault_path(server_id: int, port: int, vault_path: str) -> None:
         conn.commit()
         cur.close()
 
-    _execute(work)
+    execute(work)

@@ -12,15 +12,15 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
 )
 
-from core.api.credentials import CredentialsApi
 from core.api.base import ApiError
-from core.ssh_rotate_linux import _wipe
+from core.utils.secure import wipe
+
 
 class _ExportWorker(QThread):
     success = pyqtSignal(list)
     error = pyqtSignal(Exception)
 
-    def __init__(self, api: CredentialsApi, username: str, master_password: str):
+    def __init__(self, api, username: str, master_password: str):
         super().__init__()
         self._api = api
         self._username = username
@@ -33,13 +33,16 @@ class _ExportWorker(QThread):
         except Exception as exc:
             self.error.emit(exc)
         finally:
-            _wipe(self._master_password)
+            wipe(self._master_password)
             self._master_password = ""
+
 
 class EnvelopePrintDialog(QDialog):
     """Загружает все пароли с бекенда и открывает окно предпросмотра печати."""
 
-    def __init__(self, username: str, master_password: str, parent=None):
+    def __init__(
+        self, username: str, master_password: str, credentials_api, parent=None
+    ):
         super().__init__(parent)
         self.setWindowTitle("Формирование конверта с паролями")
         self.setMinimumWidth(360)
@@ -58,8 +61,7 @@ class EnvelopePrintDialog(QDialog):
         self._buttons.rejected.connect(self.reject)
         layout.addWidget(self._buttons)
 
-        self._api = CredentialsApi()
-        self._worker = _ExportWorker(self._api, username, master_password)
+        self._worker = _ExportWorker(credentials_api, username, master_password)
         self._worker.success.connect(self._on_success)
         self._worker.error.connect(self._on_error)
         self._worker.start()
@@ -110,8 +112,7 @@ class EnvelopePrintDialog(QDialog):
     @staticmethod
     def _render(printer: QPrinter, entries: list):
         doc = QTextDocument()
-        doc.setDefaultStyleSheet(
-            """
+        doc.setDefaultStyleSheet("""
             body  { font-family: Arial, sans-serif; font-size: 9pt; }
             h1    { font-size: 13pt; text-align: center; margin-bottom: 4px; }
             .meta { font-size: 8pt; text-align: center; color: #555; margin-bottom: 12px; }
@@ -121,8 +122,7 @@ class EnvelopePrintDialog(QDialog):
             td    { padding: 4px 7px; border: 1px solid #ccc; vertical-align: top; }
             tr:nth-child(even) td { background: #f5f5f5; }
             .warn { font-size: 7pt; color: #b00; margin-top: 14px; text-align: center; }
-            """
-        )
+            """)
 
         now = datetime.now().strftime("%d.%m.%Y %H:%M")
         rows_html = ""
@@ -167,10 +167,6 @@ class EnvelopePrintDialog(QDialog):
         doc.setHtml(html)
         doc.print(printer)
 
+
 def _esc(text: str) -> str:
-    return (
-        str(text)
-        .replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-    )
+    return str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")

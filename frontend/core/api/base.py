@@ -4,6 +4,7 @@ from core.logger import get_logger
 
 log = get_logger(__name__)
 
+
 class ApiError(Exception):
     def __init__(
         self,
@@ -18,13 +19,14 @@ class ApiError(Exception):
         self.error_code = error_code
         self.retry_after = retry_after
 
+
 class BaseApi:
     def __init__(self):
         self.base_url = settings.BACKEND_BASE_URL
         self.session = requests.Session()
 
-    def get(self, path: str):
-        return self._request("GET", path)
+    def get(self, path: str, envelope: bool = True):
+        return self._request("GET", path, envelope=envelope)
 
     def post(self, path: str, json=None, params=None):
         return self._request("POST", path, json=json, params=params)
@@ -35,7 +37,12 @@ class BaseApi:
     def delete(self, path: str, json=None, params=None):
         return self._request("DELETE", path, json=json, params=params)
 
-    def _request(self, method: str, path: str, **kwargs):
+    def _request(self, method: str, path: str, envelope: bool = True, **kwargs):
+        """
+        envelope=True  — распаковывает стандартный конверт {"success", "data"}
+                         и возвращает только data (бросает ApiError при success=False).
+        envelope=False — возвращает ответ как есть (вызывающий сам разбирает).
+        """
         url = f"{self.base_url}{path}"
 
         try:
@@ -56,7 +63,7 @@ class BaseApi:
 
             data = r.json()
 
-            if path == "/api/status":
+            if not envelope:
                 return data
 
             if not data.get("success", False):
@@ -66,5 +73,10 @@ class BaseApi:
 
             return data.get("data")
 
-        except requests.RequestException:
-            raise ApiError("Backend недоступен")
+        except requests.RequestException as e:
+            # В сообщении для пользователя — коротко, детали (таймаут / DNS /
+            # connection refused) — в лог, иначе их не отличить друг от друга
+            log.warning(
+                "Сетевая ошибка %s %s: %s: %s", method, url, type(e).__name__, e
+            )
+            raise ApiError("Backend недоступен") from e

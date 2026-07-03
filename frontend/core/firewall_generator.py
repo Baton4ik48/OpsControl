@@ -1,5 +1,6 @@
 from openpyxl import load_workbook
 
+
 def generate_firewall_rules(file_path: str) -> list[str]:
     wb = load_workbook(file_path)
     ws = wb.active

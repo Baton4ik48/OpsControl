@@ -5,6 +5,7 @@ from core.api.tree import TreeApi
 from core.api.credentials import CredentialsApi
 from core.api.status import StatusApi
 
+
 class ApiClient:
     def __init__(self):
         self.branches = BranchApi()

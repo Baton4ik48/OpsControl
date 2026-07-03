@@ -25,7 +25,7 @@ def _make_conn(fetchone=None, fetchall=None, rowcount=1):
 
 def _patch(monkeypatch, conn):
     monkeypatch.setattr(
-        "app.services.db.ports_db._execute",
+        "app.services.db.ports_db.execute",
         lambda fn, retries=1: fn(conn),
     )
 
@@ -57,7 +57,7 @@ def test_load_ports_empty(monkeypatch):
 
 def test_load_ports_db_unavailable(monkeypatch):
     monkeypatch.setattr(
-        "app.services.db.ports_db._execute",
+        "app.services.db.ports_db.execute",
         lambda fn, retries=1: (_ for _ in ()).throw(ServiceUnavailableError()),
     )
     with pytest.raises(ServiceUnavailableError):
@@ -80,7 +80,7 @@ def test_create_port_returns_one(monkeypatch):
 
 def test_create_port_db_unavailable(monkeypatch):
     monkeypatch.setattr(
-        "app.services.db.ports_db._execute",
+        "app.services.db.ports_db.execute",
         lambda fn, retries=1: (_ for _ in ()).throw(ServiceUnavailableError()),
     )
     with pytest.raises(ServiceUnavailableError):
@@ -157,7 +157,7 @@ def test_update_port_migrates_credentials(monkeypatch):
 
 def test_update_port_db_unavailable(monkeypatch):
     monkeypatch.setattr(
-        "app.services.db.ports_db._execute",
+        "app.services.db.ports_db.execute",
         lambda fn, retries=1: (_ for _ in ()).throw(ServiceUnavailableError()),
     )
     with pytest.raises(ServiceUnavailableError):
@@ -190,7 +190,7 @@ def test_report_port_result_fail_updates_last_failure(monkeypatch):
 
 def test_report_port_result_db_unavailable(monkeypatch):
     monkeypatch.setattr(
-        "app.services.db.ports_db._execute",
+        "app.services.db.ports_db.execute",
         lambda fn, retries=1: (_ for _ in ()).throw(ServiceUnavailableError()),
     )
     with pytest.raises(ServiceUnavailableError):
@@ -240,7 +240,7 @@ def test_update_vault_path_nonempty_upserts(monkeypatch):
 
 def test_update_vault_path_db_unavailable(monkeypatch):
     monkeypatch.setattr(
-        "app.services.db.ports_db._execute",
+        "app.services.db.ports_db.execute",
         lambda fn, retries=1: (_ for _ in ()).throw(ServiceUnavailableError()),
     )
     with pytest.raises(ServiceUnavailableError):
@@ -269,7 +269,7 @@ def test_delete_port_not_found(monkeypatch):
 
 def test_delete_port_db_unavailable(monkeypatch):
     monkeypatch.setattr(
-        "app.services.db.ports_db._execute",
+        "app.services.db.ports_db.execute",
         lambda fn, retries=1: (_ for _ in ()).throw(ServiceUnavailableError()),
     )
     with pytest.raises(ServiceUnavailableError):

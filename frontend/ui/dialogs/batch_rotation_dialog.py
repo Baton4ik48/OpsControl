@@ -2,10 +2,22 @@ import os
 import re
 
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
-    QPushButton, QTreeWidget, QTreeWidgetItem, QProgressBar,
-    QListWidget, QListWidgetItem, QMessageBox, QStackedWidget,
-    QWidget, QTabWidget, QFormLayout,
+    QDialog,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QTreeWidget,
+    QTreeWidgetItem,
+    QProgressBar,
+    QListWidget,
+    QListWidgetItem,
+    QMessageBox,
+    QStackedWidget,
+    QWidget,
+    QTabWidget,
+    QFormLayout,
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon, QColor
@@ -18,6 +30,7 @@ from core.workers.batch_rotation_worker import BatchRotationWorker
 # Типы устройств с поддержкой автоматической смены пароля по SSH
 _SUPPORTED = {"linux", "nateks", "natex", "cisco"}
 
+
 def _eligible(server: dict) -> bool:
     # Сервер подходит для пакетной смены: поддерживаемый тип + порт 22 с учётными данными.
     if server.get("device_type") not in _SUPPORTED:
@@ -27,11 +40,13 @@ def _eligible(server: dict) -> bool:
             return True
     return False
 
+
 class BatchRotationDialog(QDialog):
-    def __init__(self, tree_data: list, parent=None):
+    def __init__(self, tree_data: list, credentials_api, parent=None):
         super().__init__(parent)
 
         self._tree_data = tree_data
+        self._api = credentials_api
         self._worker: BatchRotationWorker | None = None
         self._row_items: dict[int, QListWidgetItem] = {}  # server_id → строка прогресса
         self._total = 0
@@ -204,7 +219,9 @@ class BatchRotationDialog(QDialog):
             # Сервер — обновляем состояние ветки
             parent = item.parent()
             if parent:
-                states = {parent.child(i).checkState(0) for i in range(parent.childCount())}
+                states = {
+                    parent.child(i).checkState(0) for i in range(parent.childCount())
+                }
                 if states == {Qt.CheckState.Checked}:
                     parent.setCheckState(0, Qt.CheckState.Checked)
                 elif states == {Qt.CheckState.Unchecked}:
@@ -265,10 +282,14 @@ class BatchRotationDialog(QDialog):
         digits = sum(1 for c in text if c.isdigit())
         special = length - upper - lower - digits
         parts = [f"Длина: <b>{length}</b>"]
-        if upper:   parts.append(f"заглавных: <b>{upper}</b>")
-        if lower:   parts.append(f"строчных: <b>{lower}</b>")
-        if digits:  parts.append(f"цифр: <b>{digits}</b>")
-        if special: parts.append(f"спецсимволов: <b>{special}</b>")
+        if upper:
+            parts.append(f"заглавных: <b>{upper}</b>")
+        if lower:
+            parts.append(f"строчных: <b>{lower}</b>")
+        if digits:
+            parts.append(f"цифр: <b>{digits}</b>")
+        if special:
+            parts.append(f"спецсимволов: <b>{special}</b>")
         if length < 8:
             color, strength = "#ef9a9a", "слабый"
         elif length < 12 or not upper or not digits:
@@ -296,7 +317,9 @@ class BatchRotationDialog(QDialog):
             QMessageBox.warning(self, "Ошибка", "Введите мастер-пароль.")
             return
         if not new_pass:
-            QMessageBox.warning(self, "Ошибка", "Введите или сгенерируйте новый пароль.")
+            QMessageBox.warning(
+                self, "Ошибка", "Введите или сгенерируйте новый пароль."
+            )
             return
         if not selected:
             QMessageBox.warning(self, "Ошибка", "Выберите хотя бы один сервер.")
@@ -372,6 +395,7 @@ class BatchRotationDialog(QDialog):
         self._stack.setCurrentIndex(1)
 
         self._worker = BatchRotationWorker(
+            api=self._api,
             servers=selected,
             master_password=master,
             new_password=new_pass,

@@ -1,32 +1,34 @@
+"""
+Общий каркас смены пароля на сетевых устройствах (Cisco, Nateks, …)
+через интерактивный SSH-shell.
+
+Устройство-специфичная часть — только последовательность команд/промптов
+(параметр flow), всё остальное (подключение, обработка разрыва канала,
+проверочное переподключение) одинаково для всех устройств.
+"""
+
 import re
 import socket
 import time
-import paramiko
-from paramiko.ssh_exception import (
-    NoValidConnectionsError,
-    AuthenticationException,
-    SSHException,
-)
 
-from core.ssh_rotate_linux import SSHRotateError, _try_auth
+from paramiko.ssh_exception import SSHException
+
+from core.ssh.common import SSHRotateError, connect_or_raise, try_auth
 
 # ANSI escape-последовательности — встречаются в выводе некоторых устройств
 _ANSI_RE = re.compile(r"\x1b\[[0-9;]*[mGKHABCDJr]")
 
+
 def _strip_ansi(text: str) -> str:
     return _ANSI_RE.sub("", text)
 
-def _wait_prompt(channel, expected: str, timeout: int = 15) -> str:
+
+def wait_prompt(channel, expected: str, timeout: int = 15) -> str:
     """
     Читает вывод канала до появления ожидаемого промпта в конце строки.
 
     Возвращает накопленный вывод.
     Бросает SSHRotateError по таймауту или закрытию канала.
-
-    Промпты Nateks NTX-серии:
-      hostname>          — user mode
-      hostname#          — enable (privileged) mode
-      hostname_config#   — global config mode (не Cisco-стиль!)
     """
     buf = ""
     deadline = time.monotonic() + timeout
@@ -51,59 +53,65 @@ def _wait_prompt(channel, expected: str, timeout: int = 15) -> str:
         f"Последний вывод: {buf[-300:]!r}"
     )
 
-def rotate_nateks_password(
+
+def wait_prompt_either(channel, options: tuple, timeout: int) -> str:
+    """
+    Ждёт любого из перечисленных промптов, возвращает тот, что совпал.
+
+    Нужен для начального подключения к Cisco: пользователь с privilege 15
+    попадает сразу в '#', с privilege 1 — в '>'.
+    """
+    buf = ""
+    deadline = time.monotonic() + timeout
+
+    while time.monotonic() < deadline:
+        if channel.recv_ready():
+            chunk = channel.recv(4096).decode("utf-8", errors="replace")
+            buf += chunk
+            clean = _strip_ansi(buf).rstrip()
+            for opt in options:
+                if clean.endswith(opt):
+                    return opt
+        elif channel.closed or channel.exit_status_ready():
+            raise SSHRotateError(
+                f"Канал закрылся при ожидании промпта {options!r}.\n"
+                f"Последний вывод: {buf[-300:]!r}"
+            )
+        else:
+            time.sleep(0.05)
+
+    raise SSHRotateError(
+        f"Таймаут ({timeout}с) ожидания промпта {options!r}.\n"
+        f"Последний вывод: {buf[-300:]!r}"
+    )
+
+
+def rotate_cli_password(
     host: str,
     username: str,
     current_password: str,
     new_password: str,
-    port: int = 22,
-    timeout: int = 15,
+    port: int,
+    timeout: int,
+    flow,
+    save_command: str,
 ) -> None:
     """
-    Меняет пароль пользователя на коммутаторе Nateks через интерактивный SSH.
+    Меняет пароль на устройстве через интерактивный SSH-shell.
 
-    Последовательность команд:
-      connect → hostname> → enable → hostname# →
-      config  → hostname_config# →
-      username <user> password <pass> → hostname_config# →
-      exit    → hostname# →
-      write   → hostname# → disconnect
-
-    Nateks NTX-серия использует промпт вида `hostname_config#`,
-    а не Cisco-стиль `hostname(config)#`.
-
-    ВАЖНО: пароль передаётся plaintext напрямую в CLI-команду.
-    Не используется shlex.quote — CLI устройства не является shell,
-    кавычки были бы приняты как часть пароля.
+    flow(channel, timeout) — устройство-специфичная последовательность команд;
+    должна довести устройство до сохранения конфига.
+    save_command — имя команды сохранения (для текста предупреждения,
+    если канал разорвался и неизвестно, успела ли она выполниться).
 
     Если канал рвётся в процессе — делается проверочное переподключение
-    с новым паролем (аналогично rotate_linux_password).
+    с новым паролем.
 
     Бросает SSHRotateError во всех случаях неуспеха.
     """
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client = connect_or_raise(host, port, username, current_password, timeout)
 
     try:
-        try:
-            client.connect(
-                hostname=host,
-                port=port,
-                username=username,
-                password=current_password,
-                timeout=timeout,
-                allow_agent=False,
-                look_for_keys=False,
-            )
-        except AuthenticationException:
-            raise SSHRotateError(
-                "Ошибка аутентификации SSH — неверные текущие учётные данные"
-            )
-        except NoValidConnectionsError:
-            raise SSHRotateError(f"Не удалось подключиться к {host}:{port}")
-        except (SSHException, socket.timeout, TimeoutError, OSError) as e:
-            raise SSHRotateError(f"SSH ошибка при подключении: {e}")
-
         try:
             channel = client.invoke_shell()
             channel.settimeout(timeout)
@@ -112,26 +120,7 @@ def rotate_nateks_password(
 
         channel_dropped = False
         try:
-            _wait_prompt(channel, ">", timeout)
-
-            channel.send("enable\n")
-            _wait_prompt(channel, "#", timeout)
-
-            channel.send("config\n")
-            _wait_prompt(channel, "config#", timeout)
-
-            # Пароль передаётся plaintext — кавычки НЕ используются,
-            # устройство воспримет их как часть пароля
-            channel.send(f"username {username} password {new_password}\n")
-            _wait_prompt(channel, "config#", timeout)
-
-            channel.send("exit\n")
-            _wait_prompt(channel, "#", timeout)
-
-            # Сохранение running-config → startup-config
-            channel.send("write\n")
-            _wait_prompt(channel, "#", timeout)
-
+            flow(channel, timeout)
         except (SSHException, socket.timeout, TimeoutError, EOFError, OSError):
             channel_dropped = True
         finally:
@@ -145,17 +134,17 @@ def rotate_nateks_password(
 
     # Если канал разорвался посередине — неизвестно на каком шаге.
     # Проверяем новым паролем: если заходит — пароль точно сменён.
-    # Важно: даже если `write` не выполнился, пароль будет работать до перезагрузки.
-    # Пользователь получит предупреждение.
+    # Важно: даже если save_command не выполнился, пароль будет работать
+    # до перезагрузки. Пользователь получит предупреждение.
     verify_timeout = min(timeout, 5)
 
-    new_result = _try_auth(host, port, username, new_password, verify_timeout)
+    new_result = try_auth(host, port, username, new_password, verify_timeout)
 
     if new_result is True:
         raise SSHRotateError(
             "Соединение разорвано во время настройки.\n"
-            "Новый пароль работает, но команда write могла не выполниться.\n"
-            "Войдите на устройство и выполните write вручную для сохранения конфига."
+            f"Новый пароль работает, но команда {save_command} могла не выполниться.\n"
+            f"Войдите на устройство и выполните {save_command} вручную для сохранения конфига."
         )
 
     if new_result is None:
@@ -165,7 +154,7 @@ def rotate_nateks_password(
         )
 
     # Новый пароль не работает — пробуем старый
-    old_result = _try_auth(host, port, username, current_password, verify_timeout)
+    old_result = try_auth(host, port, username, current_password, verify_timeout)
 
     if old_result is True:
         raise SSHRotateError(

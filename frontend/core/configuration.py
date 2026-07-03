@@ -9,6 +9,7 @@ APP_ENV = os.getenv("APP_ENV", "dev")
 
 load_dotenv(dotenv_path=FRONTEND_DIR / ".env", override=(APP_ENV == "dev"))
 
+
 class Settings:
     def __init__(self):
         self._user = UserSettings()
@@ -29,5 +30,6 @@ class Settings:
             port = self._env_port
 
         return f"{scheme}://{host}:{port}"
+
 
 settings = Settings()

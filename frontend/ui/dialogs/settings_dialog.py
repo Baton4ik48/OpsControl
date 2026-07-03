@@ -20,6 +20,7 @@ from PyQt6.QtGui import QIcon
 from controllers.settings_controller import SettingsController
 from core.paths import ICONS_DIR
 
+
 class SettingsDialog(QDialog):
     def __init__(self, settings, api):
         super().__init__()
@@ -334,7 +335,9 @@ class SettingsDialog(QDialog):
         self.backend_override_checkbox.toggled.connect(
             lambda: self._mark_dirty("backend")
         )
-        self.backend_scheme_combo.currentTextChanged.connect(lambda: self._mark_dirty("backend"))
+        self.backend_scheme_combo.currentTextChanged.connect(
+            lambda: self._mark_dirty("backend")
+        )
         self.backend_host_input.textChanged.connect(lambda: self._mark_dirty("backend"))
         self.backend_port_spin.valueChanged.connect(lambda: self._mark_dirty("backend"))
 

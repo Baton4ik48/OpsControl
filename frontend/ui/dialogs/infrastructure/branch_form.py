@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import QWidget, QFormLayout, QLineEdit, QPushButton
 from PyQt6.QtCore import pyqtSignal
 
+
 class BranchForm(QWidget):
     saved = pyqtSignal(str)
     error = pyqtSignal(str)

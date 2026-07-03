@@ -5,6 +5,7 @@ from core.paths import LOG_DIR
 
 os.makedirs(LOG_DIR, exist_ok=True)
 
+
 class MaxLevelFilter(logging.Filter):
     def __init__(self, max_level):
         super().__init__()
@@ -12,6 +13,7 @@ class MaxLevelFilter(logging.Filter):
 
     def filter(self, record):
         return record.levelno <= self.max_level
+
 
 def _create_handler(filename, level, max_level=None):
     handler = RotatingFileHandler(
@@ -32,6 +34,7 @@ def _create_handler(filename, level, max_level=None):
     handler.setFormatter(formatter)
     return handler
 
+
 def setup_logging():
     root = logging.getLogger()
 
@@ -46,6 +49,7 @@ def setup_logging():
 
     # errors.log: ERROR +
     root.addHandler(_create_handler("errors.log", level=logging.ERROR))
+
 
 def get_logger(name: str):
     return logging.getLogger(name)

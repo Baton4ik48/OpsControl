@@ -22,7 +22,7 @@ def _make_conn(fetchone=None, fetchall=None, rowcount=1):
 
 def _patch(monkeypatch, conn):
     monkeypatch.setattr(
-        "app.services.db.servers_db._execute",
+        "app.services.db.servers_db.execute",
         lambda fn, retries=1: fn(conn),
     )
 
@@ -50,7 +50,7 @@ def test_load_servers_empty(monkeypatch):
 
 def test_load_servers_db_unavailable(monkeypatch):
     monkeypatch.setattr(
-        "app.services.db.servers_db._execute",
+        "app.services.db.servers_db.execute",
         lambda fn, retries=1: (_ for _ in ()).throw(ServiceUnavailableError()),
     )
     with pytest.raises(ServiceUnavailableError):
@@ -85,7 +85,7 @@ def test_create_server_default_device_type(monkeypatch):
 
 def test_create_server_db_unavailable(monkeypatch):
     monkeypatch.setattr(
-        "app.services.db.servers_db._execute",
+        "app.services.db.servers_db.execute",
         lambda fn, retries=1: (_ for _ in ()).throw(ServiceUnavailableError()),
     )
     with pytest.raises(ServiceUnavailableError):
@@ -117,7 +117,7 @@ def test_update_server_not_found(monkeypatch):
 
 def test_update_server_db_unavailable(monkeypatch):
     monkeypatch.setattr(
-        "app.services.db.servers_db._execute",
+        "app.services.db.servers_db.execute",
         lambda fn, retries=1: (_ for _ in ()).throw(ServiceUnavailableError()),
     )
     with pytest.raises(ServiceUnavailableError):
@@ -147,7 +147,7 @@ def test_delete_server_not_found(monkeypatch):
 
 def test_delete_server_db_unavailable(monkeypatch):
     monkeypatch.setattr(
-        "app.services.db.servers_db._execute",
+        "app.services.db.servers_db.execute",
         lambda fn, retries=1: (_ for _ in ()).throw(ServiceUnavailableError()),
     )
     with pytest.raises(ServiceUnavailableError):

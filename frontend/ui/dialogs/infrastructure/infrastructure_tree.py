@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import QTreeWidget, QTreeWidgetItem, QAbstractItemView
 from PyQt6.QtCore import Qt
 
+
 class InfrastructureTree(QTreeWidget):
     def __init__(self):
         super().__init__()

@@ -1,11 +1,12 @@
 from PyQt6.QtWidgets import QMenu
 from PyQt6.QtCore import Qt
 
+
 class InfrastructureContextMenu:
     def __init__(self, parent_dialog):
 
-        #parent_dialog — это InfrastructureManagerDialog
-        #Нужен для вызова методов add/delete
+        # parent_dialog — это InfrastructureManagerDialog
+        # Нужен для вызова методов add/delete
         self.dialog = parent_dialog
         self.tree = parent_dialog.tree
         self.controller = parent_dialog.controller

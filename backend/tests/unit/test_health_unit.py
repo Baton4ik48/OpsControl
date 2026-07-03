@@ -35,7 +35,7 @@ def test_check_postgres(raises, expected, monkeypatch):
         if raises is not None:
             raise raises
 
-    monkeypatch.setattr("app.services.status_services._execute", mock_execute)
+    monkeypatch.setattr("app.services.status_services.execute", mock_execute)
 
     assert check_postgres() is expected
 
@@ -45,7 +45,7 @@ def test_check_postgres_service_unavailable(monkeypatch):
     from app.services.db.pool_db import ServiceUnavailableError
 
     monkeypatch.setattr(
-        "app.services.status_services._execute",
+        "app.services.status_services.execute",
         lambda fn: (_ for _ in ()).throw(ServiceUnavailableError()),
     )
 
@@ -53,14 +53,14 @@ def test_check_postgres_service_unavailable(monkeypatch):
 
 
 def test_check_postgres_calls_work_function(monkeypatch):
-    """_execute вызывает переданную work-функцию с mock-соединением"""
+    """execute вызывает переданную work-функцию с mock-соединением"""
     mock_conn = Mock()
     mock_conn.cursor.return_value = Mock()
 
     def real_execute(fn):
         fn(mock_conn)
 
-    monkeypatch.setattr("app.services.status_services._execute", real_execute)
+    monkeypatch.setattr("app.services.status_services.execute", real_execute)
 
     result = check_postgres()
 

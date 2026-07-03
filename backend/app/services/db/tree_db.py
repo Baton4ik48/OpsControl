@@ -1,4 +1,4 @@
-from app.services.db.pool_db import _execute
+from app.services.db.pool_db import execute
 
 
 def load_tree():
@@ -33,4 +33,4 @@ def load_tree():
         cur.close()
         return rows
 
-    return _execute(work)
+    return execute(work)

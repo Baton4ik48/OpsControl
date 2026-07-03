@@ -1,63 +1,10 @@
-import ctypes
 import shlex
 import socket
-import sys
-import paramiko
-from paramiko.ssh_exception import (
-    NoValidConnectionsError,
-    AuthenticationException,
-    SSHException,
-)
 
-class SSHRotateError(Exception):
-    pass
+from paramiko.ssh_exception import SSHException
 
-def _wipe(s: str) -> None:
-    """
-    Перезаписывает внутренний буфер строки нулями в памяти процесса.
-    CPython 3.x, 64-bit, best-effort — защита от дампа памяти.
+from core.ssh.common import SSHRotateError, connect_or_raise, try_auth
 
-    Принцип: sys.getsizeof('') возвращает размер заголовка PyASCIIObject
-    включая null-терминатор. Данные строки начинаются с offset = getsizeof('') - 1.
-    Работает корректно для compact ASCII (все генерируемые пароли).
-    """
-    if not s:
-        return
-    try:
-        offset = sys.getsizeof("") - 1
-        ctypes.memset(id(s) + offset, 0, len(s))
-    except Exception:
-        pass
-
-def _try_auth(host: str, port: int, username: str, password: str, timeout: int):
-    """
-    Проверяет, работает ли пароль для SSH-входа.
-    Используется для верификации после разрыва канала.
-
-    Возвращает:
-      True  — пароль подходит
-      False — пароль точно неверный (AuthenticationException)
-      None  — невозможно определить (таймаут, сеть недоступна, прочие ошибки)
-    """
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    try:
-        client.connect(
-            hostname=host,
-            port=port,
-            username=username,
-            password=password,
-            timeout=timeout,
-            allow_agent=False,
-            look_for_keys=False,
-        )
-        return True
-    except AuthenticationException:
-        return False
-    except Exception:
-        return None  # таймаут, разрыв сети, прочие — неизвестно
-    finally:
-        client.close()
 
 def rotate_linux_password(
     host: str,
@@ -83,30 +30,10 @@ def rotate_linux_password(
 
     Бросает SSHRotateError во всех случаях неуспеха.
     """
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client = connect_or_raise(host, port, username, current_password, timeout)
     channel_dropped = False
 
     try:
-        try:
-            client.connect(
-                hostname=host,
-                port=port,
-                username=username,
-                password=current_password,
-                timeout=timeout,
-                allow_agent=False,
-                look_for_keys=False,
-            )
-        except AuthenticationException:
-            raise SSHRotateError(
-                "Ошибка аутентификации SSH — неверные текущие учётные данные"
-            )
-        except NoValidConnectionsError:
-            raise SSHRotateError(f"Не удалось подключиться к {host}:{port}")
-        except (SSHException, socket.timeout, TimeoutError, OSError) as e:
-            raise SSHRotateError(f"SSH ошибка при подключении: {e}")
-
         # sudo -S читает пароль из stdin (первая строка), остальное идёт в chpasswd.
         # Работает как с NOPASSWD так и без него.
         command = (
@@ -147,7 +74,7 @@ def rotate_linux_password(
     #   None  — соединение не установилось (таймаут / сеть), состояние неизвестно
     verify_timeout = min(timeout, 5)
 
-    new_result = _try_auth(host, port, username, new_password, verify_timeout)
+    new_result = try_auth(host, port, username, new_password, verify_timeout)
 
     if new_result is True:
         # Новый пароль работает — смена прошла успешно, продолжаем
@@ -161,7 +88,7 @@ def rotate_linux_password(
         )
 
     # new_result is False — новый пароль точно неверный, пробуем старый
-    old_result = _try_auth(host, port, username, current_password, verify_timeout)
+    old_result = try_auth(host, port, username, current_password, verify_timeout)
 
     if old_result is True:
         raise SSHRotateError(

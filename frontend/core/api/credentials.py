@@ -1,5 +1,6 @@
 from core.api.base import BaseApi
 
+
 class CredentialsApi(BaseApi):
 
     def show(self, server_id: int, port: int, username: str, master_password: str):

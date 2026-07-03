@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 from unittest.mock import patch
 
 from app.api.credentials_api import router
+from app.api.errors import register_exception_handlers
 from app.services.credentials import (
     InvalidMasterPassword,
     CredentialsNotFound,
@@ -25,6 +26,8 @@ _EXPORT_ENTRIES = [
 
 app = FastAPI()
 app.include_router(router)
+# 429/403 обрабатываются глобальными хендлерами — как в app.main
+register_exception_handlers(app)
 client = TestClient(app, raise_server_exceptions=False)
 
 

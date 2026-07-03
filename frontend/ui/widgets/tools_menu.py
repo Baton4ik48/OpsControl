@@ -1,11 +1,13 @@
 from PyQt6.QtWidgets import QMenuBar, QMessageBox, QWidget, QHBoxLayout, QLabel
+from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtCore import pyqtSignal, Qt
-from core.api.credentials import CredentialsApi
 from core.api.base import ApiError
+from core.workers.function_worker import FunctionWorker
 from ui.dialogs.credentials_dialog import CredentialsDialog
 from ui.dialogs.envelope_print_dialog import EnvelopePrintDialog
 from ui.dialogs.firewall_dialog import FirewallDialog
 from ui.dialogs.infrastructure_dialog import InfrastructureManagerDialog
+
 
 class _StatusIndicator(QWidget):
     def __init__(self, parent=None):
@@ -42,16 +44,18 @@ class _StatusIndicator(QWidget):
         self._partial.setText(f"● {partial}")
         self._down.setText(f"● {down}")
 
+
 class ToolsMenu(QMenuBar):
     infrastructure_closed = pyqtSignal()
     statistics_requested = pyqtSignal()
     batch_rotation_requested = pyqtSignal()
 
-    def __init__(self, user_settings, parent=None):
+    def __init__(self, user_settings, api, parent=None):
         super().__init__(parent)
 
         self._settings = user_settings
-        self._credentials_api = CredentialsApi()
+        self._api = api
+        self._verify_worker: FunctionWorker | None = None
 
         general_menu = self.addMenu("Общее")
 
@@ -97,7 +101,9 @@ class ToolsMenu(QMenuBar):
         dlg.exec()
 
     def _open_envelope(self, username: str, master_password: str):
-        dlg = EnvelopePrintDialog(username, master_password, self)
+        dlg = EnvelopePrintDialog(
+            username, master_password, self._api.credentials, self
+        )
         dlg.exec()
 
     def open_infrastructure_manager(self):
@@ -106,11 +112,31 @@ class ToolsMenu(QMenuBar):
         dlg.exec()
 
     def _verify_and_open(self, master_password: str):
+        # Проверка мастер-пароля — сетевой вызов, выполняем в фоне,
+        # чтобы не замораживать окно на время таймаута.
+        if self._verify_worker is not None and self._verify_worker.isRunning():
+            return
+
         username = self._settings.get("admin_login") or ""
 
-        try:
-            self._credentials_api.verify_admin(username, master_password)
-        except ApiError as e:
+        QGuiApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+
+        self._verify_worker = FunctionWorker(
+            self._api.credentials.verify_admin, username, master_password
+        )
+        self._verify_worker.success.connect(self._on_verify_ok)
+        self._verify_worker.error.connect(self._on_verify_error)
+        self._verify_worker.finished.connect(QGuiApplication.restoreOverrideCursor)
+        self._verify_worker.start()
+
+    def _on_verify_ok(self, _result):
+        dlg = InfrastructureManagerDialog(self._api, self)
+        dlg.setModal(True)
+        dlg.exec()
+        self.infrastructure_closed.emit()
+
+    def _on_verify_error(self, e: Exception):
+        if isinstance(e, ApiError):
             if e.status_code == 403:
                 QMessageBox.warning(self, "Доступ запрещён", "Неверный мастер-пароль.")
             elif e.status_code == 429:
@@ -121,9 +147,5 @@ class ToolsMenu(QMenuBar):
                 )
             else:
                 QMessageBox.critical(self, "Ошибка", e.message)
-            return
-
-        dlg = InfrastructureManagerDialog(self)
-        dlg.setModal(True)
-        dlg.exec()
-        self.infrastructure_closed.emit()
+        else:
+            QMessageBox.critical(self, "Ошибка", str(e))

@@ -25,8 +25,19 @@ class TooManyLoginAttempts(Exception):
         self.retry_after_seconds = retry_after_seconds
 
 
-def verify_admin_password(username: str, master_password: str, client_ip: str) -> None:
-    throttle_key = f"{username.lower()}:{client_ip}"
+class RotateError(Exception):
+    pass
+
+
+def _login_with_throttle(username: str, master_password: str, client_ip: str) -> str:
+    """
+    Единая точка аутентификации пользователя в Vault с учётом троттлинга.
+
+    Возвращает пользовательский Vault-токен.
+    Бросает TooManyLoginAttempts или InvalidMasterPassword.
+    """
+    username = username.lower()
+    throttle_key = f"{username}:{client_ip}"
 
     if settings.LOGIN_THROTTLE_ENABLED:
         try:
@@ -38,18 +49,23 @@ def verify_admin_password(username: str, master_password: str, client_ip: str) -
     vault = get_vault_client()
 
     try:
-        vault.login_userpass(username.lower(), master_password)
-        logger.info("Vault admin verify OK")
-
-        if settings.LOGIN_THROTTLE_ENABLED:
-            throttle.reset(throttle_key)
-
+        token = vault.login_userpass(username, master_password)
     except VaultAuthError:
         if settings.LOGIN_THROTTLE_ENABLED:
             throttle.register_fail(throttle_key)
 
-        logger.warning("Vault admin verify FAILED")
+        logger.warning("Vault login FAILED")
         raise InvalidMasterPassword()
+
+    if settings.LOGIN_THROTTLE_ENABLED:
+        throttle.reset(throttle_key)
+
+    logger.info("Vault login OK")
+    return token
+
+
+def verify_admin_password(username: str, master_password: str, client_ip: str) -> None:
+    _login_with_throttle(username, master_password, client_ip)
 
 
 def upsert_credentials(server_id: int, port: int, username: str, password: str) -> str:
@@ -72,30 +88,7 @@ def show_credentials(
     master_password: str,
     client_ip: str,
 ):
-    throttle_key = f"{username.lower()}:{client_ip}"
-
-    if settings.LOGIN_THROTTLE_ENABLED:
-        try:
-            throttle.check(throttle_key)
-        except TooManyAttempts:
-            retry_after = throttle.time_until_unblock(throttle_key)
-            raise TooManyLoginAttempts(retry_after)
-
-    vault = get_vault_client()
-
-    try:
-        token = vault.login_userpass(username.lower(), master_password)
-        logger.info("Vault login OK")
-
-        if settings.LOGIN_THROTTLE_ENABLED:
-            throttle.reset(throttle_key)
-
-    except VaultAuthError:
-        if settings.LOGIN_THROTTLE_ENABLED:
-            throttle.register_fail(throttle_key)
-
-        logger.warning("Vault login FAILED")
-        raise InvalidMasterPassword()
+    token = _login_with_throttle(username, master_password, client_ip)
 
     vault_path = get_vault_path_by_server_port(server_id, port)
     if not vault_path:
@@ -103,6 +96,7 @@ def show_credentials(
 
     logger.info(f"Vault path found: {vault_path}")
 
+    vault = get_vault_client()
     try:
         secret = vault.read_kv_v2(token, vault_path)
         logger.info("Vault secret read OK")
@@ -126,31 +120,9 @@ def export_all_credentials(
     Returns a list of dicts with branch/server/ip/port/username/password/mnemonic.
     Entries whose vault_path cannot be read are skipped with a warning.
     """
-    throttle_key = f"{username.lower()}:{client_ip}"
-
-    if settings.LOGIN_THROTTLE_ENABLED:
-        try:
-            throttle.check(throttle_key)
-        except TooManyAttempts:
-            retry_after = throttle.time_until_unblock(throttle_key)
-            raise TooManyLoginAttempts(retry_after)
+    token = _login_with_throttle(username, master_password, client_ip)
 
     vault = get_vault_client()
-
-    try:
-        token = vault.login_userpass(username.lower(), master_password)
-        logger.info("Vault login OK for export_all")
-
-        if settings.LOGIN_THROTTLE_ENABLED:
-            throttle.reset(throttle_key)
-
-    except VaultAuthError:
-        if settings.LOGIN_THROTTLE_ENABLED:
-            throttle.register_fail(throttle_key)
-
-        logger.warning("Vault login FAILED for export_all")
-        raise InvalidMasterPassword()
-
     rows = get_all_credentials_with_server_info()
     result = []
     for row in rows:
@@ -177,10 +149,6 @@ def export_all_credentials(
 
     logger.info("export_all done: %d entries returned", len(result))
     return result
-
-
-class RotateError(Exception):
-    pass
 
 
 def rotate_credentials(
@@ -210,8 +178,7 @@ def rotate_credentials(
     # 2. Получаем текущий username из Vault (он не меняется)
     vault = get_vault_client()
     try:
-        token = vault._get_backend_token()
-        current = vault.read_kv_v2(token, vault_path)
+        current = vault.read_kv_v2_as_backend(vault_path)
     except VaultReadError as e:
         logger.error("rotate: vault read failed path=%s: %s", vault_path, e)
         raise RotateError("Vault read error")

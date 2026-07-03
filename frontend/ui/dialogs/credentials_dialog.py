@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import pyqtSignal, QTimer
 
+
 class CredentialsDialog(QDialog):
     submitted = pyqtSignal(str)
 
@@ -50,7 +51,11 @@ class CredentialsDialog(QDialog):
         self.admin_input.returnPressed.connect(self._on_submit)
         layout.addWidget(self.admin_input)
 
-        btn_label = "Войти" if mode == "infra" else ("Сформировать" if mode == "envelope" else "Показать")
+        btn_label = (
+            "Войти"
+            if mode == "infra"
+            else ("Сформировать" if mode == "envelope" else "Показать")
+        )
         self.show_btn = QPushButton(btn_label)
         self.show_btn.clicked.connect(self._on_submit)
         layout.addWidget(self.show_btn)

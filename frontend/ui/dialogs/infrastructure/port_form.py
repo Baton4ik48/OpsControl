@@ -5,15 +5,17 @@ from PyQt6.QtGui import QIntValidator, QIcon
 from PyQt6.QtCore import pyqtSignal
 
 from core.paths import ICONS_DIR
-from ui.dialogs.infrastructureDialog.credential_edit_dialog import CredentialEditDialog
+from ui.dialogs.infrastructure.credential_edit_dialog import CredentialEditDialog
+
 
 class PortForm(QWidget):
     saved = pyqtSignal(int)
     error = pyqtSignal(str)
 
-    def __init__(self):
+    def __init__(self, credentials_api):
         super().__init__()
 
+        self._credentials_api = credentials_api
         self._server_id = None
         self._current_port = None
 
@@ -61,6 +63,7 @@ class PortForm(QWidget):
         dlg = CredentialEditDialog(
             server_id=self._server_id,
             port=self._current_port,
+            credentials_api=self._credentials_api,
             parent=self,
         )
         if dlg.exec():

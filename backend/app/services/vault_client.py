@@ -1,4 +1,6 @@
 import logging
+import threading
+
 import requests
 from app.config import settings
 
@@ -10,6 +12,16 @@ class VaultAuthError(Exception):
 
 
 class VaultReadError(Exception):
+    pass
+
+
+class VaultWriteError(VaultReadError):
+    """Ошибка записи в Vault.
+
+    Наследуется от VaultReadError для обратной совместимости:
+    существующий код ловит VaultReadError вокруг операций записи.
+    """
+
     pass
 
 
@@ -34,6 +46,9 @@ class VaultClient:
         self.database_role = settings.VAULT_DATABASE_ROLE_NAME
 
         self._backend_token = None
+        # login/renew backend-токена из параллельных запросов должны быть
+        # сериализованы, иначе потоки перезатирают токены друг друга
+        self._token_lock = threading.Lock()
 
     def check_sealed(self) -> None:
         """Бросает VaultSealedError или VaultUnavailableError если Vault недоступен."""
@@ -95,16 +110,17 @@ class VaultClient:
         return token
 
     def _get_backend_token(self) -> str:
-        if not self._backend_token:
+        with self._token_lock:
+            if not self._backend_token:
+                self._backend_token = self._approle_login()
+                return self._backend_token
+
+            if self._renew_token():
+                return self._backend_token
+
+            logger.debug("Backend token renew failed, re-authenticating")
             self._backend_token = self._approle_login()
             return self._backend_token
-
-        if self._renew_token():
-            return self._backend_token
-
-        logger.debug("Backend token renew failed, re-authenticating")
-        self._backend_token = self._approle_login()
-        return self._backend_token
 
     def _renew_token(self) -> bool:
         url = f"{self.addr}/v1/auth/token/renew-self"
@@ -189,9 +205,13 @@ class VaultClient:
         except KeyError as e:
             raise VaultReadError("Некорректная структура ответа Vault") from e
 
+    def read_kv_v2_as_backend(self, vault_path: str) -> dict:
+        """Читает секрет от имени бэкенда (AppRole), без пользовательского токена."""
+        return self.read_kv_v2(self._get_backend_token(), vault_path)
+
     def write_kv_v2(self, vault_path: str, data: dict) -> None:
         if not vault_path.startswith("credentials/"):
-            raise VaultReadError("Invalid vault path")
+            raise VaultWriteError("Invalid vault path")
 
         token = self._get_backend_token()
         path = vault_path.replace("credentials/", "")
@@ -205,10 +225,10 @@ class VaultClient:
                 timeout=self.http_timeout,
             )
         except requests.exceptions.RequestException as e:
-            raise VaultReadError(f"Vault недоступен: {e}") from e
+            raise VaultWriteError(f"Vault недоступен: {e}") from e
 
         if resp.status_code not in (200, 204):
-            raise VaultReadError(resp.text)
+            raise VaultWriteError(resp.text)
 
     def read_database_creds(self) -> dict:
         token = self._get_backend_token()

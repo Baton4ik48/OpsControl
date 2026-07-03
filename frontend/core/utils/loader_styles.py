@@ -1,6 +1,7 @@
 import os
 from core.paths import RESOURCES_DIR, ICONS_DIR
 
+
 def load_styles():
     base_dir = os.path.join(RESOURCES_DIR, "styles")
     icons_url = ICONS_DIR.replace("\\", "/")
