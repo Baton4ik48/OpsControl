@@ -69,6 +69,7 @@ def get_all_credentials_with_server_info() -> list[dict]:
                 b.name  AS branch_name,
                 s.name  AS server_name,
                 s.ip,
+                s.device_type,
                 c.port,
                 c.vault_path,
                 c.updated_at
@@ -84,9 +85,10 @@ def get_all_credentials_with_server_info() -> list[dict]:
                 "branch": row[0],
                 "server_name": row[1],
                 "ip": row[2],
-                "port": row[3],
-                "vault_path": row[4],
-                "updated_at": row[5].isoformat() if row[5] else None,
+                "device_type": row[3],
+                "port": row[4],
+                "vault_path": row[5],
+                "updated_at": row[6].isoformat() if row[6] else None,
             }
             for row in rows
         ]
