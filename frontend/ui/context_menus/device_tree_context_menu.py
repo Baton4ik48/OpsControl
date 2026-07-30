@@ -1,5 +1,6 @@
 from PyQt6.QtWidgets import QMenu
 
+
 class DeviceTreeContextMenu:
     def __init__(self, tree):
         self.tree = tree

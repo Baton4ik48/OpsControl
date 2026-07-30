@@ -4,18 +4,16 @@ import yaml
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+CONFIG_PATH = BASE_DIR / "config" / "config.yaml"
 
 APP_ENV = os.getenv("APP_ENV", "dev")
 
 load_dotenv(dotenv_path=BASE_DIR / ".env", override=(APP_ENV == "dev"))
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-CONFIG_PATH = BASE_DIR / "config" / "config.yaml"
-
 
 class Settings:
     def __init__(self):
-        self.VAULT_ADDR = os.getenv("VAULT_ADDR", "localhost")
+        self.VAULT_ADDR = os.getenv("VAULT_ADDR", "http://localhost:8200")
         self.VAULT_AUTH_METHOD = os.getenv("VAULT_AUTH_METHOD")
         self.VAULT_HTTP_TIMEOUT = int(os.getenv("VAULT_HTTP_TIMEOUT", 5))
         self.VAULT_ROLE_ID = os.getenv("VAULT_ROLE_ID")
@@ -41,6 +39,33 @@ class Settings:
         self.LOGIN_THROTTLE_ENABLED = login["enabled"]
         self.LOGIN_MAX_ATTEMPTS = login.get("max_attempts", 3)
         self.LOGIN_BLOCK_SECONDS = login.get("block_seconds", 120)
+
+    def validate(self) -> list[str]:
+        """
+        Возвращает список отсутствующих обязательных переменных окружения
+        с учётом выбранного DB_CREDS_MODE. Вызывается на старте приложения —
+        лучше упасть сразу с понятным сообщением, чем на первом запросе.
+        """
+        missing: list[str] = []
+
+        def _require(name: str):
+            if not getattr(self, name):
+                missing.append(name)
+
+        _require("POSTGRES_HOST")
+        _require("POSTGRES_DB")
+
+        if self.DB_CREDS_MODE in ("static", "auto"):
+            # В auto-режиме static — обязательный fallback
+            _require("POSTGRES_USER")
+            _require("POSTGRES_PASSWORD")
+
+        if self.DB_CREDS_MODE == "vault":
+            _require("VAULT_ROLE_ID")
+            _require("VAULT_SECRET_ID")
+            _require("VAULT_DATABASE_ROLE_NAME")
+
+        return missing
 
 
 settings = Settings()

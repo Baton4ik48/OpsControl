@@ -28,6 +28,7 @@ ROLE_DEVICE_TYPE = Qt.ItemDataRole.UserRole + 5
 
 CREDENTIALS_SHOW_TIMEOUT_MS = 1 * 60 * 1000
 
+
 def format_dt(value):
     if not value:
         return "нет данных"
@@ -40,8 +41,10 @@ def format_dt(value):
     local = dt.astimezone()
     return local.strftime("%d.%m.%Y %H:%M")
 
+
 def _icon_img(icon_path, size=13):
     return f'<img src="{path_to_file_uri(icon_path)}" width="{size}" height="{size}">'
+
 
 def _build_port_tooltip(state, last_success, last_failure):
     icon_up = os.path.join(ICONS_DIR, "status_up.png")
@@ -87,6 +90,7 @@ def _build_port_tooltip(state, last_success, last_failure):
 
     return f'<table cellspacing="3">{"".join(rows)}</table>'
 
+
 def _password_age_color(credentials_updated_at, rotation_days):
     """Возвращает QColor для столбца 'Дата обновления пароля' по % оставшегося срока.
 
@@ -116,6 +120,7 @@ def _password_age_color(credentials_updated_at, rotation_days):
             return QColor(210, 60, 60)  # красный
     except Exception:
         return None
+
 
 class _CommentDialog(QDialog):
     """Диалог редактирования комментария с многострочным полем."""
@@ -188,12 +193,16 @@ class _CommentDialog(QDialog):
 
     def eventFilter(self, obj, event):
         from PyQt6.QtCore import QEvent
+
         if obj is self._edit and event.type() == QEvent.Type.KeyPress:
-            if (event.key() == Qt.Key.Key_Return and
-                    event.modifiers() & Qt.KeyboardModifier.ControlModifier):
+            if (
+                event.key() == Qt.Key.Key_Return
+                and event.modifiers() & Qt.KeyboardModifier.ControlModifier
+            ):
                 self.accept()
                 return True
         return super().eventFilter(obj, event)
+
 
 class DeviceTree(QTreeWidget):
 
@@ -210,7 +219,7 @@ class DeviceTree(QTreeWidget):
     open_protocol_requested = pyqtSignal(int, int, str, str)
     show_credentials_requested = pyqtSignal(int, int, str)
     rotate_password_requested = pyqtSignal(int, str, str)  # server_id, ip, device_type
-    comment_changed = pyqtSignal(str, int, int, str)        # type, server_id, port, text
+    comment_changed = pyqtSignal(str, int, int, str)  # type, server_id, port, text
 
     def __init__(self):
         super().__init__()
@@ -220,7 +229,14 @@ class DeviceTree(QTreeWidget):
         self.user_settings = None
 
         self.setHeaderLabels(
-            ["Устройство", "IP", "Статус", "Учётные данные", "Дата обновления пароля", "Комментарий"]
+            [
+                "Устройство",
+                "IP",
+                "Статус",
+                "Учётные данные",
+                "Дата обновления пароля",
+                "Комментарий",
+            ]
         )
 
         self.icon_up = QIcon(os.path.join(ICONS_DIR, "status_up.png"))
@@ -252,7 +268,9 @@ class DeviceTree(QTreeWidget):
         self.headerItem().setTextAlignment(2, Qt.AlignmentFlag.AlignCenter)
         self.headerItem().setTextAlignment(3, Qt.AlignmentFlag.AlignCenter)
         self.headerItem().setTextAlignment(5, Qt.AlignmentFlag.AlignCenter)
-        self.headerItem().setToolTip(5, "Двойной клик по ячейке — редактировать комментарий")
+        self.headerItem().setToolTip(
+            5, "Двойной клик по ячейке — редактировать комментарий"
+        )
 
         self.setRootIsDecorated(True)
         self.setIndentation(18)
@@ -361,7 +379,9 @@ class DeviceTree(QTreeWidget):
 
             for srv in branch.get("servers", []):
                 srv_comment = srv.get("comment") or ""
-                server_item = QTreeWidgetItem([srv["name"], srv["ip"], "", "", "", srv_comment])
+                server_item = QTreeWidgetItem(
+                    [srv["name"], srv["ip"], "", "", "", srv_comment]
+                )
                 server_item.setFont(0, self._font_server)
                 server_item.setSizeHint(0, QSize(0, 15))
                 for col in range(6):
@@ -375,7 +395,9 @@ class DeviceTree(QTreeWidget):
                 )
 
                 if srv_comment and srv.get("comment_updated_at"):
-                    server_item.setToolTip(5, f"Изменён: {format_dt(srv['comment_updated_at'])}")
+                    server_item.setToolTip(
+                        5, f"Изменён: {format_dt(srv['comment_updated_at'])}"
+                    )
 
                 branch_item.addChild(server_item)
 
@@ -447,7 +469,9 @@ class DeviceTree(QTreeWidget):
                     port_item.setData(0, ROLE_IP, srv["ip"])
 
                     if port_comment and p.get("comment_updated_at"):
-                        port_item.setToolTip(5, f"Изменён: {format_dt(p['comment_updated_at'])}")
+                        port_item.setToolTip(
+                            5, f"Изменён: {format_dt(p['comment_updated_at'])}"
+                        )
 
                     tooltip = _build_port_tooltip(
                         state,
@@ -578,6 +602,7 @@ class DeviceTree(QTreeWidget):
             self.setColumnWidth(3, 160)
             # Очищаем буфер если там ещё наш пароль
             from PyQt6.QtGui import QGuiApplication
+
             cb = QGuiApplication.clipboard()
             if cb.text() in (_shown_value, username, password):
                 cb.clear()
@@ -610,11 +635,15 @@ class DeviceTree(QTreeWidget):
 
         if item_type == "server":
             title = item.text(0)
-            subtitle = item.text(1)          # IP
+            subtitle = item.text(1)  # IP
         else:
             parent_item = item.parent()
             title = parent_item.text(0) if parent_item else ""
-            subtitle = f"{parent_item.text(1)}  ·  порт {port}" if parent_item else f"порт {port}"
+            subtitle = (
+                f"{parent_item.text(1)}  ·  порт {port}"
+                if parent_item
+                else f"порт {port}"
+            )
 
         dlg = _CommentDialog(title, subtitle, current_comment, self.window())
         if dlg.exec() == QDialog.DialogCode.Accepted:
@@ -622,16 +651,22 @@ class DeviceTree(QTreeWidget):
             item.setText(5, new_comment)
             self.comment_changed.emit(item_type, server_id, port, new_comment)
 
-    def update_comment_item(self, item_type: str, server_id: int, port: int,
-                            comment: str, updated_at: str):
+    def update_comment_item(
+        self, item_type: str, server_id: int, port: int, comment: str, updated_at: str
+    ):
         # Обновляет ячейку комментария и тултип после сохранения в БД.
         for i in range(self.topLevelItemCount()):
             branch = self.topLevelItem(i)
             for j in range(branch.childCount()):
                 server = branch.child(j)
-                if item_type == "server" and server.data(0, ROLE_SERVER_ID) == server_id:
+                if (
+                    item_type == "server"
+                    and server.data(0, ROLE_SERVER_ID) == server_id
+                ):
                     server.setText(5, comment)
-                    server.setToolTip(5, f"Изменён: {format_dt(updated_at)}" if updated_at else "")
+                    server.setToolTip(
+                        5, f"Изменён: {format_dt(updated_at)}" if updated_at else ""
+                    )
                     return
                 if item_type == "port":
                     if server.data(0, ROLE_SERVER_ID) != server_id:
@@ -640,5 +675,12 @@ class DeviceTree(QTreeWidget):
                         p_item = server.child(k)
                         if p_item.data(0, ROLE_PORT) == port:
                             p_item.setText(5, comment)
-                            p_item.setToolTip(5, f"Изменён: {format_dt(updated_at)}" if updated_at else "")
+                            p_item.setToolTip(
+                                5,
+                                (
+                                    f"Изменён: {format_dt(updated_at)}"
+                                    if updated_at
+                                    else ""
+                                ),
+                            )
                             return

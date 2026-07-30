@@ -18,11 +18,11 @@ def settings_fixture(monkeypatch):
 
     # DB creds
     monkeypatch.setattr(
-        "app.services.db_credentials.settings.POSTGRES_HOST", "localhost"
+        "app.services.vault_db_creds.settings.POSTGRES_HOST", "localhost"
     )
-    monkeypatch.setattr("app.services.db_credentials.settings.POSTGRES_PORT", 5432)
-    monkeypatch.setattr("app.services.db_credentials.settings.POSTGRES_DB", "db")
-    monkeypatch.setattr("app.services.db_credentials.settings.POSTGRES_USER", "user")
+    monkeypatch.setattr("app.services.vault_db_creds.settings.POSTGRES_PORT", 5432)
+    monkeypatch.setattr("app.services.vault_db_creds.settings.POSTGRES_DB", "db")
+    monkeypatch.setattr("app.services.vault_db_creds.settings.POSTGRES_USER", "user")
     monkeypatch.setattr(
-        "app.services.db_credentials.settings.POSTGRES_PASSWORD", "pass"
+        "app.services.vault_db_creds.settings.POSTGRES_PASSWORD", "pass"
     )

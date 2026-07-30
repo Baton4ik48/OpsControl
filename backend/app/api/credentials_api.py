@@ -4,17 +4,21 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from app.api.errors import set_audit_context
 from app.services.credentials import (
     show_credentials,
     verify_admin_password,
     upsert_credentials,
     rotate_credentials,
     export_all_credentials,
-    InvalidMasterPassword,
     CredentialsNotFound,
-    TooManyLoginAttempts,
     RotateError,
+    InvalidMasterPassword,
+    TooManyLoginAttempts,
 )
+
+# 429 (троттлинг) и 403 (неверный мастер-пароль) обрабатываются глобально —
+# см. app/api/errors.py; здесь только happy path и специфичные ошибки.
 
 logger = logging.getLogger("credentials.api")
 _audit = logging.getLogger("audit")
@@ -29,6 +33,18 @@ def _ctx(request: Request) -> tuple[str, str]:
     )
     rid = getattr(request.state, "request_id", "-")
     return ip, rid
+
+
+def _audit_ok(request: Request) -> None:
+    """Пишет audit-запись об успехе, используя контекст из set_audit_context."""
+    action = request.state.audit_action
+    fields = request.state.audit_fields
+    ip, rid = _ctx(request)
+
+    parts = [f"action={action}"]
+    parts += [f"{k}={v}" for k, v in fields.items()]
+    parts += ["result=ok", f"ip={ip}", f"request_id={rid}"]
+    _audit.info(" ".join(parts))
 
 
 class ShowCredentialsRequest(BaseModel):
@@ -50,12 +66,30 @@ class UpsertCredentialsRequest(BaseModel):
     password: str
 
 
+class RotateCredentialsRequest(BaseModel):
+    server_id: int
+    ssh_port: int
+    new_password: str
+    username: str
+    master_password: str
+    mnemonic: str = ""
+
+
+class ExportAllCredentialsRequest(BaseModel):
+    username: str
+    master_password: str
+
+
 @router.post("/show")
-def show_credentials_api(
-    data: ShowCredentialsRequest,
-    request: Request,
-):
-    client_ip, request_id = _ctx(request)
+def show_credentials_api(data: ShowCredentialsRequest, request: Request):
+    client_ip, _ = _ctx(request)
+    set_audit_context(
+        request,
+        "read_credentials",
+        server_id=data.server_id,
+        port=data.port,
+        username=data.username,
+    )
 
     try:
         creds = show_credentials(
@@ -65,112 +99,40 @@ def show_credentials_api(
             master_password=data.master_password,
             client_ip=client_ip,
         )
-
-        # Авторизация в Vault прошла → username подтверждён
-        request.state.actor = data.username
-
-        _audit.info(
-            "action=read_credentials server_id=%s port=%s username=%s result=ok"
-            " ip=%s request_id=%s",
-            data.server_id,
-            data.port,
-            data.username,
-            client_ip,
-            request_id,
-        )
-        return {"success": True, "data": creds}
-
-    except TooManyLoginAttempts as e:
-        _audit.info(
-            "action=read_credentials server_id=%s port=%s username=%s result=throttled"
-            " ip=%s request_id=%s",
-            data.server_id,
-            data.port,
-            data.username,
-            client_ip,
-            request_id,
-        )
-        return JSONResponse(
-            status_code=429,
-            content={
-                "error_code": "LOGIN_THROTTLED",
-                "retry_after": e.retry_after_seconds,
-            },
-        )
-
-    except InvalidMasterPassword:
-        _audit.info(
-            "action=read_credentials server_id=%s port=%s username=%s result=invalid_password"
-            " ip=%s request_id=%s",
-            data.server_id,
-            data.port,
-            data.username,
-            client_ip,
-            request_id,
-        )
-        return JSONResponse(
-            status_code=403, content={"error_code": "INVALID_MASTER_PASSWORD"}
-        )
-
     except CredentialsNotFound:
         raise HTTPException(status_code=404, detail="Credentials not found")
 
+    # Авторизация в Vault прошла → username подтверждён
+    request.state.actor = data.username
+    _audit_ok(request)
+    return {"success": True, "data": creds}
+
 
 @router.post("/verify-admin")
-def verify_admin_api(
-    data: VerifyAdminRequest,
-    request: Request,
-):
-    client_ip, request_id = _ctx(request)
+def verify_admin_api(data: VerifyAdminRequest, request: Request):
+    client_ip, _ = _ctx(request)
+    set_audit_context(request, "verify_admin", username=data.username)
 
-    try:
-        verify_admin_password(
-            username=data.username,
-            master_password=data.master_password,
-            client_ip=client_ip,
-        )
+    verify_admin_password(
+        username=data.username,
+        master_password=data.master_password,
+        client_ip=client_ip,
+    )
 
-        # Авторизация в Vault прошла → username подтверждён
-        request.state.actor = data.username
-
-        _audit.info(
-            "action=verify_admin username=%s result=ok ip=%s request_id=%s",
-            data.username,
-            client_ip,
-            request_id,
-        )
-        return {"success": True}
-
-    except TooManyLoginAttempts as e:
-        _audit.info(
-            "action=verify_admin username=%s result=throttled ip=%s request_id=%s",
-            data.username,
-            client_ip,
-            request_id,
-        )
-        return JSONResponse(
-            status_code=429,
-            content={
-                "error_code": "LOGIN_THROTTLED",
-                "retry_after": e.retry_after_seconds,
-            },
-        )
-
-    except InvalidMasterPassword:
-        _audit.info(
-            "action=verify_admin username=%s result=invalid_password ip=%s request_id=%s",
-            data.username,
-            client_ip,
-            request_id,
-        )
-        return JSONResponse(
-            status_code=403, content={"error_code": "INVALID_MASTER_PASSWORD"}
-        )
+    request.state.actor = data.username
+    _audit_ok(request)
+    return {"success": True}
 
 
 @router.post("/upsert")
 def upsert_credentials_api(data: UpsertCredentialsRequest, request: Request):
-    client_ip, request_id = _ctx(request)
+    set_audit_context(
+        request,
+        "upsert_credentials",
+        server_id=data.server_id,
+        port=data.port,
+        username=data.username,
+    )
 
     try:
         vault_path = upsert_credentials(
@@ -179,19 +141,6 @@ def upsert_credentials_api(data: UpsertCredentialsRequest, request: Request):
             username=data.username,
             password=data.password,
         )
-
-        _audit.info(
-            "action=upsert_credentials server_id=%s port=%s username=%s"
-            " vault_path=%s ip=%s request_id=%s",
-            data.server_id,
-            data.port,
-            data.username,
-            vault_path,
-            client_ip,
-            request_id,
-        )
-        return {"success": True, "data": {"vault_path": vault_path}}
-
     except Exception as e:
         logger.error(
             "upsert_credentials failed server_id=%s port=%s: %s",
@@ -202,19 +151,21 @@ def upsert_credentials_api(data: UpsertCredentialsRequest, request: Request):
         )
         raise HTTPException(status_code=500, detail="Internal server error")
 
-
-class RotateCredentialsRequest(BaseModel):
-    server_id: int
-    ssh_port: int
-    new_password: str
-    username: str
-    master_password: str
-    mnemonic: str = ""
+    request.state.audit_fields["vault_path"] = vault_path
+    _audit_ok(request)
+    return {"success": True, "data": {"vault_path": vault_path}}
 
 
 @router.post("/rotate")
 def rotate_credentials_api(data: RotateCredentialsRequest, request: Request):
-    client_ip, request_id = _ctx(request)
+    client_ip, _ = _ctx(request)
+    set_audit_context(
+        request,
+        "rotate_credentials",
+        server_id=data.server_id,
+        port=data.ssh_port,
+        username=data.username,
+    )
 
     try:
         rotate_credentials(
@@ -226,53 +177,6 @@ def rotate_credentials_api(data: RotateCredentialsRequest, request: Request):
             client_ip=client_ip,
             mnemonic=data.mnemonic,
         )
-
-        # Авторизация в Vault прошла → username подтверждён
-        request.state.actor = data.username
-
-        _audit.info(
-            "action=rotate_credentials server_id=%s port=%s username=%s result=ok"
-            " ip=%s request_id=%s",
-            data.server_id,
-            data.ssh_port,
-            data.username,
-            client_ip,
-            request_id,
-        )
-        return {"success": True}
-
-    except TooManyLoginAttempts as e:
-        _audit.info(
-            "action=rotate_credentials server_id=%s port=%s username=%s result=throttled"
-            " ip=%s request_id=%s",
-            data.server_id,
-            data.ssh_port,
-            data.username,
-            client_ip,
-            request_id,
-        )
-        return JSONResponse(
-            status_code=429,
-            content={
-                "error_code": "LOGIN_THROTTLED",
-                "retry_after": e.retry_after_seconds,
-            },
-        )
-
-    except InvalidMasterPassword:
-        _audit.info(
-            "action=rotate_credentials server_id=%s port=%s username=%s"
-            " result=invalid_password ip=%s request_id=%s",
-            data.server_id,
-            data.ssh_port,
-            data.username,
-            client_ip,
-            request_id,
-        )
-        return JSONResponse(
-            status_code=403, content={"error_code": "INVALID_MASTER_PASSWORD"}
-        )
-
     except RotateError as e:
         logger.warning(
             "rotate_credentials failed server_id=%s port=%s: %s",
@@ -287,7 +191,7 @@ def rotate_credentials_api(data: RotateCredentialsRequest, request: Request):
             data.ssh_port,
             data.username,
             client_ip,
-            request_id,
+            _ctx(request)[1],
         )
         return JSONResponse(
             status_code=422,
@@ -297,18 +201,15 @@ def rotate_credentials_api(data: RotateCredentialsRequest, request: Request):
             },
         )
 
-
-class ExportAllCredentialsRequest(BaseModel):
-    username: str
-    master_password: str
+    request.state.actor = data.username
+    _audit_ok(request)
+    return {"success": True}
 
 
 @router.post("/export-all")
-def export_all_credentials_api(
-    data: ExportAllCredentialsRequest,
-    request: Request,
-):
-    client_ip, request_id = _ctx(request)
+def export_all_credentials_api(data: ExportAllCredentialsRequest, request: Request):
+    client_ip, _ = _ctx(request)
+    set_audit_context(request, "export_all_credentials", username=data.username)
 
     try:
         entries = export_all_credentials(
@@ -316,47 +217,14 @@ def export_all_credentials_api(
             master_password=data.master_password,
             client_ip=client_ip,
         )
-
-        request.state.actor = data.username
-
-        _audit.info(
-            "action=export_all_credentials username=%s count=%d result=ok"
-            " ip=%s request_id=%s",
-            data.username,
-            len(entries),
-            client_ip,
-            request_id,
-        )
-        return {"success": True, "data": entries}
-
-    except TooManyLoginAttempts as e:
-        _audit.info(
-            "action=export_all_credentials username=%s result=throttled"
-            " ip=%s request_id=%s",
-            data.username,
-            client_ip,
-            request_id,
-        )
-        return JSONResponse(
-            status_code=429,
-            content={
-                "error_code": "LOGIN_THROTTLED",
-                "retry_after": e.retry_after_seconds,
-            },
-        )
-
-    except InvalidMasterPassword:
-        _audit.info(
-            "action=export_all_credentials username=%s result=invalid_password"
-            " ip=%s request_id=%s",
-            data.username,
-            client_ip,
-            request_id,
-        )
-        return JSONResponse(
-            status_code=403, content={"error_code": "INVALID_MASTER_PASSWORD"}
-        )
-
+    except (TooManyLoginAttempts, InvalidMasterPassword):
+        # Обрабатываются глобальными хендлерами (429 / 403)
+        raise
     except Exception as e:
         logger.error("export_all_credentials failed: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
+
+    request.state.actor = data.username
+    request.state.audit_fields["count"] = len(entries)
+    _audit_ok(request)
+    return {"success": True, "data": entries}

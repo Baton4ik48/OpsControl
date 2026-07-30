@@ -9,6 +9,7 @@ _DOMAIN_RE = re.compile(
     r"^(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$"
 )
 
+
 def is_valid_host(value: str) -> bool:
     try:
         ipaddress.ip_address(value)
@@ -16,6 +17,7 @@ def is_valid_host(value: str) -> bool:
     except ValueError:
         pass
     return bool(_DOMAIN_RE.match(value))
+
 
 DEVICE_TYPES = [
     ("Linux-сервер", "linux"),
@@ -26,6 +28,7 @@ DEVICE_TYPES = [
     ("VipNet Coordinator", "coordinator"),
     ("ИБП", "ups"),
 ]
+
 
 class ServerForm(QWidget):
     saved = pyqtSignal(str, str, str)  # name, ip, device_type

@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import Mock, patch
 
-from app.services.db_credentials import (
+from app.services.vault_db_creds import (
     _static_creds,
     _get_dynamic_db_creds,
     get_db_credentials,
@@ -34,7 +34,7 @@ def test_dynamic_creds_success():
         "password": "dyn_pass",
     }
 
-    with patch("app.services.db_credentials.get_vault_client", return_value=mock_vault):
+    with patch("app.services.vault_db_creds.get_vault_client", return_value=mock_vault):
         creds = _get_dynamic_db_creds()
 
     assert creds.user == "dyn_user"
@@ -46,7 +46,7 @@ def test_dynamic_creds_vault_read_error():
     mock_vault = Mock()
     mock_vault.read_database_creds.side_effect = VaultReadError()
 
-    with patch("app.services.db_credentials.get_vault_client", return_value=mock_vault):
+    with patch("app.services.vault_db_creds.get_vault_client", return_value=mock_vault):
         with pytest.raises(VaultReadError):
             _get_dynamic_db_creds()
 
@@ -55,7 +55,7 @@ def test_dynamic_creds_vault_sealed():
     mock_vault = Mock()
     mock_vault.read_database_creds.side_effect = VaultSealedError()
 
-    with patch("app.services.db_credentials.get_vault_client", return_value=mock_vault):
+    with patch("app.services.vault_db_creds.get_vault_client", return_value=mock_vault):
         with pytest.raises(VaultSealedError):
             _get_dynamic_db_creds()
 
@@ -64,7 +64,7 @@ def test_dynamic_creds_vault_unavailable():
     mock_vault = Mock()
     mock_vault.read_database_creds.side_effect = VaultUnavailableError()
 
-    with patch("app.services.db_credentials.get_vault_client", return_value=mock_vault):
+    with patch("app.services.vault_db_creds.get_vault_client", return_value=mock_vault):
         with pytest.raises(VaultUnavailableError):
             _get_dynamic_db_creds()
 
@@ -74,7 +74,7 @@ def test_dynamic_creds_vault_auth_error():
     mock_vault = Mock()
     mock_vault.read_database_creds.side_effect = VaultAuthError()
 
-    with patch("app.services.db_credentials.get_vault_client", return_value=mock_vault):
+    with patch("app.services.vault_db_creds.get_vault_client", return_value=mock_vault):
         with pytest.raises(VaultAuthError):
             _get_dynamic_db_creds()
 
@@ -83,7 +83,7 @@ def test_dynamic_creds_unexpected_exception():
     mock_vault = Mock()
     mock_vault.read_database_creds.side_effect = Exception("Boom")
 
-    with patch("app.services.db_credentials.get_vault_client", return_value=mock_vault):
+    with patch("app.services.vault_db_creds.get_vault_client", return_value=mock_vault):
         with pytest.raises(Exception) as exc:
             _get_dynamic_db_creds()
 
@@ -91,7 +91,7 @@ def test_dynamic_creds_unexpected_exception():
 
 
 def test_get_db_credentials_static_mode(monkeypatch):
-    monkeypatch.setattr("app.services.db_credentials.settings.DB_CREDS_MODE", "static")
+    monkeypatch.setattr("app.services.vault_db_creds.settings.DB_CREDS_MODE", "static")
 
     creds = get_db_credentials()
 
@@ -100,9 +100,9 @@ def test_get_db_credentials_static_mode(monkeypatch):
 
 
 def test_get_db_credentials_vault_mode(monkeypatch):
-    monkeypatch.setattr("app.services.db_credentials.settings.DB_CREDS_MODE", "vault")
+    monkeypatch.setattr("app.services.vault_db_creds.settings.DB_CREDS_MODE", "vault")
 
-    with patch("app.services.db_credentials._get_dynamic_db_creds") as mock_dyn:
+    with patch("app.services.vault_db_creds._get_dynamic_db_creds") as mock_dyn:
         mock_dyn.return_value = DBCreds("h", 1, "d", "dyn", "p")
 
         creds = get_db_credentials()
@@ -112,9 +112,9 @@ def test_get_db_credentials_vault_mode(monkeypatch):
 
 
 def test_get_db_credentials_auto_success(monkeypatch):
-    monkeypatch.setattr("app.services.db_credentials.settings.DB_CREDS_MODE", "auto")
+    monkeypatch.setattr("app.services.vault_db_creds.settings.DB_CREDS_MODE", "auto")
 
-    with patch("app.services.db_credentials._get_dynamic_db_creds") as mock_dyn:
+    with patch("app.services.vault_db_creds._get_dynamic_db_creds") as mock_dyn:
         mock_dyn.return_value = DBCreds("h", 1, "d", "dyn", "p")
 
         creds = get_db_credentials()
@@ -123,10 +123,10 @@ def test_get_db_credentials_auto_success(monkeypatch):
 
 
 def test_get_db_credentials_auto_fallback(monkeypatch):
-    monkeypatch.setattr("app.services.db_credentials.settings.DB_CREDS_MODE", "auto")
+    monkeypatch.setattr("app.services.vault_db_creds.settings.DB_CREDS_MODE", "auto")
 
-    with patch("app.services.db_credentials._get_dynamic_db_creds") as mock_dyn, patch(
-        "app.services.db_credentials._static_creds"
+    with patch("app.services.vault_db_creds._get_dynamic_db_creds") as mock_dyn, patch(
+        "app.services.vault_db_creds._static_creds"
     ) as mock_static:
 
         mock_dyn.side_effect = Exception("vault down")
@@ -138,7 +138,7 @@ def test_get_db_credentials_auto_fallback(monkeypatch):
 
 
 def test_get_db_credentials_invalid_mode(monkeypatch):
-    monkeypatch.setattr("app.services.db_credentials.settings.DB_CREDS_MODE", "invalid")
+    monkeypatch.setattr("app.services.vault_db_creds.settings.DB_CREDS_MODE", "invalid")
 
     with pytest.raises(RuntimeError):
         get_db_credentials()

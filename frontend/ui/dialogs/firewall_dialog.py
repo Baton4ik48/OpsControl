@@ -39,6 +39,7 @@ F — dst ip (IP-адрес куда)
 Формат: firewall forward add <id> rule "NAME" src <ip> dst <ip> tcp dport <port> ... pass
 """
 
+
 class FirewallDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)

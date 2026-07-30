@@ -1,6 +1,9 @@
 from PyQt6.QtCore import QThread, pyqtSignal
 
-class InfrastructureWorker(QThread):
+
+class FunctionWorker(QThread):
+    """Выполняет произвольную функцию в фоновом потоке."""
+
     success = pyqtSignal(object)
     error = pyqtSignal(Exception)
 

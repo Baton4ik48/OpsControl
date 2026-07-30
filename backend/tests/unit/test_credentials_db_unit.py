@@ -22,7 +22,7 @@ def _make_conn(fetchone=None, fetchall=None, rowcount=1):
     return conn, cur
 
 
-def _patch(monkeypatch, conn, module_fn="app.services.db.credentials_db._execute"):
+def _patch(monkeypatch, conn, module_fn="app.services.db.credentials_db.execute"):
     monkeypatch.setattr(module_fn, lambda fn, retries=1: fn(conn))
 
 
@@ -49,7 +49,7 @@ def test_get_vault_path_not_found(monkeypatch):
 
 def test_get_vault_path_db_unavailable(monkeypatch):
     monkeypatch.setattr(
-        "app.services.db.credentials_db._execute",
+        "app.services.db.credentials_db.execute",
         lambda fn, retries=1: (_ for _ in ()).throw(ServiceUnavailableError()),
     )
     with pytest.raises(ServiceUnavailableError):
@@ -78,7 +78,7 @@ def test_get_credentials_username_not_found(monkeypatch):
 
 def test_get_credentials_username_db_unavailable(monkeypatch):
     monkeypatch.setattr(
-        "app.services.db.credentials_db._execute",
+        "app.services.db.credentials_db.execute",
         lambda fn, retries=1: (_ for _ in ()).throw(ServiceUnavailableError()),
     )
     with pytest.raises(ServiceUnavailableError):
@@ -102,7 +102,7 @@ def test_touch_credentials_updated_at_executes_update(monkeypatch):
 
 def test_touch_credentials_updated_at_db_unavailable(monkeypatch):
     monkeypatch.setattr(
-        "app.services.db.credentials_db._execute",
+        "app.services.db.credentials_db.execute",
         lambda fn, retries=1: (_ for _ in ()).throw(ServiceUnavailableError()),
     )
     with pytest.raises(ServiceUnavailableError):
@@ -128,7 +128,7 @@ def test_upsert_vault_path_inserts_or_updates(monkeypatch):
 
 def test_upsert_vault_path_db_unavailable(monkeypatch):
     monkeypatch.setattr(
-        "app.services.db.credentials_db._execute",
+        "app.services.db.credentials_db.execute",
         lambda fn, retries=1: (_ for _ in ()).throw(ServiceUnavailableError()),
     )
     with pytest.raises(ServiceUnavailableError):
@@ -152,7 +152,7 @@ def test_get_all_credentials_with_server_info_returns_all(monkeypatch):
     ]
     conn, cur = _make_conn_fetchall(rows)
     monkeypatch.setattr(
-        "app.services.db.credentials_db._execute", lambda fn, retries=1: fn(conn)
+        "app.services.db.credentials_db.execute", lambda fn, retries=1: fn(conn)
     )
 
     result = get_all_credentials_with_server_info()
@@ -177,7 +177,7 @@ def test_get_all_credentials_with_server_info_returns_all(monkeypatch):
 def test_get_all_credentials_with_server_info_empty(monkeypatch):
     conn, _ = _make_conn_fetchall([])
     monkeypatch.setattr(
-        "app.services.db.credentials_db._execute", lambda fn, retries=1: fn(conn)
+        "app.services.db.credentials_db.execute", lambda fn, retries=1: fn(conn)
     )
 
     result = get_all_credentials_with_server_info()
@@ -187,7 +187,7 @@ def test_get_all_credentials_with_server_info_empty(monkeypatch):
 
 def test_get_all_credentials_with_server_info_db_unavailable(monkeypatch):
     monkeypatch.setattr(
-        "app.services.db.credentials_db._execute",
+        "app.services.db.credentials_db.execute",
         lambda fn, retries=1: (_ for _ in ()).throw(ServiceUnavailableError()),
     )
     with pytest.raises(ServiceUnavailableError):

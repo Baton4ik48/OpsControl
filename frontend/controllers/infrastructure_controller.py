@@ -1,40 +1,42 @@
-from core.api.tree import TreeApi
-from core.api.servers import ServerApi
-from core.api.ports import PortApi
-from core.api.branches import BranchApi
-from core.api.base import ApiError
+from core.workers.function_worker import FunctionWorker
 
-from core.workers.infrastructure_worker import InfrastructureWorker
 
 class InfrastructureController:
 
-    def __init__(self, view, busy):
+    def __init__(self, view, busy, api):
         self.view = view
         self.busy = busy
 
-        self.tree_api = TreeApi()
-        self.server_api = ServerApi()
-        self.branch_api = BranchApi()
-        self.port_api = PortApi()
+        self.tree_api = api.tree
+        self.server_api = api.servers
+        self.branch_api = api.branches
+        self.port_api = api.ports
 
         self.current_branch_id = None
         self.current_server_id = None
         self.current_port = None
         self.cached_tree_data = None
 
-        self._worker = None
+        # Ссылки на живые воркеры: перезапись единственного атрибута
+        # уничтожала работающий QThread
+        self._workers: set = set()
+
+    def _launch(self, worker):
+        self._workers.add(worker)
+        worker.finished.connect(lambda w=worker: self._workers.discard(w))
+        worker.start()
 
     def _run_task(self, message, fn):
         self.busy.show_message(message)
 
-        self._worker = InfrastructureWorker(fn)
-        self._worker.success.connect(self._on_success)
-        self._worker.error.connect(self._on_error)
-        self._worker.finished.connect(self.busy.hide_overlay)
-        self._worker.start()
+        worker = FunctionWorker(fn)
+        worker.success.connect(self._on_success)
+        worker.error.connect(self._on_error)
+        worker.finished.connect(self.busy.hide_overlay)
+        self._launch(worker)
 
     def _on_success(self, _=None):
-        self.load_tree()
+        self.load_tree_async()
 
     def _on_error(self, e):
         self.view.show_error(str(e))
@@ -46,23 +48,15 @@ class InfrastructureController:
 
         self.busy.show_message("Загрузка инфраструктуры…")
 
-        self._worker = InfrastructureWorker(task)
-        self._worker.success.connect(self._on_tree_loaded)
-        self._worker.error.connect(self._on_error)
-        self._worker.finished.connect(self.busy.hide_overlay)
-        self._worker.start()
+        worker = FunctionWorker(task)
+        worker.success.connect(self._on_tree_loaded)
+        worker.error.connect(self._on_error)
+        worker.finished.connect(self.busy.hide_overlay)
+        self._launch(worker)
 
     def _on_tree_loaded(self, data):
         self.cached_tree_data = data
         self.view.render_tree(data)
-
-    def load_tree(self):
-        try:
-            data = self.tree_api.load_tree()
-            self.cached_tree_data = data
-            self.view.render_tree(data)
-        except ApiError as e:
-            self.view.show_api_error(e.message)
 
     def select_server(self, server_id, server_data):
         self.current_server_id = server_id

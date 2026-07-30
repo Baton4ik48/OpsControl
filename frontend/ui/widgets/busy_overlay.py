@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout
 from PyQt6.QtCore import Qt
 
+
 class BusyOverlay(QWidget):
 
     def __init__(self, parent=None):

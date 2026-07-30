@@ -1,4 +1,4 @@
-from app.services.db.pool_db import _execute, ServiceUnavailableError
+from app.services.db.pool_db import execute, ServiceUnavailableError
 from app.services.vault_client import VaultSealedError, VaultUnavailableError
 
 
@@ -25,7 +25,7 @@ def check_postgres() -> bool:
             cur.fetchone()
             cur.close()
 
-        _execute(work)
+        execute(work)
         return True
 
     except (ServiceUnavailableError, Exception):

@@ -4,13 +4,14 @@ import asyncio
 import app.logging  # noqa: F401
 
 import logging
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from app.services.db.pool_db import init_pool, close_pool, ServiceUnavailableError
 from app.services.vault_renewer import vault_renew_loop
+from app.api.errors import register_exception_handlers
 from app.api.router import router as api_router
 from app.middleware.allowed_network import AllowedNetworkMiddleware
 from app.middleware.request_logging import RequestLoggingMiddleware
@@ -21,6 +22,13 @@ logger = logging.getLogger("startup")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    missing = settings.validate()
+    if missing:
+        raise RuntimeError(
+            f"Отсутствуют обязательные переменные окружения: {', '.join(missing)}. "
+            f"Проверьте .env (DB_CREDS_MODE={settings.DB_CREDS_MODE})."
+        )
+
     # init_pool никогда не бросает — логирует ошибку и продолжает работу
     ok = init_pool()
     if not ok:
@@ -31,10 +39,14 @@ async def lifespan(app: FastAPI):
     task = asyncio.create_task(vault_renew_loop())
     yield
     task.cancel()
+    with suppress(asyncio.CancelledError):
+        await task
     close_pool()
 
 
 app = FastAPI(lifespan=lifespan)
+
+register_exception_handlers(app)
 
 
 @app.exception_handler(ServiceUnavailableError)

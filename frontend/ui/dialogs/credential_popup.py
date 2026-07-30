@@ -1,8 +1,14 @@
 import os
 
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QGridLayout,
-    QLabel, QPushButton, QLineEdit, QFrame,
+    QDialog,
+    QVBoxLayout,
+    QHBoxLayout,
+    QGridLayout,
+    QLabel,
+    QPushButton,
+    QLineEdit,
+    QFrame,
 )
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QIcon, QGuiApplication, QFont
@@ -11,10 +17,12 @@ from core.paths import ICONS_DIR, RESOURCES_DIR
 
 _POPUP_SECONDS = 30
 
+
 def _load_style() -> str:
     path = os.path.join(RESOURCES_DIR, "styles", "credential_popup.qss")
     with open(path, "r", encoding="utf-8") as f:
         return f.read()
+
 
 class CredentialPopup(QDialog):
     # Компактное окно с учётными данными для веб / внешних приложений.
@@ -69,9 +77,9 @@ class CredentialPopup(QDialog):
         btn_copy_user.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_copy_user.clicked.connect(lambda: self._copy(self._username, btn_copy_user))
 
-        grid.addWidget(lbl_user,       0, 0)
+        grid.addWidget(lbl_user, 0, 0)
         grid.addWidget(self._user_field, 0, 1)
-        grid.addWidget(btn_copy_user,  0, 2)
+        grid.addWidget(btn_copy_user, 0, 2)
 
         lbl_pass = QLabel("Пароль")
         lbl_pass.setObjectName("field_label")
@@ -97,9 +105,9 @@ class CredentialPopup(QDialog):
         pass_btns.addWidget(btn_eye)
         pass_btns.addWidget(btn_copy_pass)
 
-        grid.addWidget(lbl_pass,        1, 0)
+        grid.addWidget(lbl_pass, 1, 0)
         grid.addWidget(self._pass_field, 1, 1)
-        grid.addLayout(pass_btns,        1, 2)
+        grid.addLayout(pass_btns, 1, 2)
 
         root.addLayout(grid)
         root.addSpacing(10)

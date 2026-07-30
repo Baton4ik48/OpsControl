@@ -5,6 +5,7 @@ import threading
 import webbrowser
 import os
 
+
 class ProtocolLauncher:
 
     @staticmethod
@@ -48,7 +49,10 @@ class ProtocolLauncher:
                     raise RuntimeError("SSHPASS_NOT_FOUND")
                 subprocess.Popen(
                     [
-                        "x-terminal-emulator", "-e", "bash", "-c",
+                        "x-terminal-emulator",
+                        "-e",
+                        "bash",
+                        "-c",
                         f"sshpass -p '{password}' ssh -o StrictHostKeyChecking=no -p {port} {user}@{host}; exec bash",
                     ]
                 )
@@ -57,7 +61,10 @@ class ProtocolLauncher:
                 target = f"{user}@{host}" if user else host
                 subprocess.Popen(
                     [
-                        "x-terminal-emulator", "-e", "bash", "-c",
+                        "x-terminal-emulator",
+                        "-e",
+                        "bash",
+                        "-c",
                         f"ssh -o StrictHostKeyChecking=no -p {port} {target}; exec bash",
                     ]
                 )
@@ -113,8 +120,10 @@ class ProtocolLauncher:
                 subprocess.Popen(
                     [
                         "rdesktop",
-                        "-u", user,
-                        "-p", password,
+                        "-u",
+                        user,
+                        "-p",
+                        password,
                         host,
                     ]
                 )

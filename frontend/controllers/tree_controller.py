@@ -10,12 +10,9 @@ from core.protocol_launcher import ProtocolLauncher
 from core.logger import get_logger
 from core.api.base import ApiError
 from core.workers.credentials_worker import CredentialsWorker
-from ui.dialogs.credentials_dialog import CredentialsDialog
-from ui.dialogs.credential_popup import CredentialPopup
-
-from ui.error_handler import handle_system_error
 
 log = get_logger(__name__)
+
 
 def _split_data(data: list[dict]) -> tuple[list[dict], list[dict], list[dict]]:
     main_branches: list[dict] = []
@@ -45,13 +42,35 @@ def _split_data(data: list[dict]) -> tuple[list[dict], list[dict], list[dict]]:
 
     return main_branches, xclarity_branches, ups_branches
 
+
 class TreeController(QObject):
     loaded = pyqtSignal()
     error_occurred = pyqtSignal(ApiError)
+    system_error = pyqtSignal(object)  # Exception — окно показывает диалог ошибки
     checking_started = pyqtSignal()
     checking_finished = pyqtSignal()
 
-    def __init__(self, api, dash_main, dash_xclarity, dash_ups, detail_tree, user_settings, busy):
+    # Внутренний сигнал: перебрасывает результат сохранения комментария
+    # из фонового потока в GUI-поток (напрямую трогать виджеты оттуда нельзя)
+    _comment_saved = pyqtSignal(str, int, int, str, str)
+
+    def __init__(
+        self,
+        api,
+        dash_main,
+        dash_xclarity,
+        dash_ups,
+        detail_tree,
+        user_settings,
+        busy,
+        ask_master_password,
+        show_credential_popup,
+    ):
+        """
+        ask_master_password(ip, port, mode, on_submit) и
+        show_credential_popup(ip, port, username, password) — колбэки,
+        реализованные в ui-слое: контроллер не знает о конкретных диалогах.
+        """
         super().__init__()
         self.api = api
         self.dash_main = dash_main
@@ -60,21 +79,39 @@ class TreeController(QObject):
         self.detail_tree = detail_tree
         self.user_settings = user_settings
         self.busy = busy
+        self._ask_master_password = ask_master_password
+        self._show_credential_popup = show_credential_popup
         self.detail_tree.set_user_settings(self.user_settings)
 
         self._data: list[dict] = []
         self._data_main: list[dict] = []
         self._data_xclarity: list[dict] = []
         self._data_ups: list[dict] = []
+        self._servers_by_id: dict[int, dict] = {}
         self._active_tab: int = 0
         self._current_branch: str | None = None
         self._runtime_status = {}
         self.checker = PortCheckManager(max_threads=10)
-        self._worker = None
         self._check_count = 0
 
+        # Держим ссылки на все живые воркеры: перезапись единственного
+        # атрибута уничтожала работающий QThread → краш.
+        self._workers: set = set()
+
+        self._comment_saved.connect(self._on_comment_saved)
+
+    def _launch(self, worker):
+        """Запускает QThread, сохраняя ссылку до его завершения."""
+        self._workers.add(worker)
+        worker.finished.connect(lambda w=worker: self._workers.discard(w))
+        worker.start()
+
     @property
-    def _active_data(self) -> list[dict]:
+    def data(self) -> list[dict]:
+        return self._data
+
+    @property
+    def active_data(self) -> list[dict]:
         if self._active_tab == 1:
             return self._data_xclarity
         if self._active_tab == 2:
@@ -84,15 +121,39 @@ class TreeController(QObject):
     def set_active_tab(self, index: int):
         self._active_tab = index
 
+    def status_counts(self) -> tuple[int, int, int]:
+        """Возвращает (up, partial, down) по серверам активной вкладки."""
+        up = partial = down = 0
+        for branch in self.active_data:
+            for server in branch.get("servers", []):
+                ports = server.get("ports", [])
+                if not ports:
+                    continue
+                checked = [p for p in ports if p.get("is_up") is not None]
+                if not checked:
+                    continue
+                has_up = any(p["is_up"] is True for p in checked)
+                has_down = any(p["is_up"] is False for p in checked)
+                if has_up and has_down:
+                    partial += 1
+                elif has_up:
+                    up += 1
+                else:
+                    down += 1
+        return up, partial, down
+
     def start_load(self):
-        self._worker = TreeLoaderWorker(self.api)
-        self._worker.success.connect(self._on_loaded)
-        self._worker.error.connect(self._on_error)
-        self._worker.start()
+        worker = TreeLoaderWorker(self.api)
+        worker.success.connect(self._on_loaded)
+        worker.error.connect(self._on_error)
+        self._launch(worker)
 
     def _on_loaded(self, data):
         self._data = data
         self._data_main, self._data_xclarity, self._data_ups = _split_data(data)
+        # Словари серверов разделяются между _data и срезами вкладок,
+        # поэтому обновление через индекс видно во всех представлениях
+        self._servers_by_id = {s["id"]: s for b in data for s in b.get("servers", [])}
         self._runtime_status.clear()
         self.dash_main.render(self._data_main)
         self.dash_xclarity.render(self._data_xclarity)
@@ -116,7 +177,7 @@ class TreeController(QObject):
             self.checking_finished.emit()
 
     def refresh_all(self):
-        active = self._active_data
+        active = self.active_data
         if not active:
             return
 
@@ -146,57 +207,56 @@ class TreeController(QObject):
         self._end_one()
 
     def _get_port_data(self, server_id, port):
-        for b in self._data:
-            for s in b["servers"]:
-                if s["id"] != server_id:
-                    continue
-                for p in s["ports"]:
-                    if p["port"] == port:
-                        return p
+        server = self._servers_by_id.get(server_id)
+        if server is None:
+            return None
+        for p in server.get("ports", []):
+            if p["port"] == port:
+                return p
         return None
 
     def _update_port_status(self, server_id, port):
+        p = self._get_port_data(server_id, port)
+        if p is None:
+            return
+
+        ok = self._runtime_status[(server_id, port)]
+        p["is_up"] = ok
+
         now = datetime.now(timezone.utc).isoformat()
-
-        for b in self._data:
-            for s in b["servers"]:
-                if s["id"] != server_id:
-                    continue
-
-                for p in s["ports"]:
-                    if p["port"] != port:
-                        continue
-
-                    ok = self._runtime_status[(server_id, port)]
-                    p["is_up"] = ok
-
-                    if ok:
-                        p["last_success"] = now
-                    else:
-                        p["last_failure"] = now
-
-                    return
+        if ok:
+            p["last_success"] = now
+        else:
+            p["last_failure"] = now
 
     def show_all(self):
         if not self._data or not self._current_branch:
             return
-        branch = next((b for b in self._active_data if b["name"] == self._current_branch), None)
+        branch = next(
+            (b for b in self.active_data if b["name"] == self._current_branch), None
+        )
         if branch:
             self.detail_tree.render([branch])
 
     def show_problem(self):
         if not self._data or not self._current_branch:
             return
-        branch = next((b for b in self._active_data if b["name"] == self._current_branch), None)
+        branch = next(
+            (b for b in self.active_data if b["name"] == self._current_branch), None
+        )
         if not branch:
             return
-        bad = [s for s in branch["servers"] if any(p.get("is_up") is False for p in s["ports"])]
+        bad = [
+            s
+            for s in branch["servers"]
+            if any(p.get("is_up") is False for p in s["ports"])
+        ]
         if bad:
             self.detail_tree.render([{"name": branch["name"], "servers": bad}])
 
     def drill_into_branch(self, branch_name: str):
         self._current_branch = branch_name
-        branch = next((b for b in self._active_data if b["name"] == branch_name), None)
+        branch = next((b for b in self.active_data if b["name"] == branch_name), None)
         if branch:
             self.detail_tree.render([branch])
             self.detail_tree.expandAll()
@@ -218,53 +278,45 @@ class TreeController(QObject):
         self.checker.check_ports(servers, self._on_port_checked, self.api)
 
     def refresh_server(self, server_id: int, ip: str):
-        for b in self._data:
-            for s in b["servers"]:
-                if s["id"] != server_id:
-                    continue
+        server = self._servers_by_id.get(server_id)
+        if server is None or not server["ports"]:
+            return
 
-                if not s["ports"]:
-                    return
-
-                self._begin_check(len(s["ports"]))
-                self.checker.check_ports([s], self._on_port_checked, self.api)
-                return
+        self._begin_check(len(server["ports"]))
+        self.checker.check_ports([server], self._on_port_checked, self.api)
 
     def refresh_port(self, server_id: int, port: int, ip: str):
-        for b in self._data:
-            for s in b["servers"]:
-                if s["id"] != server_id:
-                    continue
+        server = self._servers_by_id.get(server_id)
+        if server is None:
+            return
 
-                for p in s["ports"]:
-                    if p["port"] != port:
-                        continue
+        p = self._get_port_data(server_id, port)
+        if p is None:
+            return
 
-                    self._begin_check(1)
-                    self.checker.check_ports(
-                        [{"id": server_id, "ip": s["ip"], "ports": [p]}],
-                        self._on_port_checked,
-                        self.api,
-                    )
-                    return
-
-    def show_credentials(self, server_id: int, port: int, ip: str):
-        dlg = CredentialsDialog(ip, port)
-
-        dlg.submitted.connect(
-            lambda master_password: self._start_credentials_worker(
-                server_id, port, master_password
-            )
+        self._begin_check(1)
+        self.checker.check_ports(
+            [{"id": server_id, "ip": server["ip"], "ports": [p]}],
+            self._on_port_checked,
+            self.api,
         )
 
-        dlg.exec()
+    def show_credentials(self, server_id: int, port: int, ip: str):
+        self._ask_master_password(
+            ip,
+            port,
+            "show",
+            lambda master_password: self._start_credentials_worker(
+                server_id, port, master_password
+            ),
+        )
 
     def _start_credentials_worker(self, server_id, port, master_password):
         admin_login = self.user_settings.get("admin_login")
 
         self.busy.start("Получение учётных данных…")
 
-        self._credentials_worker = CredentialsWorker(
+        worker = CredentialsWorker(
             api=self.api,
             server_id=server_id,
             port=port,
@@ -282,24 +334,15 @@ class TreeController(QObject):
             )
             del data
 
-        def on_error(e: ApiError):
-            self.error_occurred.emit(e)
-
-        self._credentials_worker.finished.connect(self.busy.stop)
-        self._credentials_worker.success.connect(on_success)
-        self._credentials_worker.error.connect(on_error)
-        self._credentials_worker.start()
+        worker.finished.connect(self.busy.stop)
+        worker.success.connect(on_success)
+        worker.error.connect(self.error_occurred.emit)
+        self._launch(worker)
 
     def _has_credentials(self, server_id: int, port: int) -> bool:
         # True если для порта в дереве есть credentials_updated_at — значит пароль сохранён.
-        for b in self._data:
-            for s in b["servers"]:
-                if s["id"] != server_id:
-                    continue
-                for p in s.get("ports", []):
-                    if p.get("port") == port:
-                        return bool(p.get("credentials_updated_at"))
-        return False
+        p = self._get_port_data(server_id, port)
+        return bool(p and p.get("credentials_updated_at"))
 
     def connect_protocol(
         self, server_id: int, port: int, ip: str, _unused_protocol: str
@@ -312,31 +355,27 @@ class TreeController(QObject):
         if port == 22:
             if has_creds:
                 # Есть пароль → запрашиваем мастер-пароль → подключаемся с кредами
-                dlg = CredentialsDialog(ip, port, mode="ssh")
-                dlg.submitted.connect(
-                    lambda mp: self._start_protocol_worker(server_id, port, mp, "ssh")
+                self._ask_master_password(
+                    ip,
+                    port,
+                    "ssh",
+                    lambda mp: self._start_protocol_worker(server_id, port, mp, "ssh"),
                 )
-                dlg.exec()
             else:
                 # Нет пароля → сразу открываем SSH без кредов
-                try:
-                    ProtocolLauncher.open("ssh", None, None, ip, port)
-                except Exception as e:
-                    handle_system_error(None, e)
+                self._open_or_report("ssh", None, None, ip, port)
             return
 
         if port == 3389:
             if has_creds:
-                dlg = CredentialsDialog(ip, port, mode="rdp")
-                dlg.submitted.connect(
-                    lambda mp: self._start_protocol_worker(server_id, port, mp, "rdp")
+                self._ask_master_password(
+                    ip,
+                    port,
+                    "rdp",
+                    lambda mp: self._start_protocol_worker(server_id, port, mp, "rdp"),
                 )
-                dlg.exec()
             else:
-                try:
-                    ProtocolLauncher.open("rdp", None, None, ip, port)
-                except Exception as e:
-                    handle_system_error(None, e)
+                self._open_or_report("rdp", None, None, ip, port)
             return
 
         for app in external_apps:
@@ -344,14 +383,16 @@ class TreeController(QObject):
                 if has_creds:
                     # Сначала мастер-пароль → потом открываем приложение + popup
                     self._ask_then_open(
-                        server_id, ip, port,
+                        server_id,
+                        ip,
+                        port,
                         open_fn=lambda: ProtocolLauncher.open_external(app.get("path")),
                     )
                 else:
                     try:
                         ProtocolLauncher.open_external(app.get("path"))
                     except Exception as e:
-                        handle_system_error(None, e)
+                        self.system_error.emit(e)
                 return
 
         scheme = None
@@ -361,28 +402,33 @@ class TreeController(QObject):
                 break
 
         if not scheme:
-            handle_system_error(None, RuntimeError("UNSUPPORTED_PROTOCOL"))
+            self.system_error.emit(RuntimeError("UNSUPPORTED_PROTOCOL"))
             return
 
         if has_creds:
             # Сначала мастер-пароль → потом открываем браузер + popup
             self._ask_then_open(
-                server_id, ip, port,
+                server_id,
+                ip,
+                port,
                 open_fn=lambda: ProtocolLauncher.open(scheme, None, None, ip, port),
             )
         else:
             # Нет пароля → просто открываем браузер
-            try:
-                ProtocolLauncher.open(scheme, None, None, ip, port)
-            except Exception as e:
-                log.exception("Ошибка запуска WEB протокола")
-                handle_system_error(None, e)
+            self._open_or_report(scheme, None, None, ip, port)
+
+    def _open_or_report(self, protocol, username, password, ip, port):
+        try:
+            ProtocolLauncher.open(protocol, username, password, ip, port)
+        except Exception as e:
+            log.exception("Ошибка запуска протокола %s", protocol)
+            self.system_error.emit(e)
 
     def _start_protocol_worker(self, server_id, port, master_password, protocol):
         admin_login = self.user_settings.get("admin_login")
         self.busy.start(f"Получение учётных данных для {protocol.upper()}…")
 
-        self._credentials_worker = CredentialsWorker(
+        worker = CredentialsWorker(
             api=self.api,
             server_id=server_id,
             port=port,
@@ -394,30 +440,25 @@ class TreeController(QObject):
             username = data["username"]
             password = data["password"]
             del data
-            host = self._get_ip_by_server_id(server_id)
-            if not host:
+            server = self._servers_by_id.get(server_id)
+            if server is None:
                 return
-            try:
-                ProtocolLauncher.open(protocol, username, password, host, port)
-            except Exception as e:
-                handle_system_error(None, e)
+            self._open_or_report(protocol, username, password, server["ip"], port)
 
-        def on_error(e: ApiError):
-            self.error_occurred.emit(e)
-
-        self._credentials_worker.finished.connect(self.busy.stop)
-        self._credentials_worker.success.connect(on_success)
-        self._credentials_worker.error.connect(on_error)
-        self._credentials_worker.start()
+        worker.finished.connect(self.busy.stop)
+        worker.success.connect(on_success)
+        worker.error.connect(self.error_occurred.emit)
+        self._launch(worker)
 
     def _ask_then_open(self, server_id: int, ip: str, port: int, open_fn):
-
-        # Запрашивает мастер-пароль → получает учётные данные → вызывает open_fn() (открывает браузер/приложение) → показывает popup.
-        dlg = CredentialsDialog(ip, port, mode="show")
-        dlg.submitted.connect(
-            lambda mp: self._start_popup_worker(server_id, ip, port, mp, open_fn)
+        # Запрашивает мастер-пароль → получает учётные данные →
+        # вызывает open_fn() (открывает браузер/приложение) → показывает popup.
+        self._ask_master_password(
+            ip,
+            port,
+            "show",
+            lambda mp: self._start_popup_worker(server_id, ip, port, mp, open_fn),
         )
-        dlg.exec()
 
     def _start_popup_worker(
         self, server_id: int, ip: str, port: int, master_password: str, open_fn
@@ -425,7 +466,7 @@ class TreeController(QObject):
         admin_login = self.user_settings.get("admin_login")
         self.busy.start("Получение учётных данных…")
 
-        self._popup_worker = CredentialsWorker(
+        worker = CredentialsWorker(
             api=self.api,
             server_id=server_id,
             port=port,
@@ -438,28 +479,18 @@ class TreeController(QObject):
             try:
                 open_fn()
             except Exception as e:
-                handle_system_error(None, e)
-            popup = CredentialPopup(ip, port, data["username"], data["password"])
-            self._active_popup = popup
-            popup.show()
+                self.system_error.emit(e)
+            self._show_credential_popup(ip, port, data["username"], data["password"])
             del data
 
-        def on_error(e: ApiError):
-            self.error_occurred.emit(e)
-
-        self._popup_worker.finished.connect(self.busy.stop)
-        self._popup_worker.success.connect(on_success)
-        self._popup_worker.error.connect(on_error)
-        self._popup_worker.start()
-
-    def _get_ip_by_server_id(self, server_id):
-        for b in self._data:
-            for s in b["servers"]:
-                if s["id"] == server_id:
-                    return s["ip"]
+        worker.finished.connect(self.busy.stop)
+        worker.success.connect(on_success)
+        worker.error.connect(self.error_occurred.emit)
+        self._launch(worker)
 
     def save_comment(self, item_type: str, server_id: int, port: int, comment: str):
-        # Сохраняет комментарий в БД в фоновом потоке, обновляет in-memory и UI.
+        # Сохраняет комментарий в БД в фоновом потоке.
+        # Данные и UI обновляются в GUI-потоке через сигнал _comment_saved.
         def _do():
             try:
                 if item_type == "server":
@@ -468,25 +499,29 @@ class TreeController(QObject):
                     self.api.ports.update_comment(server_id, port, comment)
 
                 now = datetime.now(timezone.utc).isoformat()
-                self._update_comment_in_data(item_type, server_id, port, comment, now)
-
-                self.detail_tree.update_comment_item(item_type, server_id, port, comment, now)
+                self._comment_saved.emit(item_type, server_id, port, comment, now)
 
             except Exception as e:
                 log.error("Ошибка сохранения комментария: %s", e)
 
         threading.Thread(target=_do, daemon=True).start()
 
+    def _on_comment_saved(self, item_type, server_id, port, comment, now):
+        self._update_comment_in_data(item_type, server_id, port, comment, now)
+        self.detail_tree.update_comment_item(item_type, server_id, port, comment, now)
+
     def _update_comment_in_data(self, item_type, server_id, port, comment, now):
-        for b in self._data:
-            for s in b["servers"]:
-                if item_type == "server" and s["id"] == server_id:
-                    s["comment"] = comment or None
-                    s["comment_updated_at"] = now
-                    return
-                if item_type == "port" and s["id"] == server_id:
-                    for p in s["ports"]:
-                        if p["port"] == port:
-                            p["comment"] = comment or None
-                            p["comment_updated_at"] = now
-                            return
+        server = self._servers_by_id.get(server_id)
+        if server is None:
+            return
+
+        if item_type == "server":
+            server["comment"] = comment or None
+            server["comment_updated_at"] = now
+            return
+
+        for p in server.get("ports", []):
+            if p["port"] == port:
+                p["comment"] = comment or None
+                p["comment_updated_at"] = now
+                return

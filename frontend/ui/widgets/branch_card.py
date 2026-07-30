@@ -19,15 +19,15 @@ class BranchCard(QFrame):
     double_clicked = pyqtSignal(str)
 
     _BG = {
-        "ok":      "#0d2218",
+        "ok": "#0d2218",
         "partial": "#252000",
-        "down":    "#280d0d",
+        "down": "#280d0d",
         "unknown": "#1a2730",
     }
     _BORDER = {
-        "ok":      "#1a4a30",
+        "ok": "#1a4a30",
         "partial": "#4a3800",
-        "down":    "#4a1515",
+        "down": "#4a1515",
         "unknown": "#263545",
     }
 
@@ -80,7 +80,7 @@ class BranchCard(QFrame):
         if not parts:
             parts.append(f'<span style="color:#607d8b">{unknown}</span>')
 
-        self._lbl_stats.setText('&nbsp;&nbsp;'.join(parts))
+        self._lbl_stats.setText("&nbsp;&nbsp;".join(parts))
 
         if down > 0 and up == 0 and partial == 0:
             state = "down"

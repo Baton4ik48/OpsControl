@@ -5,6 +5,7 @@ from PyQt6.QtGui import QIcon
 
 from core.paths import ICONS_DIR
 
+
 class Sidebar(QFrame):
     reload_clicked = pyqtSignal()
     refresh_all_clicked = pyqtSignal()

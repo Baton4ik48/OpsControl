@@ -19,12 +19,15 @@ from PyQt6.QtCore import Qt
 
 from core.paths import ICONS_DIR, path_to_file_uri
 
+
 def _extract_type(name: str) -> str:
     return re.sub(r"\s*\([^)]*\)\s*$", "", name).strip()
+
 
 def _extract_project(name: str) -> str | None:
     m = re.search(r"\(([^)]+)\)\s*$", name)
     return m.group(1).strip() if m else None
+
 
 def _build_stats(data: list) -> dict:
     branches: list[str] = []
@@ -63,6 +66,7 @@ def _build_stats(data: list) -> dict:
         "by_branch": by_branch,
     }
 
+
 def _fmt_dt(value: str | None) -> str:
     if not value:
         return "нет данных"
@@ -74,9 +78,11 @@ def _fmt_dt(value: str | None) -> str:
     except Exception:
         return value
 
+
 def _icon_img(name: str) -> str:
     path = os.path.join(ICONS_DIR, name)
     return f'<img src="{path_to_file_uri(path)}" width="13" height="13">'
+
 
 def _port_row(state, last_success, last_failure) -> list[str]:
     """Строки HTML-таблицы для одного порта — идентично device_tree."""
@@ -117,6 +123,7 @@ def _port_row(state, last_success, last_failure) -> list[str]:
             rows.append('<tr><td colspan="2">Статус неизвестен</td></tr>')
     return rows
 
+
 def _build_tooltip(server: dict) -> str:
     # HTML-тултип с детализацией по всем портам сервера.
     rows = [
@@ -138,6 +145,7 @@ def _build_tooltip(server: dict) -> str:
         )
     return f'<table cellspacing="3">{"".join(rows)}</table>'
 
+
 def _server_status(ports: list) -> str:
     known = [p.get("is_up") for p in ports if p.get("is_up") is not None]
     if not known:
@@ -147,6 +155,7 @@ def _server_status(ports: list) -> str:
     if all(s is False for s in known):
         return "down"
     return "partial"
+
 
 _BG = "#0f1b1e"
 _CARD = "#111f25"
@@ -166,6 +175,7 @@ _STATUS: dict[str, tuple[str, str, str]] = {
     "partial": ("#2a1a0d", "#7d5a2e", "#ffcc80"),
     "unknown": ("#1a2e36", "#2a5566", "#90a4ae"),
 }
+
 
 class _CollapsibleSection(QFrame):
     def __init__(
@@ -222,11 +232,13 @@ class _CollapsibleSection(QFrame):
     def add(self, widget: QWidget):
         self._body_layout.addWidget(widget)
 
+
 def _divider() -> QFrame:
     f = QFrame()
     f.setFrameShape(QFrame.Shape.HLine)
     f.setStyleSheet(f"color:{_BORDER}; background:{_BORDER}; max-height:1px;")
     return f
+
 
 def _h_label(text: str, size: int = 11, color: str = _ACCENT2) -> QLabel:
     lbl = QLabel(text)
@@ -236,34 +248,36 @@ def _h_label(text: str, size: int = 11, color: str = _ACCENT2) -> QLabel:
     )
     return lbl
 
+
 def _plain_label(text: str, color: str = _TEXT_DIM) -> QLabel:
     lbl = QLabel(text)
     lbl.setStyleSheet(f"color:{color}; background:transparent; font-size:9pt;")
     return lbl
+
 
 def _branch_label(text: str) -> QLabel:
     lbl = QLabel(f"  •  {text}")
     lbl.setStyleSheet(f"color:{_TEXT_DIM}; background:transparent; font-size:9pt;")
     return lbl
 
+
 def _status_tag(server: dict) -> QLabel:
     # Плашка оборудования: цвет по статусу, тултип с детализацией по портам.
     status = _server_status(server["ports"])
     bg, bor, txt = _STATUS[status]
     lbl = QLabel(server["type"])
-    lbl.setStyleSheet(
-        f"""
+    lbl.setStyleSheet(f"""
         QLabel {{
             background-color:{bg}; color:{txt};
             border:1px solid {bor}; border-radius:3px;
             padding:3px 8px; font-size:9pt;
         }}
-    """
-    )
+    """)
     lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
     if server["ports"]:
         lbl.setToolTip(_build_tooltip(server))
     return lbl
+
 
 def _equipment_grid(servers: list[dict], cols: int = 3) -> QWidget:
     w = QWidget()
@@ -285,6 +299,7 @@ def _equipment_grid(servers: list[dict], cols: int = 3) -> QWidget:
             grid.addWidget(spacer, len(servers) // cols, col)
 
     return w
+
 
 class StatisticsDialog(QDialog):
     def __init__(self, data: list | None, parent=None):

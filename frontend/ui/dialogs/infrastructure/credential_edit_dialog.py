@@ -13,16 +13,18 @@ from PyQt6.QtGui import QIcon
 import os
 
 from core.paths import ICONS_DIR
-from core.api.credentials import CredentialsApi
 from core.api.base import ApiError
+from core.workers.function_worker import FunctionWorker
+
 
 class CredentialEditDialog(QDialog):
-    def __init__(self, server_id: int, port: int, parent=None):
+    def __init__(self, server_id: int, port: int, credentials_api, parent=None):
         super().__init__(parent)
 
         self.server_id = server_id
         self.port = port
-        self._api = CredentialsApi()
+        self._api = credentials_api
+        self._worker: FunctionWorker | None = None
 
         self.setWindowTitle(f"Учётные данные — порт {port}")
         self.setWindowIcon(QIcon(os.path.join(ICONS_DIR, "key_icon.png")))
@@ -60,6 +62,9 @@ class CredentialEditDialog(QDialog):
         layout.addLayout(buttons)
 
     def _on_save(self):
+        if self._worker is not None and self._worker.isRunning():
+            return
+
         username = self.username_input.text().strip()
         password = self.password_input.text().strip()
 
@@ -70,16 +75,20 @@ class CredentialEditDialog(QDialog):
         self.save_btn.setEnabled(False)
         self.save_btn.setText("Сохранение...")
 
-        try:
-            self._api.upsert(
-                server_id=self.server_id,
-                port=self.port,
-                username=username,
-                password=password,
-            )
-            self.accept()
+        # Сетевой вызов — в фоне, чтобы не замораживать окно
+        self._worker = FunctionWorker(
+            self._api.upsert,
+            server_id=self.server_id,
+            port=self.port,
+            username=username,
+            password=password,
+        )
+        self._worker.success.connect(lambda _: self.accept())
+        self._worker.error.connect(self._on_save_error)
+        self._worker.start()
 
-        except ApiError as e:
-            QMessageBox.critical(self, "Ошибка", e.message)
-            self.save_btn.setEnabled(True)
-            self.save_btn.setText("Сохранить")
+    def _on_save_error(self, e: Exception):
+        message = e.message if isinstance(e, ApiError) else str(e)
+        QMessageBox.critical(self, "Ошибка", message)
+        self.save_btn.setEnabled(True)
+        self.save_btn.setText("Сохранить")

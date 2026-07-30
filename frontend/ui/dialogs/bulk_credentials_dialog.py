@@ -1,28 +1,38 @@
 import os
 
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QFormLayout, QHBoxLayout,
-    QLineEdit, QPushButton, QLabel, QListWidget,
-    QListWidgetItem, QMessageBox, QProgressBar,
+    QDialog,
+    QVBoxLayout,
+    QFormLayout,
+    QHBoxLayout,
+    QLineEdit,
+    QPushButton,
+    QLabel,
+    QListWidget,
+    QListWidgetItem,
+    QMessageBox,
+    QProgressBar,
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QIcon, QColor
 
 from core.paths import ICONS_DIR
-from core.api.credentials import CredentialsApi
 from core.api.base import ApiError
+
 
 class _UpsertWorker(QThread):
     # Последовательно записывает учётные данные для каждого порта в Vault.
-    port_done = pyqtSignal(int, int, str, str)  # server_id, port, status("ok"/"error"), message
+    port_done = pyqtSignal(
+        int, int, str, str
+    )  # server_id, port, status("ok"/"error"), message
     finished_all = pyqtSignal()
 
-    def __init__(self, ports: list[tuple[int, int]], username: str, password: str):
+    def __init__(self, api, ports: list[tuple[int, int]], username: str, password: str):
         super().__init__()
-        self._ports = ports          # [(server_id, port), ...]
+        self._api = api
+        self._ports = ports  # [(server_id, port), ...]
         self._username = username
         self._password = password
-        self._api = CredentialsApi()
 
     def run(self):
         for server_id, port in self._ports:
@@ -40,15 +50,17 @@ class _UpsertWorker(QThread):
                 self.port_done.emit(server_id, port, "error", str(e))
         self.finished_all.emit()
 
+
 class BulkCredentialsDialog(QDialog):
     # Пакетное обновление учётных данных в Vault для нескольких портов.
     # Вводишь логин + пароль один раз — сохраняется во все выбранные порты.
 
-    def __init__(self, ports: list[tuple[int, int]], parent=None):
+    def __init__(self, ports: list[tuple[int, int]], credentials_api, parent=None):
         # ports — список (server_id, port_number)
         super().__init__(parent)
 
         self._ports = ports
+        self._api = credentials_api
         self._worker: _UpsertWorker | None = None
         self._done = 0
         self._ok = 0
@@ -149,7 +161,7 @@ class BulkCredentialsDialog(QDialog):
         self._prog_bar.setVisible(True)
         self._result_list.setVisible(True)
 
-        self._worker = _UpsertWorker(self._ports, username, password)
+        self._worker = _UpsertWorker(self._api, self._ports, username, password)
         self._worker.port_done.connect(self._on_port_done)
         self._worker.finished_all.connect(self._on_all_done)
         self._worker.start()

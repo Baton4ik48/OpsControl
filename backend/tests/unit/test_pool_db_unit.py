@@ -7,7 +7,7 @@ import app.services.db.pool_db as pool_module
 from app.services.db.pool_db import (
     init_pool,
     close_pool,
-    _execute,
+    execute,
     ServiceUnavailableError,
 )
 
@@ -125,7 +125,7 @@ def test_execute_success(monkeypatch):
     mock_pool.getconn.return_value = mock_conn
     monkeypatch.setattr(pool_module, "pool", mock_pool)
 
-    result = _execute(lambda conn: "ok")
+    result = execute(lambda conn: "ok")
 
     assert result == "ok"
     mock_pool.putconn.assert_called_once_with(mock_conn)
@@ -137,7 +137,7 @@ def test_execute_pool_none_init_fails(monkeypatch):
     monkeypatch.setattr(pool_module, "init_pool", lambda: None)
 
     with pytest.raises(ServiceUnavailableError):
-        _execute(lambda conn: "ok")
+        execute(lambda conn: "ok")
 
 
 def test_execute_pool_none_init_succeeds(monkeypatch):
@@ -152,7 +152,7 @@ def test_execute_pool_none_init_succeeds(monkeypatch):
     monkeypatch.setattr(pool_module, "pool", None)
     monkeypatch.setattr(pool_module, "init_pool", fake_init)
 
-    result = _execute(lambda conn: "restored")
+    result = execute(lambda conn: "restored")
 
     assert result == "restored"
 
@@ -165,7 +165,7 @@ def test_execute_reraises_service_unavailable(monkeypatch):
     monkeypatch.setattr(pool_module, "pool", mock_pool)
 
     with pytest.raises(ServiceUnavailableError):
-        _execute(lambda conn: (_ for _ in ()).throw(ServiceUnavailableError("fail")))
+        execute(lambda conn: (_ for _ in ()).throw(ServiceUnavailableError("fail")))
 
 
 def test_execute_undefined_table_raises_service_unavailable(monkeypatch):
@@ -178,7 +178,7 @@ def test_execute_undefined_table_raises_service_unavailable(monkeypatch):
     err = pg_errors.UndefinedTable("no such table")
 
     with pytest.raises(ServiceUnavailableError, match="не инициализирована"):
-        _execute(lambda conn: (_ for _ in ()).throw(err))
+        execute(lambda conn: (_ for _ in ()).throw(err))
 
 
 def test_execute_operational_error_exhausted(monkeypatch):
@@ -190,7 +190,7 @@ def test_execute_operational_error_exhausted(monkeypatch):
     monkeypatch.setattr(pool_module, "init_pool", lambda: None)
 
     with pytest.raises(ServiceUnavailableError):
-        _execute(lambda conn: "ok", retries=1)
+        execute(lambda conn: "ok", retries=1)
 
 
 def test_execute_interface_error_exhausted(monkeypatch):
@@ -202,7 +202,7 @@ def test_execute_interface_error_exhausted(monkeypatch):
     monkeypatch.setattr(pool_module, "init_pool", lambda: None)
 
     with pytest.raises(ServiceUnavailableError):
-        _execute(lambda conn: "ok", retries=0)
+        execute(lambda conn: "ok", retries=0)
 
 
 def test_execute_putconn_called_even_on_fn_exception(monkeypatch):
@@ -213,6 +213,6 @@ def test_execute_putconn_called_even_on_fn_exception(monkeypatch):
     monkeypatch.setattr(pool_module, "pool", mock_pool)
 
     with pytest.raises(ServiceUnavailableError):
-        _execute(lambda conn: (_ for _ in ()).throw(ServiceUnavailableError("x")))
+        execute(lambda conn: (_ for _ in ()).throw(ServiceUnavailableError("x")))
 
     mock_pool.putconn.assert_called_once_with(mock_conn)

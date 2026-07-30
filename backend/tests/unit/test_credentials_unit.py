@@ -268,7 +268,7 @@ def test_show_credentials_throttle_block(settings, throttle):
 def test_rotate_success(verify, get_path, get_vault_client, touch_updated):
     vault = Mock()
     vault._get_backend_token.return_value = "backend-token"
-    vault.read_kv_v2.return_value = {"username": "user"}
+    vault.read_kv_v2_as_backend.return_value = {"username": "user"}
     get_vault_client.return_value = vault
     get_path.return_value = "credentials/servers/1/22"
 
@@ -291,7 +291,7 @@ def test_rotate_success_with_mnemonic(
     """Мнемоника сохраняется в Vault при передаче"""
     vault = Mock()
     vault._get_backend_token.return_value = "token"
-    vault.read_kv_v2.return_value = {"username": "user"}
+    vault.read_kv_v2_as_backend.return_value = {"username": "user"}
     get_vault_client.return_value = vault
     get_path.return_value = "credentials/servers/1/22"
 
@@ -329,7 +329,7 @@ def test_rotate_read_error(verify, get_path, get_vault_client):
     """VaultReadError при чтении текущих кред → RotateError"""
     vault = Mock()
     vault._get_backend_token.return_value = "token"
-    vault.read_kv_v2.side_effect = VaultReadError("read fail")
+    vault.read_kv_v2_as_backend.side_effect = VaultReadError("read fail")
     get_vault_client.return_value = vault
     get_path.return_value = "credentials/servers/1/22"
 
@@ -344,7 +344,7 @@ def test_rotate_write_error(verify, get_path, get_vault_client):
     """VaultReadError при записи нового пароля → RotateError"""
     vault = Mock()
     vault._get_backend_token.return_value = "token"
-    vault.read_kv_v2.return_value = {"username": "user"}
+    vault.read_kv_v2_as_backend.return_value = {"username": "user"}
     vault.write_kv_v2.side_effect = VaultReadError("write fail")
     get_vault_client.return_value = vault
     get_path.return_value = "credentials/servers/1/22"
@@ -363,7 +363,7 @@ def test_rotate_touch_not_called_on_write_error(
     """Если write в Vault упал → touch_credentials_updated_at не вызывается"""
     vault = Mock()
     vault._get_backend_token.return_value = "token"
-    vault.read_kv_v2.return_value = {"username": "user"}
+    vault.read_kv_v2_as_backend.return_value = {"username": "user"}
     vault.write_kv_v2.side_effect = VaultReadError()
     get_vault_client.return_value = vault
     get_path.return_value = "credentials/servers/1/22"

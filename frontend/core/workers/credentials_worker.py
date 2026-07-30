@@ -1,5 +1,6 @@
 from PyQt6.QtCore import QThread, pyqtSignal
-from core.ssh_rotate_linux import _wipe
+from core.utils.secure import wipe
+
 
 class CredentialsWorker(QThread):
     success = pyqtSignal(dict)
@@ -26,7 +27,7 @@ class CredentialsWorker(QThread):
             return
         finally:
             # Перезаписываем мастер-пароль нулями сразу после запроса
-            _wipe(self.master_password)
+            wipe(self.master_password)
             self.master_password = ""
 
         self.success.emit(data)

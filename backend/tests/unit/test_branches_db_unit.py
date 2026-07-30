@@ -22,7 +22,7 @@ def _make_conn(fetchone=None, fetchall=None, rowcount=1):
 
 def _patch(monkeypatch, conn):
     monkeypatch.setattr(
-        "app.services.db.branches_db._execute",
+        "app.services.db.branches_db.execute",
         lambda fn, retries=1: fn(conn),
     )
 
@@ -49,7 +49,7 @@ def test_load_branches_empty(monkeypatch):
 
 def test_load_branches_db_unavailable(monkeypatch):
     monkeypatch.setattr(
-        "app.services.db.branches_db._execute",
+        "app.services.db.branches_db.execute",
         lambda fn, retries=1: (_ for _ in ()).throw(ServiceUnavailableError()),
     )
     with pytest.raises(ServiceUnavailableError):
@@ -72,7 +72,7 @@ def test_create_branch_returns_new_id(monkeypatch):
 
 def test_create_branch_db_unavailable(monkeypatch):
     monkeypatch.setattr(
-        "app.services.db.branches_db._execute",
+        "app.services.db.branches_db.execute",
         lambda fn, retries=1: (_ for _ in ()).throw(ServiceUnavailableError()),
     )
     with pytest.raises(ServiceUnavailableError):
@@ -102,7 +102,7 @@ def test_update_branch_not_found(monkeypatch):
 
 def test_update_branch_db_unavailable(monkeypatch):
     monkeypatch.setattr(
-        "app.services.db.branches_db._execute",
+        "app.services.db.branches_db.execute",
         lambda fn, retries=1: (_ for _ in ()).throw(ServiceUnavailableError()),
     )
     with pytest.raises(ServiceUnavailableError):
@@ -132,7 +132,7 @@ def test_delete_branch_not_found(monkeypatch):
 
 def test_delete_branch_db_unavailable(monkeypatch):
     monkeypatch.setattr(
-        "app.services.db.branches_db._execute",
+        "app.services.db.branches_db.execute",
         lambda fn, retries=1: (_ for _ in ()).throw(ServiceUnavailableError()),
     )
     with pytest.raises(ServiceUnavailableError):

@@ -11,23 +11,26 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 from controllers.infrastructure_controller import InfrastructureController
 from ui.widgets.busy_overlay import BusyOverlay
-from ui.dialogs.infrastructureDialog.infrastructure_tree import InfrastructureTree
-from ui.dialogs.infrastructureDialog.server_form import is_valid_host
+from ui.dialogs.infrastructure.infrastructure_tree import InfrastructureTree
+from ui.dialogs.infrastructure.server_form import is_valid_host
 from ui.context_menus.infrastructure_context_menu import InfrastructureContextMenu
-from ui.dialogs.infrastructureDialog.server_form import ServerForm
-from ui.dialogs.infrastructureDialog.port_form import PortForm
-from ui.dialogs.infrastructureDialog.branch_form import BranchForm
+from ui.dialogs.infrastructure.server_form import ServerForm
+from ui.dialogs.infrastructure.port_form import PortForm
+from ui.dialogs.infrastructure.branch_form import BranchForm
 from ui.dialogs.bulk_credentials_dialog import BulkCredentialsDialog
 
+
 class InfrastructureManagerDialog(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, api, parent=None):
         super().__init__(parent)
+
+        self._api = api
 
         self.setWindowTitle("Управление инфраструктурой")
         self.resize(1100, 600)
 
         self.busy = BusyOverlay(self)
-        self.controller = InfrastructureController(self, self.busy)
+        self.controller = InfrastructureController(self, self.busy, api)
 
         main_layout = QVBoxLayout(self)
         splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -68,7 +71,7 @@ class InfrastructureManagerDialog(QDialog):
 
         self.branch_form = BranchForm()
         self.server_form = ServerForm()
-        self.port_form = PortForm()
+        self.port_form = PortForm(api.credentials)
 
         self.stack.addWidget(self.branch_form)
         self.stack.addWidget(self.server_form)
@@ -208,7 +211,7 @@ class InfrastructureManagerDialog(QDialog):
 
     def bulk_update_credentials(self, ports: list[tuple[int, int]]):
         """Открывает диалог пакетного обновления учётных данных для выбранных портов."""
-        dlg = BulkCredentialsDialog(ports, parent=self)
+        dlg = BulkCredentialsDialog(ports, self._api.credentials, parent=self)
         if dlg.exec():
             # Обновляем дерево чтобы показать обновлённые ✔/✖ иконки
             self.controller.load_tree_async()

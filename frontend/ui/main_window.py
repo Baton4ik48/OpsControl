@@ -1,8 +1,15 @@
 import os
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QMessageBox, QApplication,
-    QTabWidget, QStackedWidget, QPushButton, QLabel,
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QMessageBox,
+    QApplication,
+    QTabWidget,
+    QStackedWidget,
+    QPushButton,
+    QLabel,
 )
 from PyQt6.QtGui import QIcon
 from PyQt6.QtCore import QTimer
@@ -11,7 +18,7 @@ from core.paths import ICONS_DIR
 from core.config.user_settings import UserSettings
 from core.api import ApiClient
 from core.configuration import settings as app_settings
-from ui.error_handler import handle_api_error
+from ui.error_handler import handle_api_error, handle_system_error
 from core.api.base import ApiError
 from ui.managers.busy_manager import BusyManager
 
@@ -26,6 +33,8 @@ from ui.dialogs.settings_dialog import SettingsDialog
 from ui.dialogs.password_rotation_dialog import PasswordRotationDialog
 from ui.dialogs.statistics_dialog import StatisticsDialog
 from ui.dialogs.batch_rotation_dialog import BatchRotationDialog
+from ui.dialogs.credentials_dialog import CredentialsDialog
+from ui.dialogs.credential_popup import CredentialPopup
 
 
 class MainWindow(QWidget):
@@ -37,11 +46,13 @@ class MainWindow(QWidget):
         self.resize(1200, 700)
 
         self.user_settings = UserSettings()
+        self.api = ApiClient()
+        self._popups: list[CredentialPopup] = []
 
         main_layout = QVBoxLayout(self)
         body = QHBoxLayout()
 
-        self.menu = ToolsMenu(self.user_settings)
+        self.menu = ToolsMenu(self.user_settings, self.api)
         self.sidebar = Sidebar()
         main_layout.setMenuBar(self.menu)
 
@@ -80,7 +91,7 @@ class MainWindow(QWidget):
         self.detail_tree = DeviceTree()
         detail_layout.addWidget(self.detail_tree)
 
-        self.content_stack.addWidget(self.dash_tabs)      # index 0
+        self.content_stack.addWidget(self.dash_tabs)  # index 0
         self.content_stack.addWidget(self.detail_widget)  # index 1
 
         body.addWidget(self.sidebar)
@@ -92,12 +103,16 @@ class MainWindow(QWidget):
         self.busy.started.connect(self.busy_overlay.show_message)
         self.busy.finished.connect(self.busy_overlay.hide_overlay)
 
-        self.api = ApiClient()
         self.controller = TreeController(
             self.api,
-            self.dash_main, self.dash_xclarity, self.dash_ups,
+            self.dash_main,
+            self.dash_xclarity,
+            self.dash_ups,
             self.detail_tree,
-            self.user_settings, self.busy,
+            self.user_settings,
+            self.busy,
+            ask_master_password=self._ask_master_password,
+            show_credential_popup=self._show_credential_popup,
         )
 
         self.auto_refresh_timer = QTimer(self)
@@ -117,6 +132,7 @@ class MainWindow(QWidget):
         self.controller.loaded.connect(self.on_tree_loaded)
         self.controller.loaded.connect(self._update_status_counts)
         self.controller.error_occurred.connect(self._on_api_error)
+        self.controller.system_error.connect(self._on_system_error)
         self.controller.checking_started.connect(
             lambda: self.sidebar.set_actions_enabled(False)
         )
@@ -131,11 +147,19 @@ class MainWindow(QWidget):
         self.dash_ups.branch_selected.connect(self._on_branch_selected)
 
         # Сигналы дерева в детальном виде
-        self.detail_tree.refresh_branch_requested.connect(self.controller.refresh_branch)
-        self.detail_tree.refresh_server_requested.connect(self.controller.refresh_server)
+        self.detail_tree.refresh_branch_requested.connect(
+            self.controller.refresh_branch
+        )
+        self.detail_tree.refresh_server_requested.connect(
+            self.controller.refresh_server
+        )
         self.detail_tree.refresh_port_requested.connect(self.controller.refresh_port)
-        self.detail_tree.open_protocol_requested.connect(self.controller.connect_protocol)
-        self.detail_tree.show_credentials_requested.connect(self.controller.show_credentials)
+        self.detail_tree.open_protocol_requested.connect(
+            self.controller.connect_protocol
+        )
+        self.detail_tree.show_credentials_requested.connect(
+            self.controller.show_credentials
+        )
         self.detail_tree.rotate_password_requested.connect(self._open_password_rotation)
         self.detail_tree.comment_changed.connect(self.controller.save_comment)
 
@@ -169,6 +193,24 @@ class MainWindow(QWidget):
     def _on_api_error(self, error: ApiError):
         handle_api_error(self, error)
 
+    def _on_system_error(self, error: Exception):
+        handle_system_error(self, error)
+
+    def _ask_master_password(self, ip: str, port: int, mode: str, on_submit):
+        # Колбэк для контроллера: показывает диалог мастер-пароля
+        # и передаёт введённое значение в on_submit.
+        dlg = CredentialsDialog(ip, port, mode=mode)
+        dlg.submitted.connect(on_submit)
+        dlg.exec()
+
+    def _show_credential_popup(self, ip: str, port: int, username: str, password: str):
+        # Колбэк для контроллера: окно с учётными данными.
+        # Ссылки храним, иначе popup без родителя сразу уничтожится.
+        popup = CredentialPopup(ip, port, username, password)
+        self._popups = [p for p in self._popups if p.isVisible()]
+        self._popups.append(popup)
+        popup.show()
+
     def reload(self):
         self.sidebar.set_actions_enabled(False)
         self.content_stack.setCurrentIndex(0)
@@ -193,42 +235,26 @@ class MainWindow(QWidget):
             self.auto_refresh_timer.start(interval * 1000)
 
     def _update_status_counts(self, _tab_index=None):
-        data = self.controller._active_data
-        if not data:
-            self.menu.update_server_counts(0, 0, 0)
-            return
-        up = partial = down = 0
-        for branch in data:
-            for server in branch.get("servers", []):
-                ports = server.get("ports", [])
-                if not ports:
-                    continue
-                checked = [p for p in ports if p.get("is_up") is not None]
-                if not checked:
-                    continue
-                has_up = any(p["is_up"] is True for p in checked)
-                has_down = any(p["is_up"] is False for p in checked)
-                if has_up and has_down:
-                    partial += 1
-                elif has_up:
-                    up += 1
-                else:
-                    down += 1
+        up, partial, down = self.controller.status_counts()
         self.menu.update_server_counts(up, partial, down)
 
     def _open_batch_rotation(self):
-        data = self.controller._data
+        data = self.controller.data
         if not data:
-            QMessageBox.information(self, "Нет данных", "Сначала загрузите топологию сети.")
+            QMessageBox.information(
+                self, "Нет данных", "Сначала загрузите топологию сети."
+            )
             return
-        dlg = BatchRotationDialog(data, parent=self)
+        dlg = BatchRotationDialog(data, self.api.credentials, parent=self)
         dlg.exec()
 
     def _open_statistics(self):
-        dlg = StatisticsDialog(self.controller._data, parent=self)
+        dlg = StatisticsDialog(self.controller.data, parent=self)
         dlg.exec()
 
-    def _open_password_rotation(self, server_id: int, ip: str, device_type: str = "linux"):
+    def _open_password_rotation(
+        self, server_id: int, ip: str, device_type: str = "linux"
+    ):
         if device_type == "windows":
             QMessageBox.information(
                 self,
@@ -248,7 +274,12 @@ class MainWindow(QWidget):
             return
         admin_login = self.user_settings.get("admin_login") or ""
         dlg = PasswordRotationDialog(
-            server_id, ip, admin_login, device_type=device_type, parent=self
+            server_id,
+            ip,
+            admin_login,
+            self.api.credentials,
+            device_type=device_type,
+            parent=self,
         )
         dlg.exec()
 

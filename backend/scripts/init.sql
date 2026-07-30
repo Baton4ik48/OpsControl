@@ -41,8 +41,18 @@ CREATE TABLE IF NOT EXISTS credentials (
 -- =========================================================
 -- РОЛЬ ДЛЯ ПРИЛОЖЕНИЯ
 -- =========================================================
-CREATE ROLE app_role;
-GRANT app_role TO login_opscontrol;
+-- app_role — общий набор прав; его получают динамические пользователи
+-- из Vault (см. creation_statements в vault-init*.sh) и статический
+-- пользователь приложения (current_user — тот, под кем выполняется скрипт;
+-- имя в разных окружениях разное: staging — login_opscontrol, CI — свой).
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'app_role') THEN
+        CREATE ROLE app_role;
+    END IF;
+    EXECUTE format('GRANT app_role TO %I', current_user);
+END
+$$;
 
 -- =========================================================
 -- ПРАВА ДЛЯ app_role

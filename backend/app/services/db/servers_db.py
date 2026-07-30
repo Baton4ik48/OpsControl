@@ -1,4 +1,4 @@
-from app.services.db.pool_db import _execute
+from app.services.db.pool_db import execute
 
 
 def load_servers(branch_id: int):
@@ -17,7 +17,7 @@ def load_servers(branch_id: int):
         cur.close()
         return rows
 
-    return _execute(work)
+    return execute(work)
 
 
 def create_server(
@@ -38,7 +38,7 @@ def create_server(
         cur.close()
         return new_id
 
-    return _execute(work)
+    return execute(work)
 
 
 def update_server(
@@ -62,7 +62,7 @@ def update_server(
         cur.close()
         return affected
 
-    return _execute(work)
+    return execute(work)
 
 
 def update_server_comment(server_id: int, comment: str) -> int:
@@ -82,7 +82,7 @@ def update_server_comment(server_id: int, comment: str) -> int:
         cur.close()
         return affected
 
-    return _execute(work)
+    return execute(work)
 
 
 def delete_server(server_id: int) -> int:
@@ -94,4 +94,4 @@ def delete_server(server_id: int) -> int:
         cur.close()
         return affected
 
-    return _execute(work)
+    return execute(work)

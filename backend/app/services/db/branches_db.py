@@ -1,4 +1,4 @@
-from app.services.db.pool_db import _execute
+from app.services.db.pool_db import execute
 
 
 def load_branches():
@@ -9,7 +9,7 @@ def load_branches():
         cur.close()
         return rows
 
-    return _execute(work)
+    return execute(work)
 
 
 def create_branch(name: str) -> int:
@@ -21,7 +21,7 @@ def create_branch(name: str) -> int:
         cur.close()
         return new_id
 
-    return _execute(work)
+    return execute(work)
 
 
 def update_branch(branch_id: int, new_name: str) -> int:
@@ -41,7 +41,7 @@ def update_branch(branch_id: int, new_name: str) -> int:
         cur.close()
         return affected
 
-    return _execute(work)
+    return execute(work)
 
 
 def delete_branch(branch_id: int) -> int:
@@ -53,4 +53,4 @@ def delete_branch(branch_id: int) -> int:
         cur.close()
         return affected
 
-    return _execute(work)
+    return execute(work)
