@@ -18,6 +18,7 @@ from PyQt6.QtGui import QIcon, QFont, QColor, QBrush
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QSize, QModelIndex
 
 from core.paths import ICONS_DIR, path_to_file_uri
+from core.ssh.diagnostics import CHECKS as DIAGNOSTIC_CHECKS
 from ui.context_menus.device_tree_context_menu import DeviceTreeContextMenu
 
 ROLE_TYPE = Qt.ItemDataRole.UserRole + 1
@@ -250,6 +251,11 @@ class DeviceTree(QTreeWidget):
         self.icon_web = QIcon(os.path.join(ICONS_DIR, "web_icon.png"))
         self.icon_external = QIcon(os.path.join(ICONS_DIR, "external_icon.png"))
         self.icon_key = QIcon(os.path.join(ICONS_DIR, "key_icon.png"))
+        self.icon_diagnostics = QIcon(os.path.join(ICONS_DIR, "diagnostics_icon.png"))
+        self.diagnostic_icons = {
+            key: QIcon(os.path.join(ICONS_DIR, icon_file))
+            for key, (_label, _command, icon_file) in DIAGNOSTIC_CHECKS.items()
+        }
 
         header = self.header()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)

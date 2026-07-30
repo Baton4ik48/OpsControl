@@ -354,7 +354,7 @@ class TreeController(QObject):
                 return
             label = "Своя команда"
         else:
-            label, command = DIAGNOSTIC_CHECKS[check_key]
+            label, command, _icon_file = DIAGNOSTIC_CHECKS[check_key]
 
         self._ask_master_password(
             ip,

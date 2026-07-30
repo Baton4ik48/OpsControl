@@ -96,10 +96,11 @@ class DeviceTreeContextMenu:
         menu.exec(self.tree.viewport().mapToGlobal(pos))
 
     def _add_diagnostics_menu(self, menu, server_id, port, ip):
-        diag_menu = menu.addMenu("Диагностика")
+        diag_menu = menu.addMenu(self.tree.icon_diagnostics, "Диагностика")
 
-        for key, (label, _command) in DIAGNOSTIC_CHECKS.items():
-            action = diag_menu.addAction(label)
+        for key, (label, _command, _icon_file) in DIAGNOSTIC_CHECKS.items():
+            icon = self.tree.diagnostic_icons[key]
+            action = diag_menu.addAction(icon, label)
             action.triggered.connect(
                 lambda checked=False, k=key: self.tree.run_diagnostic_requested.emit(
                     server_id, port, ip, k

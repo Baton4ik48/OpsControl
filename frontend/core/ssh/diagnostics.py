@@ -7,18 +7,21 @@ DEFAULT_TIMEOUT = 10
 CUSTOM_CHECK_KEY = "__custom__"
 
 # Фиксированный набор read-only проверок для линукс-серверов (порт 22).
-# key -> (человекочитаемое имя, shell-команда). Только чтение — ничего не
-# меняет на сервере.
-CHECKS: dict[str, tuple[str, str]] = {
-    "os_release": ("Версия ОС / ядро", "cat /etc/os-release; uname -r"),
-    "uptime": ("Аптайм", "uptime"),
-    "disk": ("Диск", "df -h"),
-    "memory": ("Память", "free -h"),
-    "accounts": ("Локальные учётки", "awk -F: '$3>=1000{print $1, $3}' /etc/passwd"),
-    "root_login": ("Root-логин по SSH", "sshd -T 2>/dev/null | grep -i permitrootlogin"),
-    "listening_ports": ("Слушающие порты", "ss -tlnp"),
-    "failed_units": ("Упавшие systemd-юниты", "systemctl --failed"),
-    "last_logins": ("Последние входы", "last -n 20"),
+# key -> (человекочитаемое имя, shell-команда, файл иконки в resources/icons).
+# Только чтение — ничего не меняет на сервере.
+CHECKS: dict[str, tuple[str, str, str]] = {
+    "os_release": ("Версия ОС / ядро", "cat /etc/os-release; uname -r", "os_release_image.png"),
+    "uptime": ("Аптайм", "uptime", "uptime_image.png"),
+    "disk": ("Диск", "df -h", "disk_image.png"),
+    "memory": ("Память", "free -h", "memory_image.png"),
+    "top": ("Топ процессов", "top -bn1 | head -n 20", "top_image.png"),
+    "accounts": (
+        "Локальные учётки",
+        "awk -F: '$3>=1000{print $1, $3}' /etc/passwd",
+        "accounts_image.png",
+    ),
+    "listening_ports": ("Слушающие порты", "ss -tlnp", "listening_ports_image.png"),
+    "failed_units": ("Упавшие systemd-юниты", "systemctl --failed", "failed_units_image.png"),
 }
 
 
