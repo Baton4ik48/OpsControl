@@ -2,15 +2,11 @@ import logging
 import re
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from app.api.errors import set_audit_context
 from app.services.ansible_session import issue_session, verify_session
-from app.services.credentials import (
-    verify_admin_password,
-    InvalidMasterPassword,
-    TooManyLoginAttempts,
-)
+from app.services.credentials import verify_admin_password
 from app.services.db.credentials_db import get_all_credentials_with_server_info
 from app.services.vault_client import get_vault_client, VaultReadError
 
@@ -38,6 +34,7 @@ def _require_session(request: Request) -> str:
         raise HTTPException(status_code=401, detail="Invalid or expired session token")
 
     return username
+
 
 _RU_TRANSLIT = {
     "а": "a", "б": "b", "в": "v", "г": "g", "д": "d", "е": "e", "ё": "e",
@@ -77,24 +74,11 @@ class AnsibleLoginRequest(BaseModel):
 @router.post("/ansible/login")
 def ansible_login(data: AnsibleLoginRequest, request: Request):
     client_ip, request_id = _ctx(request)
+    set_audit_context(request, "ansible_login", username=data.username)
 
-    try:
-        verify_admin_password(data.username, data.master_password, client_ip)
-    except TooManyLoginAttempts as e:
-        _audit.info(
-            "action=ansible_login username=%s result=throttled ip=%s request_id=%s",
-            data.username, client_ip, request_id,
-        )
-        return JSONResponse(
-            status_code=429,
-            content={"error_code": "LOGIN_THROTTLED", "retry_after": e.retry_after_seconds},
-        )
-    except InvalidMasterPassword:
-        _audit.info(
-            "action=ansible_login username=%s result=invalid_password ip=%s request_id=%s",
-            data.username, client_ip, request_id,
-        )
-        return JSONResponse(status_code=403, content={"error_code": "INVALID_MASTER_PASSWORD"})
+    # TooManyLoginAttempts/InvalidMasterPassword всплывают к глобальным
+    # хендлерам в app/api/errors.py (429/403 + audit о неудаче).
+    verify_admin_password(data.username, data.master_password, client_ip)
 
     token, ttl = issue_session(data.username)
     request.state.actor = data.username
@@ -115,7 +99,6 @@ def ansible_inventory(request: Request):
 
     rows = get_all_credentials_with_server_info()
     vault = get_vault_client()
-    backend_token = vault._get_backend_token()
 
     host_slugs: dict[str, str] = {}
     host_slugs_used: set[str] = set()
@@ -136,7 +119,7 @@ def ansible_inventory(request: Request):
             continue
 
         try:
-            secret = vault.read_kv_v2(backend_token, row["vault_path"])
+            secret = vault.read_kv_v2_as_backend(row["vault_path"])
         except VaultReadError:
             logger.warning(
                 "inventory: vault read skipped path=%s host=%s", row["vault_path"], display_name
