@@ -5,14 +5,35 @@ import threading
 import webbrowser
 import os
 
+# Старые Nateks-коммутаторы поддерживают только устаревшие SSH-алгоритмы,
+# которые современный OpenSSH-клиент на Linux по умолчанию отключил
+# (ssh-rsa host key, diffie-hellman-group1-sha1, 3des-cbc). Без явного
+# разрешения этих алгоритмов подключение с Linux падает ещё на этапе
+# согласования — на Windows проблемы не было, т.к. там PuTTY/KiTTY,
+# у которых легаси-алгоритмы включены по умолчанию.
+_NATEKS_LEGACY_SSH_OPTS = (
+    "-o HostKeyAlgorithms=+ssh-rsa "
+    "-o PubkeyAcceptedAlgorithms=+ssh-rsa "
+    "-o KexAlgorithms=+diffie-hellman-group1-sha1 "
+    "-o Ciphers=3des-cbc "
+    "-o PubkeyAuthentication=no"
+)
+
 
 class ProtocolLauncher:
 
     @staticmethod
-    def open(protocol: str, user: str, password: str, host: str, port: int):
+    def open(
+        protocol: str,
+        user: str,
+        password: str,
+        host: str,
+        port: int,
+        device_type: str = "linux",
+    ):
 
         if protocol == "ssh":
-            ProtocolLauncher._open_ssh(user, password, host, port)
+            ProtocolLauncher._open_ssh(user, password, host, port, device_type)
 
         elif protocol == "rdp":
             ProtocolLauncher._open_rdp(user, password, host)
@@ -24,7 +45,7 @@ class ProtocolLauncher:
             raise RuntimeError("UNSUPPORTED_PROTOCOL")
 
     @staticmethod
-    def _open_ssh(user, password, host, port):
+    def _open_ssh(user, password, host, port, device_type="linux"):
 
         if sys.platform.startswith("win"):
             client = shutil.which("kitty") or shutil.which("putty")
@@ -44,6 +65,12 @@ class ProtocolLauncher:
                 subprocess.Popen(cmd)
 
         elif sys.platform.startswith("linux"):
+            extra_opts = (
+                f" {_NATEKS_LEGACY_SSH_OPTS}"
+                if device_type in ("nateks", "natex")
+                else ""
+            )
+
             if user and password:
                 if not shutil.which("sshpass"):
                     raise RuntimeError("SSHPASS_NOT_FOUND")
@@ -53,7 +80,7 @@ class ProtocolLauncher:
                         "-e",
                         "bash",
                         "-c",
-                        f"sshpass -p '{password}' ssh -o StrictHostKeyChecking=no -p {port} {user}@{host}; exec bash",
+                        f"sshpass -p '{password}' ssh -o StrictHostKeyChecking=no{extra_opts} -p {port} {user}@{host}; exec bash",
                     ]
                 )
             else:
@@ -65,7 +92,7 @@ class ProtocolLauncher:
                         "-e",
                         "bash",
                         "-c",
-                        f"ssh -o StrictHostKeyChecking=no -p {port} {target}; exec bash",
+                        f"ssh -o StrictHostKeyChecking=no{extra_opts} -p {port} {target}; exec bash",
                     ]
                 )
 

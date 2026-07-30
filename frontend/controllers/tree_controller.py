@@ -410,6 +410,8 @@ class TreeController(QObject):
         external_apps = settings.get("external_apps") or []
         web_ports = settings.get("web_ports") or []
         has_creds = self._has_credentials(server_id, port)
+        server = self._servers_by_id.get(server_id)
+        device_type = server.get("device_type", "linux") if server else "linux"
 
         if port == 22:
             if has_creds:
@@ -418,11 +420,13 @@ class TreeController(QObject):
                     ip,
                     port,
                     "ssh",
-                    lambda mp: self._start_protocol_worker(server_id, port, mp, "ssh"),
+                    lambda mp: self._start_protocol_worker(
+                        server_id, port, mp, "ssh", device_type
+                    ),
                 )
             else:
                 # Нет пароля → сразу открываем SSH без кредов
-                self._open_or_report("ssh", None, None, ip, port)
+                self._open_or_report("ssh", None, None, ip, port, device_type)
             return
 
         if port == 3389:
@@ -476,14 +480,16 @@ class TreeController(QObject):
             # Нет пароля → просто открываем браузер
             self._open_or_report(scheme, None, None, ip, port)
 
-    def _open_or_report(self, protocol, username, password, ip, port):
+    def _open_or_report(self, protocol, username, password, ip, port, device_type="linux"):
         try:
-            ProtocolLauncher.open(protocol, username, password, ip, port)
+            ProtocolLauncher.open(protocol, username, password, ip, port, device_type)
         except Exception as e:
             log.exception("Ошибка запуска протокола %s", protocol)
             self.system_error.emit(e)
 
-    def _start_protocol_worker(self, server_id, port, master_password, protocol):
+    def _start_protocol_worker(
+        self, server_id, port, master_password, protocol, device_type="linux"
+    ):
         admin_login = self.user_settings.get("admin_login")
         self.busy.start(f"Получение учётных данных для {protocol.upper()}…")
 
@@ -502,7 +508,9 @@ class TreeController(QObject):
             server = self._servers_by_id.get(server_id)
             if server is None:
                 return
-            self._open_or_report(protocol, username, password, server["ip"], port)
+            self._open_or_report(
+                protocol, username, password, server["ip"], port, device_type
+            )
 
         worker.finished.connect(self.busy.stop)
         worker.success.connect(on_success)

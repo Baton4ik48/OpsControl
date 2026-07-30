@@ -22,6 +22,7 @@ CHECKS: dict[str, tuple[str, str, str]] = {
     ),
     "listening_ports": ("Слушающие порты", "ss -tlnp", "listening_ports_image.png"),
     "failed_units": ("Упавшие systemd-юниты", "systemctl --failed", "failed_units_image.png"),
+    "docker": ("Docker-контейнеры", "docker ps", "docker_image.png"),
 }
 
 
