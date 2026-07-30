@@ -219,6 +219,7 @@ class DeviceTree(QTreeWidget):
     open_protocol_requested = pyqtSignal(int, int, str, str)
     show_credentials_requested = pyqtSignal(int, int, str)
     rotate_password_requested = pyqtSignal(int, str, str)  # server_id, ip, device_type
+    run_diagnostic_requested = pyqtSignal(int, int, str, str)  # server_id, port, ip, check_key
     comment_changed = pyqtSignal(str, int, int, str)  # type, server_id, port, text
 
     def __init__(self):

@@ -78,8 +78,13 @@ Sealed: false
 ⚠️ Это root токен, только для настройки Vault
 
 ```bash
-docker compose exec -e VAULT_TOKEN=hvs.cnIkuzn36jdYm72zPS1Crn4N  vault sh /vault-init.sh
+docker exec -it -e VAULT_TOKEN='hvs...' vault sh /vault-init.sh
 ```
+или 
+```bash
+docker exec -it -e VAULT_TOKEN='hvs...' vault-staging sh /vault-init-dev.sh
+```
+в зависимости от деплоя, в стегинг роль ид и сикрет ид зашиты в гитлаб
 
 На выходе получишь:
 

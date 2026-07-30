@@ -23,6 +23,8 @@ class CredentialsDialog(QDialog):
             self.setWindowTitle("Доступ к управлению инфраструктурой")
         elif mode == "envelope":
             self.setWindowTitle("Формирование конверта с паролями")
+        elif mode == "diagnostics":
+            self.setWindowTitle(f"Диагностика {ip}:{port}")
         else:
             self.setWindowTitle(f"Учётные данные {ip}:{port}")
         self.setModal(True)
@@ -43,6 +45,10 @@ class CredentialsDialog(QDialog):
             layout.addWidget(
                 QLabel("Введите мастер-пароль для выгрузки учётных данных:")
             )
+        elif mode == "diagnostics":
+            layout.addWidget(
+                QLabel("Введите мастер-пароль для выполнения диагностической команды:")
+            )
         else:
             layout.addWidget(QLabel("Введите пароль администратора:"))
 
@@ -51,11 +57,14 @@ class CredentialsDialog(QDialog):
         self.admin_input.returnPressed.connect(self._on_submit)
         layout.addWidget(self.admin_input)
 
-        btn_label = (
-            "Войти"
-            if mode == "infra"
-            else ("Сформировать" if mode == "envelope" else "Показать")
-        )
+        if mode == "infra":
+            btn_label = "Войти"
+        elif mode == "envelope":
+            btn_label = "Сформировать"
+        elif mode == "diagnostics":
+            btn_label = "Выполнить"
+        else:
+            btn_label = "Показать"
         self.show_btn = QPushButton(btn_label)
         self.show_btn.clicked.connect(self._on_submit)
         layout.addWidget(self.show_btn)

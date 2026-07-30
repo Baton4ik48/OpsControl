@@ -1,5 +1,7 @@
 from PyQt6.QtWidgets import QMenu
 
+from core.ssh.diagnostics import CHECKS as DIAGNOSTIC_CHECKS, CUSTOM_CHECK_KEY
+
 
 class DeviceTreeContextMenu:
     def __init__(self, tree):
@@ -81,6 +83,9 @@ class DeviceTreeContextMenu:
                     )
                 )
 
+            if port == 22 and device_type == "linux":
+                self._add_diagnostics_menu(menu, server_id, port, ip)
+
             menu.addSeparator()
 
             refresh_action = menu.addAction(self.tree.icon_update, "Обновить порт")
@@ -89,6 +94,25 @@ class DeviceTreeContextMenu:
             )
 
         menu.exec(self.tree.viewport().mapToGlobal(pos))
+
+    def _add_diagnostics_menu(self, menu, server_id, port, ip):
+        diag_menu = menu.addMenu("Диагностика")
+
+        for key, (label, _command) in DIAGNOSTIC_CHECKS.items():
+            action = diag_menu.addAction(label)
+            action.triggered.connect(
+                lambda checked=False, k=key: self.tree.run_diagnostic_requested.emit(
+                    server_id, port, ip, k
+                )
+            )
+
+        diag_menu.addSeparator()
+        custom_action = diag_menu.addAction("Своя команда…")
+        custom_action.triggered.connect(
+            lambda checked=False: self.tree.run_diagnostic_requested.emit(
+                server_id, port, ip, CUSTOM_CHECK_KEY
+            )
+        )
 
     def _expand_branch(self, branch_item):
         # Разворачивает филиал и все серверы внутри него.

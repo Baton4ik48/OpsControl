@@ -10,6 +10,8 @@ from core.protocol_launcher import ProtocolLauncher
 from core.logger import get_logger
 from core.api.base import ApiError
 from core.workers.credentials_worker import CredentialsWorker
+from core.workers.diagnostics_worker import DiagnosticsWorker
+from core.ssh.diagnostics import CHECKS as DIAGNOSTIC_CHECKS, CUSTOM_CHECK_KEY
 
 log = get_logger(__name__)
 
@@ -65,10 +67,14 @@ class TreeController(QObject):
         busy,
         ask_master_password,
         show_credential_popup,
+        ask_custom_command,
+        show_diagnostics_result,
     ):
         """
-        ask_master_password(ip, port, mode, on_submit) и
-        show_credential_popup(ip, port, username, password) — колбэки,
+        ask_master_password(ip, port, mode, on_submit),
+        show_credential_popup(ip, port, username, password),
+        ask_custom_command(ip) -> str | None и
+        show_diagnostics_result(ip, port, label, output) — колбэки,
         реализованные в ui-слое: контроллер не знает о конкретных диалогах.
         """
         super().__init__()
@@ -81,6 +87,8 @@ class TreeController(QObject):
         self.busy = busy
         self._ask_master_password = ask_master_password
         self._show_credential_popup = show_credential_popup
+        self._ask_custom_command = ask_custom_command
+        self._show_diagnostics_result = show_diagnostics_result
         self.detail_tree.set_user_settings(self.user_settings)
 
         self._data: list[dict] = []
@@ -337,6 +345,57 @@ class TreeController(QObject):
         worker.finished.connect(self.busy.stop)
         worker.success.connect(on_success)
         worker.error.connect(self.error_occurred.emit)
+        self._launch(worker)
+
+    def run_diagnostic(self, server_id: int, port: int, ip: str, check_key: str):
+        if check_key == CUSTOM_CHECK_KEY:
+            command = self._ask_custom_command(ip)
+            if not command:
+                return
+            label = "Своя команда"
+        else:
+            label, command = DIAGNOSTIC_CHECKS[check_key]
+
+        self._ask_master_password(
+            ip,
+            port,
+            "diagnostics",
+            lambda mp: self._start_diagnostics_worker(
+                server_id, port, ip, mp, command, label
+            ),
+        )
+
+    def _start_diagnostics_worker(
+        self, server_id, port, ip, master_password, command, label
+    ):
+        admin_login = self.user_settings.get("admin_login")
+
+        self.busy.start(f"Выполнение: {label}…")
+
+        worker = DiagnosticsWorker(
+            api=self.api,
+            server_id=server_id,
+            port=port,
+            ip=ip,
+            username=admin_login,
+            master_password=master_password,
+            command=command,
+        )
+
+        def on_success(output):
+            self._show_diagnostics_result(ip, port, label, output)
+
+        def on_error(stage, exc):
+            # "verify" — всегда ApiError (мастер-пароль/троттлинг), остальное
+            # (SSH-ошибки) — через generic system_error
+            if stage == "verify" and isinstance(exc, ApiError):
+                self.error_occurred.emit(exc)
+            else:
+                self.system_error.emit(exc)
+
+        worker.finished.connect(self.busy.stop)
+        worker.success.connect(on_success)
+        worker.error.connect(on_error)
         self._launch(worker)
 
     def _has_credentials(self, server_id: int, port: int) -> bool:

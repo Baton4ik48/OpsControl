@@ -10,6 +10,8 @@ from PyQt6.QtWidgets import (
     QStackedWidget,
     QPushButton,
     QLabel,
+    QInputDialog,
+    QLineEdit,
 )
 from PyQt6.QtGui import QIcon
 from PyQt6.QtCore import QTimer
@@ -35,6 +37,7 @@ from ui.dialogs.statistics_dialog import StatisticsDialog
 from ui.dialogs.batch_rotation_dialog import BatchRotationDialog
 from ui.dialogs.credentials_dialog import CredentialsDialog
 from ui.dialogs.credential_popup import CredentialPopup
+from ui.dialogs.diagnostics_result_dialog import DiagnosticsResultDialog
 
 
 class MainWindow(QWidget):
@@ -113,6 +116,8 @@ class MainWindow(QWidget):
             self.busy,
             ask_master_password=self._ask_master_password,
             show_credential_popup=self._show_credential_popup,
+            ask_custom_command=self._ask_custom_command,
+            show_diagnostics_result=self._show_diagnostics_result,
         )
 
         self.auto_refresh_timer = QTimer(self)
@@ -161,6 +166,7 @@ class MainWindow(QWidget):
             self.controller.show_credentials
         )
         self.detail_tree.rotate_password_requested.connect(self._open_password_rotation)
+        self.detail_tree.run_diagnostic_requested.connect(self.controller.run_diagnostic)
         self.detail_tree.comment_changed.connect(self.controller.save_comment)
 
         self.btn_back.clicked.connect(self._on_back)
@@ -210,6 +216,22 @@ class MainWindow(QWidget):
         self._popups = [p for p in self._popups if p.isVisible()]
         self._popups.append(popup)
         popup.show()
+
+    def _ask_custom_command(self, ip: str) -> str | None:
+        # Колбэк для контроллера: своя read-only команда для диагностики.
+        text, ok = QInputDialog.getText(
+            self,
+            "Своя команда",
+            f"Команда для {ip} (выполняется как есть, только для чтения):",
+            QLineEdit.EchoMode.Normal,
+        )
+        text = text.strip()
+        return text if ok and text else None
+
+    def _show_diagnostics_result(self, ip: str, port: int, label: str, output: str):
+        # Колбэк для контроллера: окно с текстовым результатом диагностики.
+        dlg = DiagnosticsResultDialog(f"{label} — {ip}:{port}", output, parent=self)
+        dlg.exec()
 
     def reload(self):
         self.sidebar.set_actions_enabled(False)
