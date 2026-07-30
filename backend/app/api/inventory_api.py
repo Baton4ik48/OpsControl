@@ -37,11 +37,39 @@ def _require_session(request: Request) -> str:
 
 
 _RU_TRANSLIT = {
-    "а": "a", "б": "b", "в": "v", "г": "g", "д": "d", "е": "e", "ё": "e",
-    "ж": "zh", "з": "z", "и": "i", "й": "y", "к": "k", "л": "l", "м": "m",
-    "н": "n", "о": "o", "п": "p", "р": "r", "с": "s", "т": "t", "у": "u",
-    "ф": "f", "х": "h", "ц": "ts", "ч": "ch", "ш": "sh", "щ": "sch",
-    "ъ": "", "ы": "y", "ь": "", "э": "e", "ю": "yu", "я": "ya",
+    "а": "a",
+    "б": "b",
+    "в": "v",
+    "г": "g",
+    "д": "d",
+    "е": "e",
+    "ё": "e",
+    "ж": "zh",
+    "з": "z",
+    "и": "i",
+    "й": "y",
+    "к": "k",
+    "л": "l",
+    "м": "m",
+    "н": "n",
+    "о": "o",
+    "п": "p",
+    "р": "r",
+    "с": "s",
+    "т": "t",
+    "у": "u",
+    "ф": "f",
+    "х": "h",
+    "ц": "ts",
+    "ч": "ch",
+    "ш": "sh",
+    "щ": "sch",
+    "ъ": "",
+    "ы": "y",
+    "ь": "",
+    "э": "e",
+    "ю": "yu",
+    "я": "ya",
 }
 
 
@@ -85,7 +113,9 @@ def ansible_login(data: AnsibleLoginRequest, request: Request):
 
     _audit.info(
         "action=ansible_login username=%s result=ok ip=%s request_id=%s",
-        data.username, client_ip, request_id,
+        data.username,
+        client_ip,
+        request_id,
     )
     return {"success": True, "data": {"token": token, "expires_in": ttl}}
 
@@ -122,7 +152,9 @@ def ansible_inventory(request: Request):
             secret = vault.read_kv_v2_as_backend(row["vault_path"])
         except VaultReadError:
             logger.warning(
-                "inventory: vault read skipped path=%s host=%s", row["vault_path"], display_name
+                "inventory: vault read skipped path=%s host=%s",
+                row["vault_path"],
+                display_name,
             )
             continue
 
@@ -139,7 +171,10 @@ def ansible_inventory(request: Request):
 
     _audit.info(
         "action=ansible_inventory_fetch username=%s host_count=%d ip=%s request_id=%s",
-        username, len(hostvars), client_ip, request_id,
+        username,
+        len(hostvars),
+        client_ip,
+        request_id,
     )
 
     result: dict = {"_meta": {"hostvars": hostvars}}

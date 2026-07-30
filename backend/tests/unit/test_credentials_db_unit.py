@@ -146,9 +146,33 @@ def _make_conn_fetchall(rows):
 def test_get_all_credentials_with_server_info_returns_all(monkeypatch):
     ts = datetime(2024, 1, 15, 10, 0, 0)
     rows = [
-        ("Москва", "server-01", "10.0.0.1", "linux", 22, "credentials/servers/1/22", ts),
-        ("Москва", "server-01", "10.0.0.1", "linux", 443, "credentials/servers/1/443", ts),
-        ("Питер", "router-01", "10.0.1.1", "cisco", 22, "credentials/servers/2/22", None),
+        (
+            "Москва",
+            "server-01",
+            "10.0.0.1",
+            "linux",
+            22,
+            "credentials/servers/1/22",
+            ts,
+        ),
+        (
+            "Москва",
+            "server-01",
+            "10.0.0.1",
+            "linux",
+            443,
+            "credentials/servers/1/443",
+            ts,
+        ),
+        (
+            "Питер",
+            "router-01",
+            "10.0.1.1",
+            "cisco",
+            22,
+            "credentials/servers/2/22",
+            None,
+        ),
     ]
     conn, cur = _make_conn_fetchall(rows)
     monkeypatch.setattr(
