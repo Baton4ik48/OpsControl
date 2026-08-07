@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.services.db.pool_db import init_pool, close_pool, ServiceUnavailableError
 from app.services.vault_renewer import vault_renew_loop
@@ -71,3 +72,7 @@ app.add_middleware(
 )
 
 app.include_router(api_router)
+
+# Регистрирует middleware, который на каждый запрос обновляет метрики,
+# и добавляет GET /metrics, отдающий их в формате Prometheus.
+Instrumentator().instrument(app).expose(app)
