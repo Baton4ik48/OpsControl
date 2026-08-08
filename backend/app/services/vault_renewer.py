@@ -1,5 +1,8 @@
 import asyncio
 import logging
+import time
+
+from app.metrics import vault_renew_total, vault_renew_last_success_timestamp
 
 logger = logging.getLogger("vault-renew")
 
@@ -30,6 +33,7 @@ async def vault_renew_loop(interval: int = 900):
         try:
             if vault._renew_token():
                 logger.info("Vault token renewed")
+                vault_renew_total.labels(result="success").inc()
             else:
                 logger.warning(
                     "Vault token renew failed → попытка re-login через AppRole"
@@ -37,18 +41,25 @@ async def vault_renew_loop(interval: int = 900):
                 vault._backend_token = None
                 vault._get_backend_token()
                 logger.info("Vault re-login успешен")
+                vault_renew_total.labels(result="reauth").inc()
+
+            vault_renew_last_success_timestamp.set(time.time())
 
         except VaultSealedError as e:
             logger.warning(
                 "Vault запечатан — обновление токена отложено до unseal. %s", e
             )
+            vault_renew_total.labels(result="sealed").inc()
         except VaultUnavailableError as e:
             logger.warning("Vault недоступен — обновление токена отложено. %s", e)
+            vault_renew_total.labels(result="unavailable").inc()
         except VaultAuthError as e:
             logger.error(
                 "Vault AppRole: ошибка авторизации при обновлении токена. "
                 "Проверьте VAULT_ROLE_ID / VAULT_SECRET_ID в .env. Ошибка: %s",
                 e,
             )
+            vault_renew_total.labels(result="auth_error").inc()
         except Exception as e:
             logger.error("Неожиданная ошибка в vault_renew_loop: %s", e)
+            vault_renew_total.labels(result="unexpected_error").inc()

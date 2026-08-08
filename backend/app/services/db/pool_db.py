@@ -2,6 +2,7 @@ from psycopg2.pool import SimpleConnectionPool
 from psycopg2 import OperationalError, InterfaceError, errors
 from app.config import settings
 from app.services.vault_db_creds import get_db_credentials
+from app.metrics import db_pool_reinit_total
 import threading
 import time
 import logging
@@ -93,6 +94,7 @@ def _reset_pool(expected: SimpleConnectionPool | None):
             return
         close_pool()
         init_pool()
+    db_pool_reinit_total.inc()
 
 
 def execute(fn, retries: int = 1):

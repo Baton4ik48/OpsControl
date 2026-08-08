@@ -2,6 +2,7 @@ import threading
 import time
 from collections import defaultdict
 from app.config import settings
+from app.metrics import login_failed_total, login_blocked_total
 
 
 class TooManyAttempts(Exception):
@@ -35,6 +36,7 @@ class LoginThrottle:
                 self.failed.pop(key, None)
 
             if len(attempts) >= self.max_attempts:
+                login_blocked_total.inc()
                 raise TooManyAttempts()
 
     def register_fail(self, key: str):
@@ -45,6 +47,7 @@ class LoginThrottle:
             # логинами без последующего успеха никогда не чистились)
             self._purge_expired(now)
             self.failed[key].append(now)
+        login_failed_total.inc()
 
     def reset(self, key: str):
         with self._lock:
