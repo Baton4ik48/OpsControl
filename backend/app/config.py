@@ -11,21 +11,33 @@ APP_ENV = os.getenv("APP_ENV", "dev")
 load_dotenv(dotenv_path=BASE_DIR / ".env", override=(APP_ENV == "dev"))
 
 
+def _read_secret(name: str, default: str | None = None) -> str | None:
+    """
+    Читает секрет либо из файла (если задана NAME_FILE — путь к файлу,
+    например /run/secrets/db_password из docker secrets), либо напрямую
+    из переменной NAME. NAME_FILE имеет приоритет.
+    """
+    file_path = os.getenv(f"{name}_FILE")
+    if file_path:
+        return Path(file_path).read_text().strip()
+    return os.getenv(name, default)
+
+
 class Settings:
     def __init__(self):
         self.VAULT_ADDR = os.getenv("VAULT_ADDR", "http://localhost:8200")
         self.VAULT_AUTH_METHOD = os.getenv("VAULT_AUTH_METHOD")
         self.VAULT_HTTP_TIMEOUT = int(os.getenv("VAULT_HTTP_TIMEOUT", 5))
-        self.VAULT_ROLE_ID = os.getenv("VAULT_ROLE_ID")
-        self.VAULT_SECRET_ID = os.getenv("VAULT_SECRET_ID")
+        self.VAULT_ROLE_ID = _read_secret("VAULT_ROLE_ID")
+        self.VAULT_SECRET_ID = _read_secret("VAULT_SECRET_ID")
         self.VAULT_DATABASE_ROLE_NAME = os.getenv("VAULT_DATABASE_ROLE_NAME")
 
         self.POSTGRES_HOST = os.getenv("POSTGRES_HOST")
         self.POSTGRES_PORT = int(os.getenv("POSTGRES_PORT", 5432))
         self.POSTGRES_DB = os.getenv("POSTGRES_DB")
         self.DB_CREDS_MODE = os.getenv("DB_CREDS_MODE", "static").lower()
-        self.POSTGRES_USER = os.getenv("POSTGRES_USER")
-        self.POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+        self.POSTGRES_USER = _read_secret("POSTGRES_USER")
+        self.POSTGRES_PASSWORD = _read_secret("POSTGRES_PASSWORD")
         self.POSTGRES_CONNECT_TIMEOUT = int(os.getenv("POSTGRES_CONNECT_TIMEOUT", 4))
         self.POSTGRES_QUERY_TIMEOUT = int(os.getenv("POSTGRES_QUERY_TIMEOUT", 7))
 
