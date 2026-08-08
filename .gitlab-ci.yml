@@ -178,6 +178,8 @@ deploy_staging_job:
         --env-file backend/.env.staging \
         -p 9001:8000 \
         localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA
+    - docker network inspect metrics-net >/dev/null 2>&1 || docker network create metrics-net
+    - docker network connect metrics-net opscontrol-backend-staging
     - |
       docker image inspect curlimages/curl:8.7.1 >/dev/null 2>&1 || docker pull curlimages/curl:8.7.1
       for i in $(seq 1 20); do

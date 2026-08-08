@@ -63,8 +63,16 @@ services:
       - backend_logs:/app/logs
     ports:
       - "8001:8000"
+    networks:
+      - default
+      - metrics-net
 
 volumes:
   pg_data:
   vault_data:
   backend_logs:
+
+networks:
+  default:
+  metrics-net:
+    external: true

@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from prometheus_client import start_http_server
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.services.db.pool_db import init_pool, close_pool, ServiceUnavailableError
@@ -73,6 +74,10 @@ app.add_middleware(
 
 app.include_router(api_router)
 
-# Регистрирует middleware, который на каждый запрос обновляет метрики,
-# и добавляет GET /metrics, отдающий их в формате Prometheus.
-Instrumentator().instrument(app).expose(app)
+# instrument() вешает middleware, который на каждый запрос обновляет метрики.
+# .expose(app) намеренно не вызываем — /metrics не должен быть роутом
+# публичного API-порта. Вместо этого раздаём его отдельным HTTP-сервером
+# на отдельном порту (start_http_server), не связанным с uvicorn/middleware —
+# он не проходит через AllowedNetworkMiddleware и недостижим через 8000/8001.
+Instrumentator().instrument(app)
+start_http_server(9000)
