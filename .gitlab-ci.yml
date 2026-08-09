@@ -115,6 +115,7 @@ build_job:
 scan_image:
   stage: security_scan
   image: docker:29.4.1
+  tags: [docker]
   extends: .default_docker
   script:
     - apk add --no-cache curl
