@@ -106,7 +106,7 @@ build_job:
   image: docker:29.4.1
   extends: .default_docker
   script:
-    - docker build -t localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA -f backend/Dockerfile backend/
+    - docker build --pull -t localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA -f backend/Dockerfile backend/
     - docker push localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA
 
 # ============================================
