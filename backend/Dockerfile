@@ -12,7 +12,8 @@ RUN apt-get update \
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
- && pip install --no-cache-dir -r requirements.txt
+ && pip install --no-cache-dir -r requirements.txt \
+ && rm -f /usr/local/lib/python3.11/site-packages/pip/_vendor/bom.cdx.json
 
 COPY . .
 
