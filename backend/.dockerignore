@@ -9,3 +9,6 @@ venv/
 .vscode/
 .github/
 .gitkeep
+.pytest_cache/
+.coverage*
+tests/
