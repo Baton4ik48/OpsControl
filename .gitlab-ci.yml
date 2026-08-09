@@ -19,12 +19,12 @@ variables:
 
 .default_docker:
   before_script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD localhost:5050
 
 .verify_base:
   stage: verify
   tags: [docker]
-  image: $CI_REGISTRY/root/opscontrol/ci-image:$CI_COMMIT_SHA
+  image: localhost:5050/root/opscontrol/ci-image:$CI_COMMIT_SHA
   timeout: 5 minutes
   services:
     - name: postgres:15
@@ -32,7 +32,7 @@ variables:
     - name: hashicorp/vault:1.15
       alias: vault
       command: ["vault","server","-dev","-dev-root-token-id=root","-dev-listen-address=0.0.0.0:8200"]
-    - name: $CI_REGISTRY/root/opscontrol/backend-image:$CI_COMMIT_SHA
+    - name: localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA
       alias: backend
   variables:
     VAULT_ROLE_ID: ci-backend-role-id
@@ -66,8 +66,8 @@ prepare_job:
   image: docker:29.4.1
   extends: .default_docker
   script:
-    - docker build -t $CI_REGISTRY/root/opscontrol/ci-image:$CI_COMMIT_SHA -f backend/Dockerfile-ci backend/
-    - docker push $CI_REGISTRY/root/opscontrol/ci-image:$CI_COMMIT_SHA
+    - docker build -t localhost:5050/root/opscontrol/ci-image:$CI_COMMIT_SHA -f backend/Dockerfile-ci backend/
+    - docker push localhost:5050/root/opscontrol/ci-image:$CI_COMMIT_SHA
 
 # ============================================
 # Stage 1: Lint & Unit Tests
@@ -75,7 +75,7 @@ prepare_job:
 lint_job:
   stage: test
   tags: [docker]
-  image: $CI_REGISTRY/root/opscontrol/ci-image:$CI_COMMIT_SHA
+  image: localhost:5050/root/opscontrol/ci-image:$CI_COMMIT_SHA
   timeout: 2 minutes
   script:
     - ruff check backend/
@@ -85,7 +85,7 @@ unit_job:
   stage: test
   tags:
     - docker
-  image: $CI_REGISTRY/root/opscontrol/ci-image:$CI_COMMIT_SHA
+  image: localhost:5050/root/opscontrol/ci-image:$CI_COMMIT_SHA
   timeout: 2 minutes
   script:
     - export COVERAGE_FILE=.coverage.unit
@@ -106,21 +106,21 @@ build_job:
   image: docker:29.4.1
   extends: .default_docker
   script:
-    - docker build -t $CI_REGISTRY/root/opscontrol/backend-image:$CI_COMMIT_SHA -f backend/Dockerfile backend/
-    - docker push $CI_REGISTRY/root/opscontrol/backend-image:$CI_COMMIT_SHA
+    - docker build -t localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA -f backend/Dockerfile backend/
+    - docker push localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA
 
 # ============================================
 # Stage 3: Security Scan
 # ============================================
 scan_image:
   stage: security_scan
-  image: aquasec/trivy:latest
-  variables:
-    TRIVY_USERNAME: $CI_REGISTRY_USER
-    TRIVY_PASSWORD: $CI_REGISTRY_PASSWORD
+  image: docker:29.4.1
+  extends: .default_docker
   script:
-    - trivy image --exit-code 0 --severity HIGH $CI_REGISTRY/root/opscontrol/backend-image:$CI_COMMIT_SHA
-    - trivy image --exit-code 1 --severity CRITICAL $CI_REGISTRY/root/opscontrol/backend-image:$CI_COMMIT_SHA
+    - apk add --no-cache curl
+    - curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+    - trivy image --exit-code 0 --severity HIGH localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA
+    - trivy image --exit-code 1 --severity CRITICAL localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA
 
 # ============================================
 # Stage 4: integration-e2e Tests
@@ -149,7 +149,7 @@ e2e_job:
 # -------------------------
 report_job:
   stage: report
-  image: $CI_REGISTRY/root/opscontrol/ci-image:$CI_COMMIT_SHA
+  image: localhost:5050/root/opscontrol/ci-image:$CI_COMMIT_SHA
   tags: [docker]
   script:
     - coverage combine
@@ -180,8 +180,8 @@ deploy_staging_job:
     - when: never
   manual_confirmation: "Задеплоить staging?"
   script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - docker pull $CI_REGISTRY/root/opscontrol/backend-image:$CI_COMMIT_SHA
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD localhost:5050
+    - docker pull localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA
     - docker rm -f opscontrol-backend-staging || true
     - |
       docker run -d \
@@ -190,7 +190,7 @@ deploy_staging_job:
         --network opscontrol-staging_default \
         --env-file backend/.env.staging \
         -p 9001:8000 \
-        $CI_REGISTRY/root/opscontrol/backend-image:$CI_COMMIT_SHA
+        localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA
     - docker network inspect metrics-net >/dev/null 2>&1 || docker network create metrics-net
     - docker network connect metrics-net opscontrol-backend-staging
     - |
@@ -218,3 +218,4 @@ deploy_prod_job:
     - when: never
   script:
     - echo "Здесь могла бы быть ваша реклама :)"
+
