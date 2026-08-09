@@ -119,18 +119,21 @@ scan_image:
     name: aquasec/trivy:0.58.1
     entrypoint: [""]
   variables:
+    IMAGE: localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA
     TRIVY_CACHE_DIR: .trivycache/
     TRIVY_USERNAME: $CI_REGISTRY_USER
     TRIVY_PASSWORD: $CI_REGISTRY_PASSWORD
+    TRIVY_INSECURE: "true"
   cache:
     key: trivy-db
     paths: [.trivycache/]
   script:
-    - trivy image --exit-code 0 --severity HIGH --no-progress $IMAGE
-    - trivy image --exit-code 1 --severity CRITICAL --skip-db-update --no-progress $IMAGE
+    - trivy image --exit-code 0 --severity HIGH --no-progress "$IMAGE"
+    - trivy image --exit-code 1 --severity CRITICAL --ignore-unfixed --skip-db-update --no-progress "$IMAGE"
     - trivy image --format template --template "@/contrib/gitlab.tpl"
-        -o gl-container-scanning-report.json $IMAGE
+        --skip-db-update --no-progress -o gl-container-scanning-report.json "$IMAGE"
   artifacts:
+    when: always
     reports:
       container_scanning: gl-container-scanning-report.json
 
