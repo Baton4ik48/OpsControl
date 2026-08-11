@@ -12,6 +12,11 @@ services:
       - pg_data:/var/lib/postgresql/data
     ports:
       - "5433:5432"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
 
   vault-init:
     image: hashicorp/vault:1.15
@@ -21,6 +26,11 @@ services:
     volumes:
       - vault_data:/vault/data
     restart: "no"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
 
   vault:
     image: hashicorp/vault:1.15
@@ -44,6 +54,11 @@ services:
     cap_add:
       - IPC_LOCK
     command: vault server -config=/vault/config/config.hcl
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
 
   backend:
     image: opscontrol-backend
@@ -66,6 +81,11 @@ services:
     networks:
       - default
       - metrics-net
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
 
 volumes:
   pg_data:
