@@ -16,7 +16,6 @@ variables:
   VAULT_ROLE_ID: $VAULT_ROLE
   VAULT_SECRET_ID: $VAULT_SECRET
   DB_CREDS_MODE: static
-  LOG_DIR: $CI_PROJECT_DIR/backend/logs
 
 .default_docker:
   before_script:
@@ -89,6 +88,7 @@ unit_job:
   image: localhost:5050/root/opscontrol/ci-image:$CI_COMMIT_SHA
   timeout: 2 minutes
   script:
+    - export LOG_DIR="$CI_PROJECT_DIR/backend/logs"
     - mkdir -p "$LOG_DIR"
     - export COVERAGE_FILE=.coverage.unit
     - PYTHONPATH=backend pytest backend/tests/unit/ --cov=backend --cov-report=term --cov-report= --cov-config=.coveragerc --junitxml=report-unit.xml
@@ -149,6 +149,7 @@ scan_image:
 integration_job:
   extends: .verify_base
   script:
+    - export LOG_DIR="$CI_PROJECT_DIR/backend/logs"
     - mkdir -p "$LOG_DIR"
     - export COVERAGE_FILE=.coverage.integration
     - PYTHONPATH=backend pytest backend/tests/integ/ --cov=backend --cov-report=term --cov-report= --cov-config=.coveragerc --junitxml=report-integration.xml
