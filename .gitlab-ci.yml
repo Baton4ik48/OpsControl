@@ -282,6 +282,7 @@ package_job:
     - skopeo login --tls-verify=false -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$REGISTRY_HOST"
     - skopeo copy --src-tls-verify=false --dest-tls-verify=false "docker://${IMAGE_REPO}:${CI_COMMIT_SHA}" "docker://${IMAGE_REPO}:${CI_COMMIT_TAG}"
     - DIGEST=$(skopeo inspect --tls-verify=false "docker://${IMAGE_REPO}:${CI_COMMIT_TAG}" --format '{{.Digest}}')
+    - mkdir -p images/backend
     - skopeo copy --preserve-digests --src-tls-verify=false "docker://${IMAGE_REPO}@${DIGEST}" "dir:images/backend"
     - ARCHIVE_DIGEST=$(skopeo inspect "dir:images/backend" --format '{{.Digest}}')
     - |
