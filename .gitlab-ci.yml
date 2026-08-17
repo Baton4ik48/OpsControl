@@ -21,11 +21,24 @@ variables:
   before_script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD localhost:5050
 
+# Тег-пайплайн (релиз) не должен пересобирать/перетестировать образ заново —
+# он должен только ретегировать уже собранный на dev образ и упаковать его.
+# Эти джобы выполняются только на ветках, на тег-пайплайне пропускаются.
+.skip_on_tag:
+  rules:
+    - if: '$CI_COMMIT_TAG'
+      when: never
+    - when: on_success
+
 .verify_base:
   stage: verify
   tags: [docker]
   image: localhost:5050/root/opscontrol/ci-image:$CI_COMMIT_SHA
   timeout: 5 minutes
+  rules:
+    - if: '$CI_COMMIT_TAG'
+      when: never
+    - when: on_success
   services:
     - name: postgres:15
       alias: postgres
@@ -56,6 +69,7 @@ stages:
   - verify
   - report
   - deploy
+  - package
 
 # ============================================
 # Stage 0: Build Images 
@@ -64,7 +78,7 @@ prepare_job:
   stage: prepare
   tags: [docker]
   image: docker:29.4.1
-  extends: .default_docker
+  extends: [.default_docker, .skip_on_tag]
   script:
     - docker build -t localhost:5050/root/opscontrol/ci-image:$CI_COMMIT_SHA -f backend/Dockerfile-ci backend/
     - docker push localhost:5050/root/opscontrol/ci-image:$CI_COMMIT_SHA
@@ -77,6 +91,7 @@ lint_job:
   tags: [docker]
   image: localhost:5050/root/opscontrol/ci-image:$CI_COMMIT_SHA
   timeout: 2 minutes
+  extends: .skip_on_tag
   script:
     - ruff check backend/
     - black --check backend/
@@ -87,6 +102,7 @@ unit_job:
     - docker
   image: localhost:5050/root/opscontrol/ci-image:$CI_COMMIT_SHA
   timeout: 2 minutes
+  extends: .skip_on_tag
   script:
     - export LOG_DIR="$CI_PROJECT_DIR/backend/logs"
     - mkdir -p "$LOG_DIR"
@@ -106,7 +122,7 @@ build_job:
   stage: build
   tags: [docker]
   image: docker:29.4.1
-  extends: .default_docker
+  extends: [.default_docker, .skip_on_tag]
   script:
     - docker build --pull -t localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA -f backend/Dockerfile backend/
     - docker push localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA
@@ -121,6 +137,7 @@ scan_image:
     name: aquasec/trivy:0.58.1
     entrypoint: [""]
   dependencies: []
+  extends: .skip_on_tag
   variables:
     IMAGE: localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA
     TRIVY_CACHE_DIR: .trivycache/
@@ -174,6 +191,7 @@ report_job:
   stage: report
   image: localhost:5050/root/opscontrol/ci-image:$CI_COMMIT_SHA
   tags: [docker]
+  extends: .skip_on_tag
   script:
     - coverage combine
     - coverage xml -o coverage.xml
@@ -241,4 +259,42 @@ deploy_prod_job:
     - when: never
   script:
     - echo "Здесь могла бы быть ваша реклама :)"
+
+# ============================================
+# Stage 6: офлайн-пакет для закрытого контура
+# ============================================
+package_job:
+  stage: package
+  image: alpine:3.20
+  tags: [docker]
+  variables:
+    GIT_DEPTH: 0
+    GIT_STRATEGY: clone
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/'
+      when: manual
+  before_script:
+    - apk add --no-cache skopeo git jq
+  script:
+    - PKG_NAME="opscontrol-${CI_COMMIT_TAG}"
+    - IMAGE_REPO="localhost:5050/root/opscontrol/backend-image"
+
+    - git bundle create "${PKG_NAME}.bundle" --all
+
+    - skopeo login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" localhost:5050
+    # Релизный тег вешается на уже собранный и протестированный на dev образ —
+    # server-side ретег по SHA, без docker build.
+    - skopeo copy "docker://${IMAGE_REPO}:${CI_COMMIT_SHA}" "docker://${IMAGE_REPO}:${CI_COMMIT_TAG}"
+    - DIGEST=$(skopeo inspect "docker://${IMAGE_REPO}:${CI_COMMIT_TAG}" --format '{{.Digest}}')
+    - skopeo copy "docker://${IMAGE_REPO}@${DIGEST}" "dir:images/backend"
+
+    - sh scripts/build_manifest.sh "$CI_COMMIT_TAG" "$CI_COMMIT_SHA" "$IMAGE_REPO" "$DIGEST" "${PKG_NAME}.bundle" > manifest.json
+
+    - tar -czf "${PKG_NAME}.tar.gz" manifest.json "${PKG_NAME}.bundle" images/
+    - sha256sum "${PKG_NAME}.tar.gz" > "${PKG_NAME}.tar.gz.sha256"
+  artifacts:
+    paths:
+      - opscontrol-${CI_COMMIT_TAG}.tar.gz
+      - opscontrol-${CI_COMMIT_TAG}.tar.gz.sha256
+    expire_in: never
 
