@@ -229,7 +229,7 @@ deploy_staging_job:
         --name opscontrol-backend-staging \
         --restart always \
         --network opscontrol-staging_default \
-        --env-file backend/.env.staging \
+        --env-file "$STAGING_ENV_FILE" \
         -p 9001:8000 \
         localhost:5050/root/opscontrol/backend-image:$CI_COMMIT_SHA
     - docker network inspect metrics-net >/dev/null 2>&1 || docker network create metrics-net
@@ -286,11 +286,15 @@ package_job:
     # server-side ретег по SHA, без docker build.
     - skopeo copy "docker://${IMAGE_REPO}:${CI_COMMIT_SHA}" "docker://${IMAGE_REPO}:${CI_COMMIT_TAG}"
     - DIGEST=$(skopeo inspect "docker://${IMAGE_REPO}:${CI_COMMIT_TAG}" --format '{{.Digest}}')
-    - skopeo copy "docker://${IMAGE_REPO}@${DIGEST}" "dir:images/backend"
+    # oci-archive, а не dir:/docker-archive: — сохраняет digest byte-в-byte.
+    # В контуре нет skopeo, поэтому его образ (quay.io/skopeo/stable) везётся
+    # в контур отдельно и один раз через docker save/load, дальше запускается
+    # через docker run для skopeo copy oci-archive:... docker://harbor.
+    - skopeo copy "docker://${IMAGE_REPO}@${DIGEST}" "oci-archive:images/backend.tar:${CI_COMMIT_TAG}"
 
     - sh scripts/build_manifest.sh "$CI_COMMIT_TAG" "$CI_COMMIT_SHA" "$IMAGE_REPO" "$DIGEST" "${PKG_NAME}.bundle" > manifest.json
 
-    - tar -czf "${PKG_NAME}.tar.gz" manifest.json "${PKG_NAME}.bundle" images/
+    - tar -czf "${PKG_NAME}.tar.gz" manifest.json "${PKG_NAME}.bundle" images/backend.tar
     - sha256sum "${PKG_NAME}.tar.gz" > "${PKG_NAME}.tar.gz.sha256"
   artifacts:
     paths:
