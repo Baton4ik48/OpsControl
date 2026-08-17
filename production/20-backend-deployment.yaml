@@ -1,0 +1,81 @@
+# Секреты (opscontrol-backend-secrets) сюда НЕ входят — создаются вручную
+# в контуре командой kubectl create secret, не едут на флешке и не лежат в git.
+# Ожидаемые ключи secret'а: VAULT_ROLE_ID, VAULT_SECRET_ID.
+#
+# Digest образа берётся из manifest.json собранного пакета, подставляется
+# перед apply вручную (или отдельным шагом при первом прогоне).
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opscontrol-backend
+  namespace: opscontrol
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: opscontrol-backend
+  template:
+    metadata:
+      labels:
+        app: opscontrol-backend
+    spec:
+      containers:
+        - name: backend
+          image: 10.3.179.11:8090/opscontrol/backend-image@sha256:REPLACE_ME
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          env:
+            - name: APP_ENV
+              value: "prod"
+            - name: POSTGRES_HOST
+              value: "postgres"
+            - name: POSTGRES_PORT
+              value: "5433"
+            - name: POSTGRES_DB
+              value: "opscontrol_database"
+            - name: POSTGRES_USER
+              value: "login_opscontrol"
+            - name: VAULT_ADDR
+              value: "http://vault:8200"
+            - name: VAULT_AUTH_METHOD
+              value: "approle"
+            - name: VAULT_DATABASE_ROLE_NAME
+              value: "postgres-dynamic"
+            - name: DB_CREDS_MODE
+              value: "vault"
+          envFrom:
+            - secretRef:
+                name: opscontrol-backend-secrets
+          readinessProbe:
+            httpGet:
+              path: /api/status
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /api/status
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: opscontrol-backend
+  namespace: opscontrol
+spec:
+  selector:
+    app: opscontrol-backend
+  ports:
+    - port: 8000
+      targetPort: 8000

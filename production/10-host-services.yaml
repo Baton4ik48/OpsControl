@@ -1,0 +1,48 @@
+# Postgres и Vault работают на хосте, вне кластера k3s.
+# Service без selector + ручной Endpoints — приложение внутри кластера
+# продолжает обращаться по тем же именам (postgres/vault), что и на staging,
+# а при смене IP хоста правится только Endpoints, не конфиг приложения.
+#
+# ВНИМАНИЕ: подставить реальный IP хоста и порты перед apply.
+# Ниже — предположение (10.3.179.11, как у Harbor), не проверено.
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: opscontrol
+spec:
+  ports:
+    - port: 5433
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: postgres
+  namespace: opscontrol
+subsets:
+  - addresses:
+      - ip: 10.3.179.11
+    ports:
+      - port: 5433
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vault
+  namespace: opscontrol
+spec:
+  ports:
+    - port: 8200
+      targetPort: 8200
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: vault
+  namespace: opscontrol
+subsets:
+  - addresses:
+      - ip: 10.3.179.11
+    ports:
+      - port: 8200

@@ -293,24 +293,26 @@ package_job:
     # server-side ретег по SHA, без docker build.
     - skopeo copy --src-tls-verify=false --dest-tls-verify=false "docker://${IMAGE_REPO}:${CI_COMMIT_SHA}" "docker://${IMAGE_REPO}:${CI_COMMIT_TAG}"
     - DIGEST=$(skopeo inspect --tls-verify=false "docker://${IMAGE_REPO}:${CI_COMMIT_TAG}" --format '{{.Digest}}')
-    # oci-archive, а не dir:/docker-archive: — должен сохранять digest byte-в-byte.
-    # --preserve-digests заставляет skopeo упасть, а не тихо переконвертировать
-    # manifest в OCI-формат со сменой digest. Проверяем сразу же: если после
-    # копирования digest внутри архива не совпал с исходным — вся идея
-    # сквозного digest не работает, и это должно ронять джобу, а не уезжать
-    # в контур незамеченным.
-    - skopeo copy --preserve-digests --src-tls-verify=false "docker://${IMAGE_REPO}@${DIGEST}" "oci-archive:images/backend.tar:${CI_COMMIT_TAG}"
-    - ARCHIVE_DIGEST=$(skopeo inspect "oci-archive:images/backend.tar:${CI_COMMIT_TAG}" --format '{{.Digest}}')
+    # dir:, не oci-archive: — проверено эмпирически (17.08, тест на
+    # nginx:1.27-alpine и локальном backend-image): oci-archive пишет
+    # Docker Schema2 манифест нормально (backend-image собран обычным
+    # docker build, это Schema2, не OCI), но `skopeo inspect oci-archive:...`
+    # после этого отказывается его читать обратно ("unsupported manifest
+    # MIME types"). dir: этого ограничения не имеет — copy и inspect оба
+    # работают, digest сохраняется byte-в-byte (перепроверено на
+    # single-platform манифесте с известным digest).
+    - skopeo copy --preserve-digests --src-tls-verify=false "docker://${IMAGE_REPO}@${DIGEST}" "dir:images/backend"
+    - ARCHIVE_DIGEST=$(skopeo inspect "dir:images/backend" --format '{{.Digest}}')
     - |
       if [ "$ARCHIVE_DIGEST" != "$DIGEST" ]; then
-        echo "Digest разошёлся при копировании в oci-archive: было $DIGEST, стало $ARCHIVE_DIGEST"
+        echo "Digest разошёлся при копировании в dir: было $DIGEST, стало $ARCHIVE_DIGEST"
         echo "Сквозной digest не работает — нужно возвращаться к варианту с docker-archive и справочным digest."
         exit 1
       fi
 
     - sh scripts/build_manifest.sh "$CI_COMMIT_TAG" "$CI_COMMIT_SHA" "$IMAGE_REPO" "$DIGEST" "${PKG_NAME}.bundle" > manifest.json
 
-    - tar -czf "${PKG_NAME}.tar.gz" manifest.json "${PKG_NAME}.bundle" images/backend.tar
+    - tar -czf "${PKG_NAME}.tar.gz" manifest.json "${PKG_NAME}.bundle" images/backend
     - sha256sum "${PKG_NAME}.tar.gz" > "${PKG_NAME}.tar.gz.sha256"
   artifacts:
     paths:
