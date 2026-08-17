@@ -274,8 +274,8 @@ package_job:
     - apk add --no-cache skopeo git jq
   script:
     - PKG_NAME="opscontrol-${CI_COMMIT_TAG}"
-    - REGISTRY_HOST="172.17.0.1:5050"
-    - IMAGE_REPO="${REGISTRY_HOST}/root/opscontrol/backend-image"
+    - IMAGE_NAME="${CI_PROJECT_PATH}/backend-image"
+    - IMAGE_REPO="${REGISTRY_HOST}/${IMAGE_NAME}"
     - git bundle create "${PKG_NAME}.bundle" --all
     - git bundle verify "${PKG_NAME}.bundle"
     - git bundle list-heads "${PKG_NAME}.bundle"
@@ -291,7 +291,7 @@ package_job:
         echo "Сквозной digest не работает — нужно возвращаться к варианту с docker-archive и справочным digest."
         exit 1
       fi
-    - sh scripts/build_manifest.sh "$CI_COMMIT_TAG" "$CI_COMMIT_SHA" "$IMAGE_REPO" "$DIGEST" "${PKG_NAME}.bundle" > manifest.json
+    - sh scripts/build_manifest.sh "$CI_COMMIT_TAG" "$CI_COMMIT_SHA" "$IMAGE_NAME" "$DIGEST" "${PKG_NAME}.bundle" > manifest.json
     - tar -czf "${PKG_NAME}.tar.gz" manifest.json "${PKG_NAME}.bundle" images/backend
     - sha256sum "${PKG_NAME}.tar.gz" > "${PKG_NAME}.tar.gz.sha256"
   artifacts:
